@@ -1,0 +1,153 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="試し">
+<meta name="theme-color" content="#fdf3e3">
+<title>揺れの試し</title>
+<style>
+:root{
+  --sand:#faf6ee; --card:#ffffff; --line:#e4dccc; --text:#37474f; --soft:#57676f;
+  --sea:#3f7585; --me:#eaf5f8; --me-line:#cfe4ea;
+  --skyA:#fdf3e3; --skyB:#e8f3f5;
+}
+*{ box-sizing:border-box; }
+html,body{ margin:0; height:100%; overflow:hidden; overscroll-behavior:none; background:var(--sand); }
+body{ color:var(--text); font-family:"Hiragino Maru Gothic ProN","Hiragino Sans",sans-serif; -webkit-text-size-adjust:100%; }
+/* 画面いっぱいに固定。キーボードが出たら、見えている高さに合わせて縮める */
+#app{
+  position:fixed; top:0; left:0; right:0; height:100dvh;
+  display:flex; flex-direction:column; background:var(--sand);
+  will-change:transform;
+}
+header{
+  flex-shrink:0;
+  padding:calc(env(safe-area-inset-top,0px) + 14px) 20px 14px;
+  background:linear-gradient(160deg,var(--skyA) 0%,var(--skyB) 80%,var(--sand) 100%);
+  border-bottom:1px solid var(--line);
+}
+header h1{ margin:0; font-size:21px; font-weight:700; }
+header p{ margin:4px 0 0; font-size:14px; color:var(--soft); line-height:1.6; }
+#list{
+  flex:1 1 auto; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch;
+  overscroll-behavior:contain; padding:18px 18px 12px;
+  display:flex; flex-direction:column; gap:14px;
+}
+.msg{ max-width:80%; padding:12px 15px; font-size:17px; line-height:1.8; white-space:pre-wrap; word-break:break-word; }
+.ai{ align-self:flex-start; background:var(--card); border:1px solid var(--line); border-radius:20px 20px 20px 6px; }
+.me{ align-self:flex-end; background:var(--me); border:1px solid var(--me-line); border-radius:20px 20px 6px 20px; }
+footer{
+  flex-shrink:0; display:flex; gap:10px; align-items:flex-end;
+  padding:10px 14px calc(env(safe-area-inset-bottom,0px) + 10px);
+  background:#fffdf9; border-top:1px solid var(--line);
+}
+textarea{
+  flex:1; min-width:0; resize:none; border:1px solid var(--line); border-radius:18px;
+  background:var(--card); color:var(--text); padding:11px 15px;
+  font:inherit; font-size:17px; line-height:1.6; max-height:160px; overflow-y:auto;
+  outline:none;
+}
+textarea:focus{ border-color:#9cc3cf; }
+button{
+  flex-shrink:0; min-height:48px; min-width:84px; padding:0 18px; border:none; border-radius:16px;
+  background:var(--sea); color:#fff; font:inherit; font-size:16px; font-weight:700;
+}
+button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
+.label{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
+</style>
+</head>
+<body>
+<div id="app">
+  <header>
+    <h1>揺れの試し（1）</h1>
+    <p>ここは試しのページです。文字を打って、画面が揺れないか見てください。AIは返事をしません。</p>
+  </header>
+  <main id="list" aria-live="polite"></main>
+  <footer>
+    <label class="label" for="msg">メッセージ</label>
+    <textarea id="msg" rows="1" placeholder="メッセージを書く"></textarea>
+    <button id="send" type="button">送る</button>
+  </footer>
+</div>
+<script>
+(function(){
+  const app = document.getElementById("app");
+  const list = document.getElementById("list");
+  const box = document.getElementById("msg");
+  const send = document.getElementById("send");
+
+  // 試し用の会話(スクロールの具合も見られるように、少し多めに)
+  const samples = [
+    ["ai","おはよう。今日はどう？"],
+    ["me","今日は少し調子がいいよ。昨日より眠れたかも。"],
+    ["ai","それはよかった。眠れた朝は、それだけで少し気持ちが軽くなるよね。"],
+    ["me","うん。午後は少し散歩しようかな。"],
+    ["ai","いいね。風が気持ちいい時間だといいな。帰ってきたら、どうだったか聞かせてね。"],
+    ["me","長めの文章も打ってみるね。改行もしてみる。\nこんな感じで、二行目。\n三行目も。"],
+    ["ai","ちゃんと届いてるよ。下の入力欄で、たくさん文字を打ったり、改行したり、消したりしてみてね。"]
+  ];
+  function add(who, text){
+    const d = document.createElement("div");
+    d.className = "msg " + who;
+    d.textContent = text;
+    list.appendChild(d);
+  }
+  for(let r = 0; r < 3; r++) samples.forEach(s => add(s[0], s[1]));
+
+  const atBottom = () => list.scrollHeight - list.scrollTop - list.clientHeight < 40;
+  const toBottom = () => { list.scrollTop = list.scrollHeight; };
+  toBottom();
+
+  // キーボードが出たり引っこんだりしたら、見えている範囲に画面を合わせる
+  let pending = false;
+  function fit(){
+    pending = false;
+    const vv = window.visualViewport;
+    const stick = atBottom();
+    if(vv){
+      app.style.height = vv.height + "px";
+      app.style.transform = "translateY(" + vv.offsetTop + "px)";
+    }else{
+      app.style.height = window.innerHeight + "px";
+    }
+    if(stick) toBottom();
+  }
+  function schedule(){ if(!pending){ pending = true; requestAnimationFrame(fit); } }
+  if(window.visualViewport){
+    visualViewport.addEventListener("resize", schedule);
+    visualViewport.addEventListener("scroll", schedule);
+  }
+  window.addEventListener("resize", schedule);
+  // ページ全体が勝手に動いたら、元に戻す
+  window.addEventListener("scroll", () => { if(window.scrollY !== 0) window.scrollTo(0, 0); }, { passive:true });
+  fit();
+
+  // 入力欄の高さを、文字に合わせて伸ばす(高さが変わるときだけ動かす)
+  let lastH = 0;
+  function grow(){
+    const stick = atBottom();
+    box.style.height = "auto";
+    const h = Math.min(box.scrollHeight + 2, 160);
+    box.style.height = h + "px";
+    if(h !== lastH){ lastH = h; if(stick) toBottom(); }
+  }
+  box.addEventListener("input", grow);
+  grow();
+
+  function submit(){
+    const t = box.value.trim();
+    if(!t) return;
+    add("me", t);
+    box.value = "";
+    grow();
+    toBottom();
+  }
+  send.addEventListener("click", () => { submit(); box.focus(); });
+})();
+</script>
+</body>
+</html>
