@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#fdf3e3">
 <title>新しいアプリ（仮）</title>
 <style>
-/* 新しいアプリ（仮） 版 0.1 ── 会話の画面と、保存の入れ物だけ */
+/* 新しいアプリ（仮） 版 0.3 ── 会話の画面、保存、部屋とスレッド、AIと話す（Claude・Gemini） */
 :root{
   --sand:#faf6ee; --text:#37474f; --soft:#5d6c73; --line:#e4dccc; --sea:#3f7585;
   --skyA:#fdf3e3; --skyB:#e8f3f5;
@@ -34,6 +34,12 @@ header{
   padding:calc(env(safe-area-inset-top,0px) + 12px) 20px 12px;
   background:linear-gradient(160deg,var(--skyA) 0%,var(--skyB) 80%,var(--sand) 100%);
   border-bottom:1px solid var(--line);
+}
+.top{ display:flex; align-items:flex-start; gap:12px; }
+.titles{ flex:1; min-width:0; }
+.plain{
+  flex-shrink:0; min-height:44px; padding:0 14px; border:1px solid var(--line); border-radius:14px;
+  background:#fffdf9; color:var(--sea); font:inherit; font-size:15px; font-weight:700;
 }
 header h1{ margin:0; font-size:20px; font-weight:700; letter-spacing:.02em; }
 header h1 small{ font-size:13px; font-weight:400; color:var(--soft); margin-left:8px; }
@@ -82,14 +88,112 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   border:1px solid transparent; padding:11px 15px; font:inherit; font-size:17px; line-height:27px;
   white-space:pre-wrap; word-break:break-word; overflow-wrap:break-word;
 }
+/* 部屋とスレッドの画面 */
+.panel{
+  position:absolute; inset:0; z-index:5; background:var(--sand);
+  display:flex; flex-direction:column;
+}
+.panel[hidden], #dlg[hidden]{ display:none; }
+.phead{
+  flex-shrink:0; display:flex; align-items:center; gap:12px;
+  padding:calc(env(safe-area-inset-top,0px) + 12px) 20px 12px;
+  background:linear-gradient(160deg,var(--skyA) 0%,var(--skyB) 80%,var(--sand) 100%);
+  border-bottom:1px solid var(--line);
+}
+.phead h2{ flex:1; margin:0; font-size:20px; }
+.pbody{
+  flex:1 1 auto; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch;
+  padding:16px 16px calc(env(safe-area-inset-bottom,0px) + 24px);
+  display:flex; flex-direction:column; gap:16px;
+}
+.room{ background:#fffdf9; border:1px solid var(--line); border-radius:20px; padding:14px; }
+.rhead{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:10px; }
+.rhead h3{ flex:1; min-width:8em; margin:0; font-size:18px; word-break:break-word; }
+.small{
+  min-height:40px; padding:0 12px; border:1px solid var(--line); border-radius:12px;
+  background:#ffffff; color:var(--sea); font:inherit; font-size:14px;
+}
+.small.danger{ color:#a14a3c; }
+.thread{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:8px 0; border-top:1px solid var(--line); }
+.topen{
+  flex:1; min-width:10em; min-height:48px; text-align:left; padding:8px 12px; border:1px solid var(--line);
+  border-radius:14px; background:#ffffff; color:var(--text); font:inherit; font-size:16px; line-height:1.5; word-break:break-word;
+}
+.topen.now{ background:var(--me-bg); border-color:var(--me-line); font-weight:700; }
+.topen small{ display:block; font-size:12px; font-weight:400; color:var(--soft); }
+.add{
+  width:100%; min-height:48px; margin-top:10px; border:1px dashed #b9cfd6; border-radius:14px;
+  background:#f4fafb; color:var(--sea); font:inherit; font-size:16px; font-weight:700;
+}
+.bar{ display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
+.bar .plain{ min-height:40px; font-size:14px; padding:0 12px; }
+.field{ background:#fffdf9; border:1px solid var(--line); border-radius:20px; padding:16px; }
+.field h3{ margin:0 0 6px; font-size:17px; }
+.field p{ margin:0 0 10px; font-size:14px; line-height:1.8; color:var(--soft); }
+.field input{
+  width:100%; padding:11px 14px; border:1px solid var(--line); border-radius:14px;
+  background:#fff; color:var(--text); font:inherit; font-size:17px; outline:none;
+}
+.field input:focus{ border-color:#9cc3cf; }
+.go{
+  width:100%; min-height:50px; border:none; border-radius:16px; background:var(--sea); color:#fff;
+  font:inherit; font-size:17px; font-weight:700;
+}
+.group{ margin:4px 4px -6px; font-size:14px; font-weight:700; color:var(--soft); }
+.model{
+  width:100%; min-height:56px; text-align:left; padding:10px 14px; border:1px solid var(--line); border-radius:16px;
+  background:#fffdf9; color:var(--text); font:inherit; font-size:17px; line-height:1.5;
+}
+.model.now{ background:var(--me-bg); border-color:var(--me-line); font-weight:700; }
+.model small{ display:block; font-size:13px; font-weight:400; color:var(--soft); }
+.note .detail{ display:block; margin-top:6px; font-size:12px; word-break:break-word; }
+.note button{
+  display:block; margin:10px auto 0; min-height:44px; padding:0 18px; border:none; border-radius:14px;
+  background:var(--sea); color:#fff; font:inherit; font-size:15px; font-weight:700;
+}
+.msg.wait{ color:var(--soft); }
+#send:disabled{ opacity:.45; }
+#dlgArea{
+  width:100%; height:300px; max-height:45vh; margin:0 0 14px; padding:11px 14px; border:1px solid var(--line); border-radius:14px;
+  background:#fff; color:var(--text); font:inherit; font-size:17px; line-height:1.7; outline:none; resize:none;
+}
+#dlgArea:focus{ border-color:#9cc3cf; }
+/* たずねる小窓 */
+#dlg{
+  position:absolute; inset:0; z-index:9; background:rgba(55,71,79,.28);
+  display:flex; align-items:flex-start; justify-content:center; padding:calc(env(safe-area-inset-top,0px) + 50px) 18px 18px; overflow-y:auto;
+}
+#dlg .card{
+  width:100%; max-width:560px; background:#fffdf9; border:1px solid var(--line); border-radius:22px; padding:20px;
+  box-shadow:0 12px 40px rgba(55,71,79,.18);
+}
+#dlgText{ margin:0 0 14px; font-size:17px; line-height:1.8; white-space:pre-line; }
+#dlgInput{
+  width:100%; margin:0 0 14px; padding:11px 14px; border:1px solid var(--line); border-radius:14px;
+  background:#fff; color:var(--text); font:inherit; font-size:17px; outline:none;
+}
+#dlgInput:focus{ border-color:#9cc3cf; }
+#dlg .btns{ display:flex; gap:10px; justify-content:flex-end; }
+#dlg .btns button{ min-height:48px; min-width:96px; padding:0 16px; border-radius:14px; font:inherit; font-size:16px; font-weight:700; }
+#dlgNo{ border:1px solid var(--line); background:#fff; color:var(--text); }
+#dlgYes{ border:none; background:var(--sea); color:#fff; }
 .label{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
 </style>
 </head>
 <body>
 <div id="app">
   <header>
-    <h1>新しいアプリ<small>（仮）版 0.1</small></h1>
-    <p id="where">じゅんび中…</p>
+    <div class="top">
+      <div class="titles">
+        <h1>新しいアプリ<small>（仮）版 0.3</small></h1>
+        <p id="where">じゅんび中…</p>
+      </div>
+    </div>
+    <div class="bar">
+      <button id="openRooms" class="plain" type="button">部屋とスレッド</button>
+      <button id="openModels" class="plain" type="button">モデル</button>
+      <button id="openSettings" class="plain" type="button">設定</button>
+    </div>
     <p id="state" aria-hidden="true"></p>
   </header>
   <main id="list" aria-live="polite"></main>
@@ -99,11 +203,60 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     <button id="send" type="button">送る</button>
     <div id="mirror" aria-hidden="true"></div>
   </footer>
+  <section id="rooms" class="panel" hidden aria-label="部屋とスレッド">
+    <div class="phead">
+      <h2>部屋とスレッド</h2>
+      <button id="closeRooms" class="plain" type="button">閉じる</button>
+    </div>
+    <div id="roomList" class="pbody"></div>
+  </section>
+  <section id="models" class="panel" hidden aria-label="モデルを選ぶ">
+    <div class="phead">
+      <h2>モデルを選ぶ</h2>
+      <button id="closeModels" class="plain" type="button">閉じる</button>
+    </div>
+    <div id="modelList" class="pbody"></div>
+  </section>
+  <section id="settings" class="panel" hidden aria-label="設定">
+    <div class="phead">
+      <h2>設定</h2>
+      <button id="closeSettings" class="plain" type="button">閉じる</button>
+    </div>
+    <div class="pbody">
+      <div class="field">
+        <h3>ClaudeのAPIキー</h3>
+        <p>Claude Console で作ったキーを貼ってください。</p>
+        <input id="keyClaude" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="sk-ant-…">
+      </div>
+      <div class="field">
+        <h3>GeminiのAPIキー</h3>
+        <p>Google AI Studio で作ったキーを貼ってください。使わないなら、空のままで大丈夫です。</p>
+        <input id="keyGemini" type="password" autocomplete="off" autocapitalize="off" spellcheck="false">
+      </div>
+      <button id="showKeys" class="small" type="button">キーを見えるようにする</button>
+      <button id="saveKeys" class="go" type="button">キーを保存する</button>
+      <div class="field">
+        <h3>キーのあつかい</h3>
+        <p>キーは、このiPadの中だけに保存します。会話を送るときに、そのAIの会社にだけ送ります。<br>料金は、1ドル155円で計算した目安です。</p>
+      </div>
+    </div>
+  </section>
+  <div id="dlg" hidden role="dialog" aria-modal="true">
+    <div class="card">
+      <p id="dlgText"></p>
+      <input id="dlgInput" type="text" autocomplete="off" maxlength="60">
+      <textarea id="dlgArea"></textarea>
+      <div class="btns">
+        <button id="dlgNo" type="button">やめる</button>
+        <button id="dlgYes" type="button">OK</button>
+      </div>
+    </div>
+  </div>
 </div>
 <script>
 (function(){
   "use strict";
-  const VERSION = "0.1";
+  const VERSION = "0.3";
   const app = document.getElementById("app");
   const list = document.getElementById("list");
   const box = document.getElementById("msg");
@@ -111,6 +264,136 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   const mirror = document.getElementById("mirror");
   const where = document.getElementById("where");
   const state = document.getElementById("state");
+
+  /* ───────── たずねる小窓（名前を入れる、確かめる、知らせる） ───────── */
+  const dlg = document.getElementById("dlg");
+  const dlgText = document.getElementById("dlgText");
+  const dlgInput = document.getElementById("dlgInput");
+  const dlgArea = document.getElementById("dlgArea");
+  const dlgYes = document.getElementById("dlgYes");
+  const dlgNo = document.getElementById("dlgNo");
+  let dlgDone = null;
+  // input:true なら入れた文字、そうでなければ true を返す。やめたら null
+  function dialog(o){
+    return new Promise(resolve => {
+      dlgText.textContent = o.text;
+      dlgInput.hidden = !o.input;
+      dlgInput.value = o.value || "";
+      dlgArea.hidden = !o.area;
+      dlgArea.value = o.area ? (o.value || "") : "";
+      dlgYes.textContent = o.yes || "OK";
+      dlgNo.textContent = o.no || "やめる";
+      dlgNo.hidden = !!o.only;
+      dlg.hidden = false;
+      dlgDone = v => { dlg.hidden = true; dlgDone = null; resolve(v); };
+      if(o.input) setTimeout(() => { dlgInput.focus(); dlgInput.select(); }, 50);
+    });
+  }
+  dlgYes.addEventListener("click", () => {
+    if(!dlgDone) return;
+    if(!dlgArea.hidden){ dlgArea.blur(); dlgDone({ text:dlgArea.value }); return; }
+    if(!dlgInput.hidden){
+      const v = dlgInput.value.trim();
+      if(!v){ dlgInput.focus(); return; }
+      dlgInput.blur(); dlgDone(v);
+    }else dlgDone(true);
+  });
+  dlgNo.addEventListener("click", () => { if(dlgDone){ dlgInput.blur(); dlgArea.blur(); dlgDone(null); } });
+  const tell = text => dialog({ text:text, only:true, yes:"わかった" });
+
+  /* ───────── モデルの一覧（ここ1か所にまとめる） ─────────
+     pin / pout は、100万トークンあたりの料金（ドル）。
+     Claude は公式の料金表で 2026年11月11日に確認。Gemini は 2026年10月末の情報で、公式ページでは未確認。 */
+  const RATE = 155;            // 1ドル = 155円 で計算
+  const SEND_COUNT = 40;       // AIに送る発言の数
+  const DEFAULT_MODEL = "claude-sonnet-5-5";
+  const MODELS = [
+    { id:"claude-sonnet-5-5", by:"claude", name:"Claude Sonnet 5.5", pin:2,    pout:10 },
+    { id:"claude-opus-5-5",   by:"claude", name:"Claude Opus 5.5",   pin:4,    pout:20 },
+    { id:"claude-haiku-5-5",  by:"claude", name:"Claude Haiku 5.5",  pin:0.1,  pout:0.5 },
+    { id:"claude-fable-5-2",  by:"claude", name:"Claude Fable 5.2",  pin:8,    pout:40 },
+    { id:"claude-opus-4-6",   by:"claude", name:"Claude Opus 4.6（前の世代）",   pin:5, pout:25 },
+    { id:"claude-sonnet-4-6", by:"claude", name:"Claude Sonnet 4.6（前の世代）", pin:3, pout:15 },
+    { id:"claude-sonnet-4-5", by:"claude", name:"Claude Sonnet 4.5（前の世代）", pin:3, pout:15 },
+    { id:"gemini-3.8-flash",       by:"gemini", name:"Gemini 3.8 Flash", pin:0.75, pout:3.75 },
+    { id:"gemini-3.1-pro-preview", by:"gemini", name:"Gemini 3.1 Pro",   pin:2,    pout:12 }
+  ];
+  const COMPANY = { claude:"Claude", gemini:"Gemini" };
+  const modelOf = id => MODELS.find(m => m.id === id) || null;
+  const yen = usd => {
+    const y = usd * RATE;
+    return y < 0.05 ? "0.1円未満" : "約" + (y < 10 ? y.toFixed(1) : Math.round(y)) + "円";
+  };
+
+  /* ───────── AIの会社に送る ───────── */
+  function trouble(plain, detail){ const e = new Error(plain); e.plain = plain; e.detail = detail || ""; return e; }
+  function fail(status, msg, who){
+    const d = status + (msg ? " " + msg : "");
+    if(/credit balance/i.test(msg || "")) return trouble("APIの残高が足りないようです。\n" + who + "の管理画面で、残高を確かめてください。", d);
+    if(status === 401 || status === 403) return trouble(who + "のAPIキーが正しくないようです。\n「設定」で確かめてください。", d);
+    if(status === 404) return trouble("このモデルは使えなくなったようです。\n別のモデルを選んでね。", d);
+    if(status === 429) return trouble("今は、使いすぎの制限にかかっています。\n少し待ってから、もう一度ためしてください。", d);
+    if(status >= 500) return trouble(who + "のほうが混んでいるようです。\n少し待ってから、もう一度ためしてください。", d);
+    return trouble("送った内容を、" + who + "が受け付けませんでした。", d);
+  }
+  async function post(url, headers, body, signal, who){
+    let res;
+    try{
+      res = await fetch(url, { method:"POST", headers:headers, body:JSON.stringify(body), signal:signal });
+    }catch(e){
+      if(e && e.name === "AbortError") throw e;
+      throw trouble("通信できませんでした。\n電波やWi-Fiを確かめて、もう一度ためしてください。", String(e && e.message || e));
+    }
+    let data = null;
+    try{ data = await res.json(); }catch(e){}
+    if(!res.ok) throw fail(res.status, data && data.error && data.error.message, who);
+    if(!data) throw trouble("返事を読み取れませんでした。もう一度ためしてください。");
+    return data;
+  }
+  async function askClaude(model, key, persona, turns, signal){
+    const body = { model:model.id, max_tokens:4096, messages:turns.map(t => ({ role:t.role, content:t.text })) };
+    if(persona.trim()) body.system = persona;
+    const data = await post("https://api.anthropic.com/v1/messages", {
+      "content-type":"application/json", "x-api-key":key, "anthropic-version":"2023-06-01",
+      "anthropic-dangerous-direct-browser-access":"true"
+    }, body, signal, "Claude");
+    const text = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("");
+    if(!text.trim()) throw trouble("返事が空でした。もう一度ためしてください。", "stop_reason: " + data.stop_reason);
+    const u = data.usage || {};
+    const usd = ((u.input_tokens || 0) * model.pin + (u.cache_creation_input_tokens || 0) * model.pin * 1.25 +
+      (u.cache_read_input_tokens || 0) * model.pin * 0.1 + (u.output_tokens || 0) * model.pout) / 1e6;
+    return { text:text, usd:usd, cut:data.stop_reason === "max_tokens",
+      usage:{ input:(u.input_tokens || 0) + (u.cache_creation_input_tokens || 0) + (u.cache_read_input_tokens || 0), output:u.output_tokens || 0 } };
+  }
+  async function askGemini(model, key, persona, turns, signal){
+    const body = { contents:turns.map(t => ({ role:t.role === "assistant" ? "model" : "user", parts:[{ text:t.text }] })) };
+    if(persona.trim()) body.systemInstruction = { parts:[{ text:persona }] };
+    const data = await post("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model.id) + ":generateContent", {
+      "content-type":"application/json", "x-goog-api-key":key
+    }, body, signal, "Gemini");
+    const c = (data.candidates || [])[0];
+    const text = c && c.content && c.content.parts ? c.content.parts.filter(p => !p.thought && typeof p.text === "string").map(p => p.text).join("") : "";
+    if(!text.trim()){
+      const why = (data.promptFeedback && data.promptFeedback.blockReason) || (c && c.finishReason) || "";
+      throw trouble("Geminiが返事を出しませんでした。\n内容がGeminiの決まりに引っかかったのかもしれません。", why);
+    }
+    const u = data.usageMetadata || {};
+    const out = (u.candidatesTokenCount || 0) + (u.thoughtsTokenCount || 0);
+    const usd = ((u.promptTokenCount || 0) * model.pin + out * model.pout) / 1e6;
+    return { text:text, usd:usd, cut:c.finishReason === "MAX_TOKENS", usage:{ input:u.promptTokenCount || 0, output:out } };
+  }
+  // 発言を、AIに送る形にそろえる（同じ人の発言が続いたら1つにまとめ、自分の発言から始める）
+  function buildTurns(msgs){
+    const turns = [];
+    msgs.forEach(m => {
+      const role = m.role === "ai" ? "assistant" : "user";
+      const last = turns[turns.length - 1];
+      if(last && last.role === role) last.text += "\n\n" + m.text;
+      else turns.push({ role:role, text:m.text });
+    });
+    while(turns.length && turns[0].role !== "user") turns.shift();
+    return turns;
+  }
 
   /* ───────── 空の色（朝・昼・夕方・夜。いつも明るい画面） ───────── */
   const SKIES = [
@@ -217,6 +500,34 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       g.onsuccess = () => { const th = g.result; if(th){ th.updatedAt = m.createdAt; ts.put(th); } };
     });
   }
+  const getAll = name => ask(db.transaction(name).objectStore(name).getAll());
+  const getOne = (name, id) => ask(db.transaction(name).objectStore(name).get(id));
+  const putOne = (name, v) => tx(name, "readwrite", t => { t.objectStore(name).put(v); });
+  async function setCurrent(roomId, threadId){
+    const meta = (await getOne("meta", "app")) || { key:"app", schema:SCHEMA, createdAt:Date.now() };
+    meta.currentRoomId = roomId; meta.currentThreadId = threadId;
+    await putOne("meta", meta);
+  }
+  // スレッドを、中の発言ごと消す（いくつでも、ひとまとめに）
+  function removeThreads(ids, roomId){
+    return tx(["messages","threads","rooms"], "readwrite", t => {
+      const ms = t.objectStore("messages"), idx = ms.index("threadId");
+      ids.forEach(id => {
+        const c = idx.openKeyCursor(IDBKeyRange.only(id));
+        c.onsuccess = () => { const cur = c.result; if(cur){ ms.delete(cur.primaryKey); cur.continue(); } };
+        t.objectStore("threads").delete(id);
+      });
+      if(roomId) t.objectStore("rooms").delete(roomId);
+    });
+  }
+  let keys = { claude:"", gemini:"" };
+  let prefs = { lastModel:DEFAULT_MODEL };
+  async function loadSettings(){
+    const k = await getOne("meta", "keys");
+    if(k) keys = { claude:k.claude || "", gemini:k.gemini || "" };
+    const p = await getOne("meta", "prefs");
+    if(p && p.lastModel) prefs.lastModel = p.lastModel;
+  }
   function removeMessage(id){
     return tx("messages", "readwrite", t => { t.objectStore("messages").delete(id); });
   }
@@ -236,7 +547,8 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   let hint = null;
   function showHint(){
     if(count === 0 && !hint){
-      hint = note("まだAIとは話せません。\nここで打った文字が、アプリを閉じても残るかを確かめる版です。");
+      hint = note((keys.claude || keys.gemini) ? "ここから会話を始められます。"
+        : "まだAPIキーが入っていません。\n上の「設定」からキーを入れると、AIと話せます。");
       hint.style.whiteSpace = "pre-line";
     }else if(count > 0 && hint){ hint.remove(); hint = null; }
   }
@@ -259,18 +571,298 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     del.type = "button";
     del.textContent = "削除";
     del.addEventListener("click", async () => {
-      if(!window.confirm("この発言を削除しますか？\n削除すると、元に戻せません。")) return;
+      if(!await dialog({ text:"この発言を削除しますか？\n削除すると、元に戻せません。", yes:"削除する" })) return;
       try{
         await removeMessage(m.id);
         row.remove();
         count--; showHint(); showState();
-      }catch(e){ window.alert("削除できませんでした。もう一度ためしてください。"); }
+      }catch(e){ tell("削除できませんでした。もう一度ためしてください。"); }
     });
-    u.appendChild(t); u.appendChild(del);
+    u.appendChild(t);
+    if(m.role === "ai"){
+      const mo = modelOf(m.model);
+      let info = mo ? mo.name : (m.model || "");
+      if(typeof m.usd === "number") info += " ・ " + yen(m.usd);
+      if(m.cut) info += " ・ 長くて途中で切れました";
+      if(info) u.appendChild(el("span", "", info));
+    }
+    u.appendChild(del);
+    row.id = "m-" + m.id;
     row.appendChild(b); row.appendChild(u);
     list.appendChild(row);
+    return row;
   }
   const toBottom = () => { list.scrollTop = list.scrollHeight; };
+
+  // いま開いているスレッドの会話を、画面に出しなおす
+  const modelBtn = document.getElementById("openModels");
+  async function currentModelId(){
+    const th = await getOne("threads", current.threadId);
+    return (th && th.model) || prefs.lastModel || DEFAULT_MODEL;
+  }
+  async function showModel(){
+    const mo = modelOf(await currentModelId());
+    modelBtn.textContent = "モデル：" + (mo ? mo.name.replace("Claude ", "").replace("（前の世代）", "") : "選びなおしてね");
+  }
+  async function openCurrent(){
+    where.textContent = current.roomName + " ／ " + current.threadName;
+    clearProblem();
+    await showModel();
+    list.textContent = ""; hint = null;
+    const msgs = await loadMessages();
+    count = msgs.length;
+    showHint();
+    msgs.forEach(draw);
+    toBottom();
+    showState();
+  }
+
+  /* ───────── 返事をもらう ───────── */
+  let waiting = null, problemNote = null;
+  function clearProblem(){ if(problemNote){ problemNote.remove(); problemNote = null; } }
+  function problem(text, retry, detail){
+    clearProblem();
+    const d = note(text);
+    d.style.whiteSpace = "pre-line";
+    if(detail) d.appendChild(el("span", "detail", "くわしい内容： " + detail));
+    if(retry){
+      const b = el("button", "", "もう一度ためす");
+      b.type = "button";
+      b.addEventListener("click", () => { clearProblem(); reply(); });
+      d.appendChild(b);
+    }
+    problemNote = d;
+    toBottom();
+  }
+  async function reply(){
+    if(waiting || !db) return;
+    clearProblem();
+    const threadId = current.threadId, roomId = current.roomId;
+    const model = modelOf(await currentModelId());
+    if(!model){ problem("このモデルは使えなくなりました。\n上の「モデル」から、別のモデルを選んでね。", false); return; }
+    const key = keys[model.by];
+    if(!key){ problem(COMPANY[model.by] + "のAPIキーがまだ入っていません。\n上の「設定」から入れてください。", true); return; }
+    const room = await getOne("rooms", roomId);
+    const turns = buildTurns((await loadMessages()).slice(-SEND_COUNT));
+    if(!turns.length || turns[turns.length - 1].role !== "user") return;
+    const ctl = new AbortController();
+    const row = el("div", "row ai");
+    row.appendChild(el("div", "msg wait", "返事を待っています…"));
+    const u = el("div", "under");
+    const stop = el("button", "", "止める");
+    stop.type = "button";
+    stop.addEventListener("click", () => ctl.abort());
+    u.appendChild(stop); row.appendChild(u);
+    list.appendChild(row);
+    toBottom();
+    waiting = ctl; send.disabled = true;
+    try{
+      const r = await (model.by === "claude" ? askClaude : askGemini)(model, key, (room && room.persona) || "", turns, ctl.signal);
+      const m = { id:newId(), threadId:threadId, roomId:roomId, role:"ai", text:r.text, createdAt:Date.now(),
+        model:model.id, usage:r.usage, usd:r.usd, cut:r.cut };
+      await saveMessage(m);
+      row.remove();
+      if(current.threadId === threadId){
+        count++; showHint();
+        const newRow = draw(m);
+        // 返事のはじめが見える位置まで動かす（返事が短ければ、いちばん下まで）
+        list.scrollTop = Math.max(0, newRow.offsetTop - list.offsetTop - 12);
+      }
+    }catch(e){
+      row.remove();
+      if(current.threadId === threadId){
+        if(e && e.name === "AbortError") problem("返事を待つのをやめました。", true);
+        else problem((e && e.plain) || "うまくいきませんでした。もう一度ためしてください。", true, e && (e.detail || (!e.plain && e.message)));
+      }
+    }
+    waiting = null; send.disabled = false;
+    showState();
+  }
+
+  /* ───────── モデルを選ぶ ───────── */
+  const modelsPanel = document.getElementById("models");
+  const modelList = document.getElementById("modelList");
+  async function drawModels(){
+    const nowId = await currentModelId();
+    modelList.textContent = "";
+    if(!modelOf(nowId)) modelList.appendChild(note("このモデルは使えなくなりました。別のモデルを選んでね。"));
+    ["claude", "gemini"].forEach(by => {
+      modelList.appendChild(el("p", "group", COMPANY[by] + (keys[by] ? "" : "（APIキーがまだ入っていません）")));
+      MODELS.filter(m => m.by === by).forEach(m => {
+        const b = el("button", "model" + (m.id === nowId ? " now" : ""), m.name);
+        b.type = "button";
+        b.appendChild(el("small", "", (m.id === nowId ? "いま選んでいる ・ " : "") +
+          "送る文字 $" + m.pin + " ／ 返事の文字 $" + m.pout + "（100万トークンあたり）"));
+        b.addEventListener("click", async () => {
+          try{
+            const th = await getOne("threads", current.threadId);
+            th.model = m.id; await putOne("threads", th);
+            prefs.lastModel = m.id; await putOne("meta", { key:"prefs", lastModel:m.id });
+            await showModel(); clearProblem();
+            modelsPanel.hidden = true;
+          }catch(e){ tell("モデルを変えられませんでした。もう一度ためしてください。"); }
+        });
+        modelList.appendChild(b);
+      });
+    });
+    modelList.appendChild(note("モデルは、スレッドごとに覚えます。\n料金は、返事ごとに、発言の下に出ます。")).style.whiteSpace = "pre-line";
+  }
+  modelBtn.addEventListener("click", async () => {
+    if(!db) return;
+    box.blur();
+    try{ await drawModels(); modelsPanel.hidden = false; }
+    catch(e){ tell("モデルの一覧を開けませんでした。もう一度ためしてください。"); }
+  });
+  document.getElementById("closeModels").addEventListener("click", () => { modelsPanel.hidden = true; });
+
+  /* ───────── 設定（APIキー） ───────── */
+  const settingsPanel = document.getElementById("settings");
+  const keyClaude = document.getElementById("keyClaude");
+  const keyGemini = document.getElementById("keyGemini");
+  const showKeys = document.getElementById("showKeys");
+  document.getElementById("openSettings").addEventListener("click", () => {
+    if(!db) return;
+    box.blur();
+    keyClaude.value = keys.claude; keyGemini.value = keys.gemini;
+    keyClaude.type = keyGemini.type = "password";
+    showKeys.textContent = "キーを見えるようにする";
+    settingsPanel.hidden = false;
+  });
+  showKeys.addEventListener("click", () => {
+    const hide = keyClaude.type !== "password";
+    keyClaude.type = keyGemini.type = hide ? "password" : "text";
+    showKeys.textContent = hide ? "キーを見えるようにする" : "キーをかくす";
+  });
+  document.getElementById("saveKeys").addEventListener("click", async () => {
+    const k = { key:"keys", claude:keyClaude.value.trim(), gemini:keyGemini.value.trim() };
+    try{
+      await putOne("meta", k);
+      keys = { claude:k.claude, gemini:k.gemini };
+      keyClaude.blur(); keyGemini.blur();
+      if(hint){ hint.remove(); hint = null; showHint(); }
+      settingsPanel.hidden = true;
+      await tell("キーを保存しました。");
+    }catch(e){ tell("キーを保存できませんでした。もう一度ためしてください。"); }
+  });
+  document.getElementById("closeSettings").addEventListener("click", () => { keyClaude.blur(); keyGemini.blur(); settingsPanel.hidden = true; });
+
+  /* ───────── 部屋とスレッド ───────── */
+  const panel = document.getElementById("rooms");
+  const roomList = document.getElementById("roomList");
+  function el(tag, cls, text){
+    const e = document.createElement(tag);
+    if(cls) e.className = cls;
+    if(text != null) e.textContent = text;
+    return e;
+  }
+  function btn(cls, text, fn){
+    const b = el("button", cls, text);
+    b.type = "button";
+    b.addEventListener("click", () => { Promise.resolve(fn()).catch(() => tell("うまくいきませんでした。もう一度ためしてください。")); });
+    return b;
+  }
+  async function goThread(th, room){
+    current = { roomId:room.id, threadId:th.id, roomName:room.name, threadName:th.name };
+    await setCurrent(room.id, th.id);
+    await openCurrent();
+    panel.hidden = true;
+  }
+  async function makeThread(room, name){
+    const now = Date.now();
+    const th = { id:newId(), roomId:room.id, name:name, createdAt:now, updatedAt:now, model:prefs.lastModel };
+    await putOne("threads", th);
+    return th;
+  }
+  async function drawRooms(){
+    const rooms = (await getAll("rooms")).sort((a, b) => a.createdAt - b.createdAt);
+    const threads = (await getAll("threads")).sort((a, b) => b.updatedAt - a.updatedAt);
+    roomList.textContent = "";
+    rooms.forEach(room => {
+      const mine = threads.filter(t => t.roomId === room.id);
+      const card = el("div", "room");
+      const head = el("div", "rhead");
+      head.appendChild(el("h3", "", room.name));
+      head.appendChild(btn("small", "名前を変える", async () => {
+        const v = await dialog({ text:"部屋の名前", input:true, value:room.name, yes:"変える" });
+        if(!v) return;
+        room.name = v; await putOne("rooms", room);
+        if(current.roomId === room.id){ current.roomName = v; where.textContent = current.roomName + " ／ " + current.threadName; }
+        await drawRooms();
+      }));
+      head.appendChild(btn("small", "キャラ設定", async () => {
+        const r = await dialog({ text:"「" + room.name + "」のキャラ設定\nここに書いたことを、毎回AIに伝えます。", area:true, value:room.persona || "", yes:"保存する" });
+        if(!r) return;
+        room.persona = r.text; await putOne("rooms", room);
+      }));
+      head.appendChild(btn("small danger", "部屋を削除", async () => {
+        if(rooms.length < 2){ await tell("部屋が1つだけのときは、削除できません。\n先に、別の部屋を作ってください。"); return; }
+        const ok = await dialog({ text:"「" + room.name + "」を削除しますか？\n中のスレッド " + mine.length + "個と、その会話がすべて消えます。元に戻せません。", yes:"削除する" });
+        if(!ok) return;
+        await removeThreads(mine.map(t => t.id), room.id);
+        if(current.roomId === room.id){
+          const other = rooms.find(r => r.id !== room.id);
+          let th = threads.find(t => t.roomId === other.id);
+          if(!th) th = await makeThread(other, "スレッド 1");
+          current = { roomId:other.id, threadId:th.id, roomName:other.name, threadName:th.name };
+          await setCurrent(other.id, th.id);
+          await openCurrent();
+        }
+        await drawRooms();
+      }));
+      card.appendChild(head);
+      mine.forEach(th => {
+        const row = el("div", "thread");
+        const now = th.id === current.threadId;
+        const open = btn("topen" + (now ? " now" : ""), th.name, () => goThread(th, room));
+        open.appendChild(el("small", "", (now ? "いま開いている ・ " : "") + "さいごに話した日 " + when(th.updatedAt)));
+        row.appendChild(open);
+        row.appendChild(btn("small", "名前を変える", async () => {
+          const v = await dialog({ text:"スレッドの名前", input:true, value:th.name, yes:"変える" });
+          if(!v) return;
+          th.name = v; await putOne("threads", th);
+          if(now){ current.threadName = v; where.textContent = current.roomName + " ／ " + current.threadName; }
+          await drawRooms();
+        }));
+        row.appendChild(btn("small danger", "削除", async () => {
+          if(mine.length < 2){ await tell("部屋の中のスレッドが1つだけのときは、削除できません。\n先に、別のスレッドを作ってください。"); return; }
+          const ok = await dialog({ text:"スレッド「" + th.name + "」を削除しますか？\n中の会話がすべて消えます。元に戻せません。", yes:"削除する" });
+          if(!ok) return;
+          await removeThreads([th.id], null);
+          if(now){
+            const other = mine.find(t => t.id !== th.id);
+            current = { roomId:room.id, threadId:other.id, roomName:room.name, threadName:other.name };
+            await setCurrent(room.id, other.id);
+            await openCurrent();
+          }
+          await drawRooms();
+        }));
+        card.appendChild(row);
+      });
+      card.appendChild(btn("add", "＋ この部屋にスレッドを作る", async () => {
+        const v = await dialog({ text:"新しいスレッドの名前", input:true, value:"スレッド " + (mine.length + 1), yes:"作る" });
+        if(!v) return;
+        const th = await makeThread(room, v);
+        await goThread(th, room);
+      }));
+      roomList.appendChild(card);
+    });
+    roomList.appendChild(btn("add", "＋ 部屋を作る", async () => {
+      const v = await dialog({ text:"新しい部屋の名前", input:true, value:"", yes:"作る" });
+      if(!v) return;
+      const now = Date.now();
+      const room = { id:newId(), name:v, createdAt:now, order:rooms.length, persona:"", colors:{ me:"水色", ai:"白" } };
+      await putOne("rooms", room);
+      const th = await makeThread(room, "スレッド 1");
+      await goThread(th, room);
+    }));
+  }
+  document.getElementById("openRooms").addEventListener("click", async () => {
+    if(!db) return;
+    box.blur();
+    try{ await drawRooms(); panel.hidden = false; }
+    catch(e){ tell("部屋の一覧を開けませんでした。もう一度ためしてください。"); }
+  });
+  document.getElementById("closeRooms").addEventListener("click", () => { panel.hidden = true; });
 
   /* ───────── 画面の土台（揺れの試し（3）と同じ作り） ───────── */
   let lastH = -1, lastT = "";
@@ -318,7 +910,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   let busy = false;
   async function submit(){
     const text = box.value.replace(/\s+$/, "");
-    if(!text.trim() || busy || !db) return;
+    if(!text.trim() || busy || waiting || !db) return;
     busy = true;
     const m = { id:newId(), threadId:current.threadId, roomId:current.roomId, role:"me", text:text, createdAt:Date.now() };
     try{
@@ -329,8 +921,11 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       grow();
       toBottom();
       showState();
+      busy = false;
+      reply();
+      return;
     }catch(e){
-      window.alert("保存できませんでした。文字は入力欄に残してあります。もう一度「送る」を押してください。");
+      tell("保存できませんでした。文字は入力欄に残してあります。もう一度「送る」を押してください。");
     }
     busy = false;
   }
@@ -342,12 +937,8 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       db = await openDB();
       db.onversionchange = () => { db.close(); };
       await prepare();
-      where.textContent = current.roomName + " ／ " + current.threadName;
-      const msgs = await loadMessages();
-      count = msgs.length;
-      showHint();
-      msgs.forEach(draw);
-      toBottom();
+      await loadSettings();
+      await openCurrent();
       // 「勝手に消さないで」とiPadにお願いする（聞き入れられたかを表示する）
       if(navigator.storage && navigator.storage.persist){
         let ok = false;
