@@ -6,74 +6,91 @@
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="試し">
+<meta name="apple-mobile-web-app-title" content="新しいアプリ">
 <meta name="theme-color" content="#fdf3e3">
-<title>揺れの試し（3）</title>
+<title>新しいアプリ（仮）</title>
 <style>
+/* 新しいアプリ（仮） 版 0.1 ── 会話の画面と、保存の入れ物だけ */
 :root{
-  --sand:#faf6ee; --card:#ffffff; --line:#e4dccc; --text:#37474f; --soft:#57676f;
-  --sea:#3f7585; --me:#eaf5f8; --me-line:#cfe4ea;
+  --sand:#faf6ee; --text:#37474f; --soft:#5d6c73; --line:#e4dccc; --sea:#3f7585;
   --skyA:#fdf3e3; --skyB:#e8f3f5;
+  /* 文字欄の色（あとで部屋ごとに選べるようにする。今は AI=白、自分=水色） */
+  --ai-bg:#ffffff; --ai-line:#e4dccc; --ai-text:#37474f;
+  --me-bg:#eaf5f8; --me-line:#cfe4ea; --me-text:#37474f;
 }
 *{ box-sizing:border-box; }
 html,body{ margin:0; height:100%; overflow:hidden; overscroll-behavior:none; background:var(--sand); }
-body{ position:fixed; top:0; left:0; right:0; bottom:0; width:100%; }
-body{ color:var(--text); font-family:"Hiragino Maru Gothic ProN","Hiragino Sans",sans-serif; -webkit-text-size-adjust:100%; }
-/* 画面いっぱいに固定。キーボードが出たら、見えている高さに合わせて縮める */
+body{
+  position:fixed; top:0; left:0; right:0; bottom:0; width:100%;
+  color:var(--text); font-family:"Hiragino Maru Gothic ProN","Hiragino Sans",sans-serif;
+  -webkit-text-size-adjust:100%;
+}
 #app{
   position:fixed; top:0; left:0; right:0; height:100dvh;
   display:flex; flex-direction:column; background:var(--sand);
 }
 header{
   flex-shrink:0;
-  padding:calc(env(safe-area-inset-top,0px) + 14px) 20px 14px;
+  padding:calc(env(safe-area-inset-top,0px) + 12px) 20px 12px;
   background:linear-gradient(160deg,var(--skyA) 0%,var(--skyB) 80%,var(--sand) 100%);
   border-bottom:1px solid var(--line);
 }
-header h1{ margin:0; font-size:21px; font-weight:700; }
-header p{ margin:4px 0 0; font-size:14px; color:var(--soft); line-height:1.6; }
+header h1{ margin:0; font-size:20px; font-weight:700; letter-spacing:.02em; }
+header h1 small{ font-size:13px; font-weight:400; color:var(--soft); margin-left:8px; }
+#where{ margin:3px 0 0; font-size:14px; color:var(--soft); }
+#state{ margin:3px 0 0; font-size:12px; color:var(--soft); }
 #list{
   flex:1 1 auto; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch;
-  overscroll-behavior:contain; padding:18px 18px 12px;
+  overscroll-behavior:contain; padding:18px 18px 14px;
   display:flex; flex-direction:column; gap:14px;
 }
-.msg{ max-width:80%; padding:12px 15px; font-size:17px; line-height:1.8; white-space:pre-wrap; word-break:break-word; }
-.ai{ align-self:flex-start; background:var(--card); border:1px solid var(--line); border-radius:20px 20px 20px 6px; }
-.me{ align-self:flex-end; background:var(--me); border:1px solid var(--me-line); border-radius:20px 20px 6px 20px; }
+.note{
+  align-self:center; max-width:34em; text-align:center; font-size:15px; line-height:1.8;
+  color:var(--soft); padding:10px 16px; border:1px dashed var(--line); border-radius:16px; background:#fffdf9;
+}
+.row{ display:flex; flex-direction:column; max-width:80%; }
+.row.me{ align-self:flex-end; align-items:flex-end; }
+.row.ai{ align-self:flex-start; align-items:flex-start; }
+.msg{ padding:12px 15px; font-size:17px; line-height:1.8; white-space:pre-wrap; word-break:break-word; overflow-wrap:break-word; }
+.row.ai .msg{ background:var(--ai-bg); border:1px solid var(--ai-line); color:var(--ai-text); border-radius:20px 20px 20px 6px; }
+.row.me .msg{ background:var(--me-bg); border:1px solid var(--me-line); color:var(--me-text); border-radius:20px 20px 6px 20px; }
+.under{ display:flex; gap:12px; align-items:center; margin-top:4px; padding:0 6px; font-size:12px; color:var(--soft); }
+.under button{
+  border:none; background:none; color:var(--sea); font:inherit; font-size:13px;
+  padding:6px 4px; min-height:32px;
+}
 footer{
-  flex-shrink:0; display:flex; gap:10px; align-items:flex-end;
+  flex-shrink:0; display:flex; gap:10px; align-items:flex-end; position:relative;
   padding:10px 14px calc(env(safe-area-inset-bottom,0px) + 14px);
-  position:relative;
   background:#fffdf9; border-top:1px solid var(--line);
 }
 textarea{
   flex:1; min-width:0; resize:none; border:1px solid var(--line); border-radius:18px;
-  background:var(--card); color:var(--text); padding:11px 15px;
+  background:#ffffff; color:var(--text); padding:11px 15px;
   font:inherit; font-size:17px; line-height:27px; height:51px; max-height:160px; overflow-y:auto;
   outline:none;
 }
+textarea:focus{ border-color:#9cc3cf; }
+#send{
+  flex-shrink:0; min-height:48px; min-width:84px; padding:0 18px; border:none; border-radius:16px;
+  background:var(--sea); color:#fff; font:inherit; font-size:16px; font-weight:700;
+}
+button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
 /* 入力欄の高さを測るための、見えない写し */
 #mirror{
   position:absolute; left:-9999px; top:0; visibility:hidden; pointer-events:none;
   border:1px solid transparent; padding:11px 15px; font:inherit; font-size:17px; line-height:27px;
   white-space:pre-wrap; word-break:break-word; overflow-wrap:break-word;
 }
-#dbg{ display:block; margin-top:4px; font-size:12px; color:var(--soft); }
-textarea:focus{ border-color:#9cc3cf; }
-button{
-  flex-shrink:0; min-height:48px; min-width:84px; padding:0 18px; border:none; border-radius:16px;
-  background:var(--sea); color:#fff; font:inherit; font-size:16px; font-weight:700;
-}
-button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
 .label{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
 </style>
 </head>
 <body>
 <div id="app">
   <header>
-    <h1>揺れの試し（3）</h1>
-    <p>ここは試しのページです。文字を打って、画面が揺れないか見てください。AIは返事をしません。</p>
-    <span id="dbg" aria-hidden="true"></span>
+    <h1>新しいアプリ<small>（仮）版 0.1</small></h1>
+    <p id="where">じゅんび中…</p>
+    <p id="state" aria-hidden="true"></p>
   </header>
   <main id="list" aria-live="polite"></main>
   <footer>
@@ -85,44 +102,177 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
 </div>
 <script>
 (function(){
+  "use strict";
+  const VERSION = "0.1";
   const app = document.getElementById("app");
   const list = document.getElementById("list");
   const box = document.getElementById("msg");
   const send = document.getElementById("send");
+  const mirror = document.getElementById("mirror");
+  const where = document.getElementById("where");
+  const state = document.getElementById("state");
 
-  // 試し用の会話(スクロールの具合も見られるように、少し多めに)
-  const samples = [
-    ["ai","おはよう。今日はどう？"],
-    ["me","今日は少し調子がいいよ。昨日より眠れたかも。"],
-    ["ai","それはよかった。眠れた朝は、それだけで少し気持ちが軽くなるよね。"],
-    ["me","うん。午後は少し散歩しようかな。"],
-    ["ai","いいね。風が気持ちいい時間だといいな。帰ってきたら、どうだったか聞かせてね。"],
-    ["me","長めの文章も打ってみるね。改行もしてみる。\nこんな感じで、二行目。\n三行目も。"],
-    ["ai","ちゃんと届いてるよ。下の入力欄で、たくさん文字を打ったり、改行したり、消したりしてみてね。"]
+  /* ───────── 空の色（朝・昼・夕方・夜。いつも明るい画面） ───────── */
+  const SKIES = [
+    { from:5,  name:"朝",   a:"#fdf3e3", b:"#e8f3f5" },
+    { from:10, name:"昼",   a:"#e3f2f8", b:"#f3f8ef" },
+    { from:16, name:"夕方", a:"#fde4d3", b:"#f4e6ee" },
+    { from:19, name:"夜",   a:"#e4e7f5", b:"#eef0f7" }
   ];
-  function add(who, text){
+  function paintSky(){
+    const h = new Date().getHours();
+    let sky = SKIES[SKIES.length - 1];
+    for(const s of SKIES){ if(h >= s.from) sky = s; }
+    if(h < SKIES[0].from) sky = SKIES[SKIES.length - 1];
+    const root = document.documentElement.style;
+    root.setProperty("--skyA", sky.a);
+    root.setProperty("--skyB", sky.b);
+    const m = document.querySelector('meta[name="theme-color"]');
+    if(m) m.setAttribute("content", sky.a);
+  }
+  paintSky();
+  setInterval(paintSky, 5 * 60 * 1000);
+
+  /* ───────── 保存の入れ物（この iPad の中だけ。IndexedDB を使う） ─────────
+     部屋 → スレッド → 発言 の形。記憶などは、あとの版で入れ物を足す。
+     保存の形を変えるときは SCHEMA の数字を上げて、古い形から移す。 */
+  const DB_NAME = "newapp-data";
+  const SCHEMA = 1;
+  let db = null;
+
+  function openDB(){
+    return new Promise((resolve, reject) => {
+      if(!("indexedDB" in window)){ reject(new Error("この端末では保存の仕組みが使えません")); return; }
+      const req = indexedDB.open(DB_NAME, SCHEMA);
+      req.onupgradeneeded = () => {
+        const d = req.result;
+        if(!d.objectStoreNames.contains("meta")) d.createObjectStore("meta", { keyPath:"key" });
+        if(!d.objectStoreNames.contains("rooms")) d.createObjectStore("rooms", { keyPath:"id" });
+        if(!d.objectStoreNames.contains("threads")){
+          const t = d.createObjectStore("threads", { keyPath:"id" });
+          t.createIndex("roomId", "roomId");
+        }
+        if(!d.objectStoreNames.contains("messages")){
+          const m = d.createObjectStore("messages", { keyPath:"id" });
+          m.createIndex("threadId", "threadId");
+        }
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error || new Error("保存の入れ物を開けませんでした"));
+      req.onblocked = () => reject(new Error("ほかの画面でアプリが開いたままです"));
+    });
+  }
+  function tx(stores, mode, work){
+    return new Promise((resolve, reject) => {
+      const t = db.transaction(stores, mode);
+      let out;
+      t.oncomplete = () => resolve(out);
+      t.onerror = () => reject(t.error);
+      t.onabort = () => reject(t.error || new Error("保存が中断されました"));
+      out = work(t);
+    });
+  }
+  function ask(req){
+    return new Promise((resolve, reject) => {
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error);
+    });
+  }
+  const newId = () => (window.crypto && crypto.randomUUID) ? crypto.randomUUID()
+    : "id-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 10);
+
+  let current = { roomId:null, threadId:null, roomName:"", threadName:"" };
+
+  // はじめて開いたときだけ、部屋とスレッドを1つずつ作る
+  async function prepare(){
+    const meta = await ask(db.transaction("meta").objectStore("meta").get("app"));
+    if(meta && meta.currentThreadId){
+      const th = await ask(db.transaction("threads").objectStore("threads").get(meta.currentThreadId));
+      const rm = th ? await ask(db.transaction("rooms").objectStore("rooms").get(th.roomId)) : null;
+      if(th && rm){
+        current = { roomId:rm.id, threadId:th.id, roomName:rm.name, threadName:th.name };
+        return;
+      }
+    }
+    const now = Date.now();
+    const room = { id:newId(), name:"はじめの部屋", createdAt:now, order:0, persona:"", colors:{ me:"水色", ai:"白" } };
+    const thread = { id:newId(), roomId:room.id, name:"はじめのスレッド", createdAt:now, updatedAt:now };
+    await tx(["meta","rooms","threads"], "readwrite", t => {
+      t.objectStore("rooms").put(room);
+      t.objectStore("threads").put(thread);
+      t.objectStore("meta").put({ key:"app", schema:SCHEMA, createdAt:now, currentRoomId:room.id, currentThreadId:thread.id });
+    });
+    current = { roomId:room.id, threadId:thread.id, roomName:room.name, threadName:thread.name };
+  }
+  async function loadMessages(){
+    const all = await ask(db.transaction("messages").objectStore("messages").index("threadId").getAll(current.threadId));
+    all.sort((a, b) => a.createdAt - b.createdAt);
+    return all;
+  }
+  function saveMessage(m){
+    return tx(["messages","threads"], "readwrite", t => {
+      t.objectStore("messages").put(m);
+      const ts = t.objectStore("threads");
+      const g = ts.get(m.threadId);
+      g.onsuccess = () => { const th = g.result; if(th){ th.updatedAt = m.createdAt; ts.put(th); } };
+    });
+  }
+  function removeMessage(id){
+    return tx("messages", "readwrite", t => { t.objectStore("messages").delete(id); });
+  }
+
+  /* ───────── 会話の画面 ───────── */
+  let count = 0, keep = "確かめ中", moved = 0;
+  function showState(){
+    state.textContent = "保存：このiPadの中（" + keep + "） ・ 発言 " + count + "件 ・ 動いた回数 " + moved;
+  }
+  function note(text){
     const d = document.createElement("div");
-    d.className = "msg " + who;
+    d.className = "note";
     d.textContent = text;
     list.appendChild(d);
+    return d;
   }
-  for(let r = 0; r < 3; r++) samples.forEach(s => add(s[0], s[1]));
-
+  let hint = null;
+  function showHint(){
+    if(count === 0 && !hint){
+      hint = note("まだAIとは話せません。\nここで打った文字が、アプリを閉じても残るかを確かめる版です。");
+      hint.style.whiteSpace = "pre-line";
+    }else if(count > 0 && hint){ hint.remove(); hint = null; }
+  }
+  const two = n => (n < 10 ? "0" : "") + n;
+  function when(ms){
+    const d = new Date(ms);
+    return (d.getMonth() + 1) + "月" + d.getDate() + "日 " + d.getHours() + ":" + two(d.getMinutes());
+  }
+  function draw(m){
+    const row = document.createElement("div");
+    row.className = "row " + (m.role === "ai" ? "ai" : "me");
+    const b = document.createElement("div");
+    b.className = "msg";
+    b.textContent = m.text;
+    const u = document.createElement("div");
+    u.className = "under";
+    const t = document.createElement("span");
+    t.textContent = when(m.createdAt);
+    const del = document.createElement("button");
+    del.type = "button";
+    del.textContent = "削除";
+    del.addEventListener("click", async () => {
+      if(!window.confirm("この発言を削除しますか？\n削除すると、元に戻せません。")) return;
+      try{
+        await removeMessage(m.id);
+        row.remove();
+        count--; showHint(); showState();
+      }catch(e){ window.alert("削除できませんでした。もう一度ためしてください。"); }
+    });
+    u.appendChild(t); u.appendChild(del);
+    row.appendChild(b); row.appendChild(u);
+    list.appendChild(row);
+  }
   const toBottom = () => { list.scrollTop = list.scrollHeight; };
-  toBottom();
 
-  // 画面の上の小さな数字(変になったときの手がかり)
-  const dbg = document.getElementById("dbg");
-  const mirror = document.getElementById("mirror");
-  let moved = 0;
-  function show(){
-    const vv = window.visualViewport;
-    dbg.textContent = "高さ " + Math.round(vv ? vv.height : window.innerHeight) +
-      " ・ ずれ " + Math.round(vv ? vv.offsetTop : 0) + " ・ 動いた回数 " + moved;
-  }
-
-  // キーボードが出たり引っこんだりしたら、見えている範囲に画面を合わせる。
-  // ページ全体が勝手に動いたら、その場ですぐ元に戻す(追いかけて動かさない)
+  /* ───────── 画面の土台（揺れの試し（3）と同じ作り） ───────── */
   let lastH = -1, lastT = "";
   function fit(){
     const vv = window.visualViewport;
@@ -132,7 +282,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     }
     const h = Math.round(vv ? vv.height : window.innerHeight);
     const off = vv ? vv.offsetTop : 0;
-    // キーボードが出入りしたときは、いちばん下からの距離を保つ(見ていた所がずれないように)
+    // キーボードが出入りしたときは、いちばん下からの距離を保つ
     if(h !== lastH){
       const gap = list.scrollHeight - list.scrollTop - list.clientHeight;
       lastH = h;
@@ -141,7 +291,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     }
     const t = off > 0.5 ? "translateY(" + off + "px)" : "";
     if(t !== lastT){ lastT = t; app.style.transform = t; }
-    show();
+    showState();
   }
   if(window.visualViewport){
     visualViewport.addEventListener("resize", fit);
@@ -151,33 +301,66 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   window.addEventListener("scroll", fit, { passive:true });
   fit();
 
-  // 入力欄の高さを、文字に合わせて伸ばす。
-  // 入力欄そのものは縮めずに、見えない写しで高さを測る(縮めた一瞬に画面が動くのを防ぐ)
+  // 入力欄は縮めずに、見えない写しで高さを測る。伸びても会話は動かさない
   let boxH = 0;
   function grow(){
     mirror.style.width = box.offsetWidth + "px";
     mirror.textContent = box.value + "\u200b";
     const h = Math.max(51, Math.min(Math.ceil(mirror.offsetHeight), 160));
-    // 入力欄が伸びても、会話は動かさない(入力欄が上にかぶさっていく)
-    if(h !== boxH){
-      boxH = h;
-      box.style.height = h + "px";
-    }
+    if(h !== boxH){ boxH = h; box.style.height = h + "px"; }
   }
   box.addEventListener("input", () => { grow(); fit(); requestAnimationFrame(fit); });
   box.addEventListener("focus", () => { setTimeout(fit, 60); setTimeout(fit, 350); });
   window.addEventListener("resize", grow);
   grow();
 
-  function submit(){
-    const t = box.value.trim();
-    if(!t) return;
-    add("me", t);
-    box.value = "";
-    grow();
-    toBottom();
+  /* ───────── 送る ───────── */
+  let busy = false;
+  async function submit(){
+    const text = box.value.replace(/\s+$/, "");
+    if(!text.trim() || busy || !db) return;
+    busy = true;
+    const m = { id:newId(), threadId:current.threadId, roomId:current.roomId, role:"me", text:text, createdAt:Date.now() };
+    try{
+      await saveMessage(m);          // 先に保存してから、画面に出す
+      count++; showHint();
+      draw(m);
+      box.value = "";
+      grow();
+      toBottom();
+      showState();
+    }catch(e){
+      window.alert("保存できませんでした。文字は入力欄に残してあります。もう一度「送る」を押してください。");
+    }
+    busy = false;
   }
   send.addEventListener("click", () => { submit(); box.focus(); });
+
+  /* ───────── はじまり ───────── */
+  (async function start(){
+    try{
+      db = await openDB();
+      db.onversionchange = () => { db.close(); };
+      await prepare();
+      where.textContent = current.roomName + " ／ " + current.threadName;
+      const msgs = await loadMessages();
+      count = msgs.length;
+      showHint();
+      msgs.forEach(draw);
+      toBottom();
+      // 「勝手に消さないで」とiPadにお願いする（聞き入れられたかを表示する）
+      if(navigator.storage && navigator.storage.persist){
+        let ok = false;
+        try{ ok = await navigator.storage.persisted() || await navigator.storage.persist(); }catch(e){}
+        keep = ok ? "消えにくい設定" : "ふつうの設定";
+      }else{ keep = "ふつうの設定"; }
+      showState();
+    }catch(e){
+      where.textContent = "保存の入れ物を開けませんでした";
+      note("保存の入れ物を開けませんでした。このままでは文字が残りません。\n画面の写真を撮って、Claudeに見せてください。\n（" + (e && e.message ? e.message : "理由は分かりません") + "）").style.whiteSpace = "pre-line";
+      send.disabled = true;
+    }
+  })();
 })();
 </script>
 </body>
