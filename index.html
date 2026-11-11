@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="試し">
 <meta name="theme-color" content="#fdf3e3">
-<title>揺れの試し（2）</title>
+<title>揺れの試し（3）</title>
 <style>
 :root{
   --sand:#faf6ee; --card:#ffffff; --line:#e4dccc; --text:#37474f; --soft:#57676f;
@@ -71,7 +71,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
 <body>
 <div id="app">
   <header>
-    <h1>揺れの試し（2）</h1>
+    <h1>揺れの試し（3）</h1>
     <p>ここは試しのページです。文字を打って、画面が揺れないか見てください。AIは返事をしません。</p>
     <span id="dbg" aria-hidden="true"></span>
   </header>
@@ -108,7 +108,6 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   }
   for(let r = 0; r < 3; r++) samples.forEach(s => add(s[0], s[1]));
 
-  const atBottom = () => list.scrollHeight - list.scrollTop - list.clientHeight < 40;
   const toBottom = () => { list.scrollTop = list.scrollHeight; };
   toBottom();
 
@@ -133,11 +132,15 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     }
     const h = Math.round(vv ? vv.height : window.innerHeight);
     const off = vv ? vv.offsetTop : 0;
-    const stick = atBottom();
-    if(h !== lastH){ lastH = h; app.style.height = h + "px"; }
+    // キーボードが出入りしたときは、いちばん下からの距離を保つ(見ていた所がずれないように)
+    if(h !== lastH){
+      const gap = list.scrollHeight - list.scrollTop - list.clientHeight;
+      lastH = h;
+      app.style.height = h + "px";
+      list.scrollTop = list.scrollHeight - list.clientHeight - gap;
+    }
     const t = off > 0.5 ? "translateY(" + off + "px)" : "";
     if(t !== lastT){ lastT = t; app.style.transform = t; }
-    if(stick) toBottom();
     show();
   }
   if(window.visualViewport){
@@ -155,11 +158,10 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     mirror.style.width = box.offsetWidth + "px";
     mirror.textContent = box.value + "\u200b";
     const h = Math.max(51, Math.min(Math.ceil(mirror.offsetHeight), 160));
+    // 入力欄が伸びても、会話は動かさない(入力欄が上にかぶさっていく)
     if(h !== boxH){
-      const stick = atBottom();
       boxH = h;
       box.style.height = h + "px";
-      if(stick) toBottom();
     }
   }
   box.addEventListener("input", () => { grow(); fit(); requestAnimationFrame(fit); });
