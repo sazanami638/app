@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#fdf3e3">
 <title>新しいアプリ（仮）</title>
 <style>
-/* 新しいアプリ（仮） 版 1.1 ── 会話の画面、保存、ペルソナと部屋、プロンプトの切り替え、AIと話す（Claude・Gemini・GPT・Grok）、検索、思考、保存 */
+/* 新しいアプリ（仮） 版 1.2 ── 会話の画面、保存、ペルソナと部屋、プロンプトの切り替え、記憶（項目ごと）、AIと話す（Claude・Gemini・GPT・Grok）、検索、思考、保存 */
 :root{
   --sand:#faf6ee; --text:#37474f; --soft:#5d6c73; --line:#e4dccc; --sea:#3f7585;
   --skyA:#fdf3e3; --skyB:#e8f3f5;
@@ -49,7 +49,7 @@ header{
 }
 .pick .pt{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .pick .pa{ flex-shrink:0; font-size:13px; color:var(--soft); }
-.pick.big{ font-size:18px; font-weight:700; min-height:50px; }
+
 .gap{ flex:1; }
 #ver{ flex-shrink:0; font-size:12px; color:var(--soft); }
 .mk{ flex-shrink:0; min-height:46px; padding:0 14px; border:none; border-radius:14px; background:var(--sea); color:#fff; font:inherit; font-size:15px; font-weight:700; }
@@ -58,6 +58,7 @@ header{
 .sheet.top{ align-items:flex-start; padding-top:calc(env(safe-area-inset-top,0px) + 70px); }
 .pcard{ border:1px solid var(--line); border-radius:16px; padding:12px; margin-top:10px; background:#fff; }
 .pcard.main{ border:2px solid #7fb0bf; }
+.pcard h4 span.off{ background:#f1ede4; color:var(--soft); }
 .pcard h4{ margin:0 0 2px; font-size:16px; word-break:break-word; }
 .pcard h4 span{ display:inline-block; margin-left:8px; padding:2px 10px; border-radius:10px; background:#e3f1f4; font-size:12px; font-weight:400; }
 .pcard p{ margin:0 0 8px; font-size:13px; }
@@ -271,7 +272,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     <div class="hl">
       <button id="openPersonas" class="pick" type="button"><span id="pName" class="pt">じゅんび中…</span><span class="pa">▾</span></button>
       <span class="gap"></span>
-      <span id="ver">版 1.1</span>
+      <span id="ver">版 1.2</span>
       <button id="openSettings" class="plain" type="button">設定</button>
     </div>
     <div class="hl">
@@ -282,6 +283,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     <div class="bar tools">
       <button id="openFinder" class="plain" type="button">さがす</button>
       <button id="openPersona" class="plain" type="button">プロンプト</button>
+      <button id="openMemory" class="plain" type="button">記憶</button>
       <button id="btnColor" class="plain" type="button">カラー</button>
       <span class="gap"></span>
       <button id="btnSave" class="plain" type="button">ファイルに保存</button>
@@ -320,6 +322,13 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       <button id="closePersona" class="plain" type="button">閉じる</button>
     </div>
     <div id="personaBody" class="pbody"></div>
+  </section>
+  <section id="memory" class="panel" hidden aria-label="記憶">
+    <div class="phead">
+      <h2 id="memoryTitle">記憶</h2>
+      <button id="closeMemory" class="plain" type="button">閉じる</button>
+    </div>
+    <div id="memoryBody" class="pbody"></div>
   </section>
   <section id="models" class="sheet" hidden aria-label="この部屋のモデル">
     <div class="card2">
@@ -451,7 +460,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
 <script>
 (function(){
   "use strict";
-  const VERSION = "1.1";
+  const VERSION = "1.2";
   const app = document.getElementById("app");
   const list = document.getElementById("list");
   const box = document.getElementById("msg");
@@ -831,6 +840,18 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     return false;
   }
   const mainOf = room => room.prompts.find(p => p.id === room.mainPrompt) || room.prompts[0];
+  /* 記憶は、ペルソナ（rooms）の中の memories に、項目ごとに持つ。{ id, title, text, show, createdAt, updatedAt }
+     show が true の項目だけ、プロンプトのうしろに付けてAIに伝える。 */
+  const shownMemories = room => (room.memories || []).filter(m => m.show && (m.text || "").trim());
+  function systemFor(room, pr){
+    let out = (pr && pr.text) || "";
+    const ms = shownMemories(room);
+    if(ms.length){
+      out += (out.trim() ? "\n\n" : "") + "【記憶】\n（ユーザーが書きのこした、覚えておいてほしいことです）";
+      ms.forEach(m => { out += "\n\n■ " + m.title + "\n" + m.text.trim(); });
+    }
+    return out;
+  }
   const promptFor = (room, th) => (th && th.promptId && room.prompts.find(p => p.id === th.promptId)) || mainOf(room);
   async function getRoom(id){
     const r = await ask(db.transaction("rooms").objectStore("rooms").get(id));
@@ -1165,7 +1186,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     toBottom();
     waiting = ctl; send.disabled = true;
     try{
-      const r = await ASK[model.by](model, key, (pr && pr.text) || "", turns, ctl.signal, opt);
+      const r = await ASK[model.by](model, key, room ? systemFor(room, pr) : "", turns, ctl.signal, opt);
       const m = { id:newId(), threadId:threadId, roomId:roomId, role:"ai", text:r.text, createdAt:Date.now(),
         model:model.id, usage:r.usage, usd:r.usd, cut:r.cut, thinking:r.thinking || "", searches:r.searches || 0,
         queries:r.queries || [], sources:r.sources || [],
@@ -1824,7 +1845,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       c.appendChild(el("p", "", body ? "中身：" + body.slice(0, 60) + (body.length > 60 ? "…" : "") : "中身：（まだ何も書いていません）"));
       c.appendChild(el("p", "", main ? "どの部屋も、ふつうはこれを使います。" : "使っている部屋：" + (users.length ? users.map(t => t.name).join("、") : "なし")));
       const bar = el("div", "bar");
-      bar.appendChild(btn("small", "中身を直す", async () => {
+      bar.appendChild(btn("small", "編集", async () => {
         const r = await dialog({ text:"プロンプト「" + p.name + "」の中身\nここに書いたことを、毎回AIに伝えます。", area:true, value:p.text || "", yes:"保存する" });
         if(!r) return;
         p.text = r.text; await save();
@@ -1868,7 +1889,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       if(!v) return;
       room.prompts.push({ id:newId(), name:v, text:mainOf(room).text || "" }); await save();
       await drawPersona();
-      toast("「" + v + "」を作りました。「中身を直す」で書きかえられます");
+      toast("「" + v + "」を作りました。「編集」で書きかえられます");
     }));
   }
   document.getElementById("openPersona").addEventListener("click", async () => {
@@ -1878,6 +1899,74 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     catch(e){ tell("プロンプトを開けませんでした。もう一度ためしてください。"); }
   });
   document.getElementById("closePersona").addEventListener("click", () => { personaPanel.hidden = true; });
+
+  // 記憶（いま開いているペルソナの分。項目ごと）
+  const memoryPanel = document.getElementById("memory");
+  const memoryBody = document.getElementById("memoryBody");
+  async function drawMemory(){
+    const room = await getRoom(current.roomId);
+    if(!room) return;
+    if(!Array.isArray(room.memories)) room.memories = [];
+    const save = () => putOne("rooms", room);
+    document.getElementById("memoryTitle").textContent = "⛵️ " + room.name + " の記憶";
+    memoryBody.textContent = "";
+    const f = el("div", "field");
+    const total = shownMemories(room).reduce((n, m) => n + m.text.trim().length, 0);
+    f.appendChild(el("p", "", "このペルソナだけの記憶です。「AIに見せる」の項目を、毎回プロンプトと一緒にAIに伝えます。「見せない」の項目は、取っておくだけです。"));
+    f.appendChild(el("p", "", "いまAIに見せている量：およそ " + total + " 文字"));
+    memoryBody.appendChild(f);
+    room.memories.forEach(m => {
+      const c = el("div", "pcard");
+      const h = el("h4", "", m.title);
+      h.appendChild(el("span", m.show ? "" : "off", m.show ? "AIに見せる" : "見せない"));
+      c.appendChild(h);
+      const body = (m.text || "").replace(/\s+/g, " ").trim();
+      c.appendChild(el("p", "", body ? body.slice(0, 80) + (body.length > 80 ? "…" : "") : "（まだ何も書いていません）"));
+      const bar = el("div", "bar");
+      const edit = async () => {
+        const r = await dialog({ text:"記憶「" + m.title + "」", area:true, value:m.text || "", yes:"保存する" });
+        if(!r) return false;
+        m.text = r.text; m.updatedAt = Date.now(); await save();
+        await drawMemory(); toast("記憶を保存しました");
+        return true;
+      };
+      bar.appendChild(btn("small", "編集", edit));
+      bar.appendChild(btn("small", "名前を変える", async () => {
+        const v = await dialog({ text:"項目の名前", input:true, value:m.title, yes:"変える" });
+        if(!v) return;
+        m.title = v; await save(); await drawMemory();
+      }));
+      bar.appendChild(btn("small", m.show ? "見せない にする" : "見せる にする", async () => {
+        m.show = !m.show; await save(); await drawMemory();
+      }));
+      bar.appendChild(btn("small danger", "削除", async () => {
+        const ok = await dialog({ text:"記憶「" + m.title + "」を削除しますか？\n書いた中身も消えます。元に戻せません。", yes:"削除する" });
+        if(!ok) return;
+        room.memories = room.memories.filter(x => x.id !== m.id); await save(); await drawMemory();
+      }));
+      c.appendChild(bar);
+      f.appendChild(c);
+    });
+    f.appendChild(btn("add", "＋ 新しい項目", async () => {
+      const v = await dialog({ text:"新しい項目の名前\n（例：体のこと、音楽）", input:true, value:"", yes:"作る" });
+      if(!v) return;
+      const now = Date.now();
+      const m = { id:newId(), title:v, text:"", show:true, createdAt:now, updatedAt:now };
+      room.memories.push(m); await save();
+      await drawMemory();
+      const r = await dialog({ text:"記憶「" + v + "」\n覚えておいてほしいことを書いてください。", area:true, value:"", yes:"保存する" });
+      if(!r) return;
+      m.text = r.text; m.updatedAt = Date.now(); await save();
+      await drawMemory(); toast("記憶を保存しました");
+    }));
+  }
+  document.getElementById("openMemory").addEventListener("click", async () => {
+    if(!db) return;
+    box.blur();
+    try{ await drawMemory(); memoryPanel.hidden = false; }
+    catch(e){ tell("記憶を開けませんでした。もう一度ためしてください。"); }
+  });
+  document.getElementById("closeMemory").addEventListener("click", () => { memoryPanel.hidden = true; });
 
   /* ───────── 画面の土台（揺れの試し（3）と同じ作り） ───────── */
   let lastH = -1, lastT = "";
