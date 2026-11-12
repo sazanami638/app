@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#fdf3e3">
 <title>新しいアプリ（仮）</title>
 <style>
-/* 新しいアプリ（仮） 版 0.9 ── 会話の画面、保存、部屋とスレッド、AIと話す（Claude・Gemini・GPT・Grok）、検索、思考、保存 */
+/* 新しいアプリ（仮） 版 1.0 ── 会話の画面、保存、ペルソナと部屋、プロンプトの切り替え、AIと話す（Claude・Gemini・GPT・Grok）、検索、思考、保存 */
 :root{
   --sand:#faf6ee; --text:#37474f; --soft:#5d6c73; --line:#e4dccc; --sea:#3f7585;
   --skyA:#fdf3e3; --skyB:#e8f3f5;
@@ -41,10 +41,28 @@ header{
   flex-shrink:0; min-height:44px; padding:0 14px; border:1px solid var(--line); border-radius:14px;
   background:#fffdf9; color:var(--sea); font:inherit; font-size:15px; font-weight:700;
 }
-header h1{ margin:0; font-size:20px; font-weight:700; letter-spacing:.02em; }
-header h1 small{ font-size:13px; font-weight:400; color:var(--soft); margin-left:8px; }
-#where{ margin:3px 0 0; font-size:14px; color:var(--soft); }
-#state{ margin:3px 0 0; font-size:12px; color:var(--soft); }
+.hl{ display:flex; align-items:center; gap:10px; }
+.hl + .hl{ margin-top:8px; }
+.pick{
+  flex:0 1 auto; min-width:0; min-height:46px; display:flex; align-items:center; gap:8px; padding:0 14px;
+  border:1px solid var(--line); border-radius:14px; background:#fffdf9; color:var(--text); font:inherit; font-size:16px; text-align:left;
+}
+.pick .pt{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.pick .pa{ flex-shrink:0; font-size:13px; color:var(--soft); }
+.pick.big{ font-size:18px; font-weight:700; min-height:50px; }
+.gap{ flex:1; }
+#ver{ flex-shrink:0; font-size:12px; color:var(--soft); }
+.mk{ flex-shrink:0; min-height:46px; padding:0 14px; border:none; border-radius:14px; background:var(--sea); color:#fff; font:inherit; font-size:15px; font-weight:700; }
+.tools{ margin-top:10px; padding-top:10px; border-top:1px solid var(--line); }
+#state{ margin:0; font-size:13px; color:var(--soft); }
+.sheet.top{ align-items:flex-start; padding-top:calc(env(safe-area-inset-top,0px) + 70px); }
+.pcard{ border:1px solid var(--line); border-radius:16px; padding:12px; margin-top:10px; background:#fff; }
+.pcard.main{ border:2px solid #7fb0bf; }
+.pcard h4{ margin:0 0 2px; font-size:16px; word-break:break-word; }
+.pcard h4 span{ margin-left:8px; padding:2px 10px; border-radius:10px; background:#e3f1f4; font-size:12px; font-weight:400; }
+.pcard p{ margin:0 0 8px; font-size:13px; }
+.pcard .bar{ margin-top:0; }
+.tname{ flex:1; min-width:8em; font-size:16px; word-break:break-word; }
 #list{
   flex:1 1 auto; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch;
   overscroll-behavior:contain; padding:18px 18px 14px;
@@ -70,8 +88,9 @@ footer{
   padding:10px 14px calc(env(safe-area-inset-bottom,0px) + 14px);
   background:#fffdf9;
 }
-#modelRow{ flex-shrink:0; display:flex; gap:8px; padding:10px 14px 0; background:#fffdf9; border-top:1px solid var(--line); }
-#openModels{ flex:1; min-width:0; }
+#modelRow{ flex-shrink:0; display:flex; flex-wrap:wrap; gap:8px; padding:10px 14px 0; background:#fffdf9; border-top:1px solid var(--line); }
+#openModels{ flex:1 1 9em; min-width:0; }
+#openPrompts{ flex:0 1 auto; min-width:0; }
 #toggleSearch, #toggleThink{ flex-shrink:0; }
 .pill.on{ background:#e3f1f4; border-color:#9cc3cf; font-weight:700; }
 .pill{
@@ -249,24 +268,27 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
 <body>
 <div id="app">
   <header>
-    <div class="top">
-      <div class="titles">
-        <h1>新しいアプリ<small>（仮）版 0.9</small></h1>
-        <p id="where">じゅんび中…</p>
-      </div>
+    <div class="hl">
+      <button id="openPersonas" class="pick" type="button"><span id="pName" class="pt">じゅんび中…</span><span class="pa">▾</span></button>
+      <span class="gap"></span>
+      <span id="ver">版 1.0</span>
+      <button id="openSettings" class="plain" type="button">アプリ設定</button>
     </div>
-    <div class="bar">
-      <button id="openRooms" class="plain" type="button">部屋の一覧</button>
-      <button id="btnColor" class="plain" type="button">文字欄の色</button>
-      <button id="btnSave" class="plain" type="button">会話を保存</button>
-      <button id="btnCopy" class="plain" type="button">会話をコピー</button>
+    <div class="hl">
+      <button id="openRoomList" class="pick big" type="button"><span id="rName" class="pt">部屋：</span><span class="pa">▾</span></button>
+      <span class="gap"></span>
+      <button id="newRoom" class="mk" type="button">＋ 新しい部屋</button>
+    </div>
+    <div class="bar tools">
       <button id="openFinder" class="plain" type="button">さがす</button>
-      <button id="openSettings" class="plain" type="button">設定</button>
+      <button id="btnSave" class="plain" type="button">ファイルに保存</button>
+      <button id="btnCopy" class="plain" type="button">全文コピー</button>
+      <button id="openPersona" class="plain" type="button">ペルソナの設定</button>
     </div>
-    <p id="state" aria-hidden="true"></p>
   </header>
   <main id="list" aria-live="polite"></main>
   <div id="modelRow">
+    <button id="openPrompts" class="pill" type="button">プロンプト ▾</button>
     <button id="openModels" class="pill" type="button">モデル ▾</button>
     <button id="toggleSearch" class="pill" type="button">ウェブ検索：オフ</button>
     <button id="toggleThink" class="pill" type="button">思考：オフ</button>
@@ -277,29 +299,42 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     <button id="send" type="button">送る</button>
     <div id="mirror" aria-hidden="true"></div>
   </footer>
-  <section id="rooms" class="panel" hidden aria-label="部屋の一覧">
-    <div class="phead">
-      <h2>部屋の一覧</h2>
-      <button id="closeRooms" class="plain" type="button">閉じる</button>
-    </div>
-    <div id="roomList" class="pbody"></div>
-  </section>
-  <section id="models" class="sheet" hidden aria-label="このスレッドのモデル">
+  <section id="pick" class="sheet top" hidden>
     <div class="card2">
       <div class="ch">
-        <h2>このスレッドのモデル</h2>
+        <h2 id="pickTitle"></h2>
+        <button id="closePickX" class="x" type="button" aria-label="閉じる">✕</button>
+      </div>
+      <div class="cb">
+        <p id="pickHint" class="hint"></p>
+        <div id="pickList" class="mlist"></div>
+      </div>
+      <div class="cf"><button id="closePick" class="close2" type="button">閉じる</button></div>
+    </div>
+  </section>
+  <section id="persona" class="panel" hidden aria-label="ペルソナの設定">
+    <div class="phead">
+      <h2 id="personaTitle">ペルソナの設定</h2>
+      <button id="closePersona" class="plain" type="button">閉じる</button>
+    </div>
+    <div id="personaBody" class="pbody"></div>
+  </section>
+  <section id="models" class="sheet" hidden aria-label="この部屋のモデル">
+    <div class="card2">
+      <div class="ch">
+        <h2>この部屋のモデル</h2>
         <button id="closeModelsX" class="x" type="button" aria-label="閉じる">✕</button>
       </div>
       <div class="cb">
-        <p class="hint">ここで選ぶと、このスレッドの次の返事から切り替わります。過去の返事の下には、その返事で実際に使ったモデルが残ります。</p>
+        <p class="hint">ここで選ぶと、この部屋の次の返事から切り替わります。過去の返事の下には、その返事で実際に使ったモデルが残ります。</p>
         <div id="modelList" class="mlist"></div>
       </div>
       <div class="cf"><button id="closeModels" class="close2" type="button">閉じる</button></div>
     </div>
   </section>
-  <section id="settings" class="panel" hidden aria-label="設定">
+  <section id="settings" class="panel" hidden aria-label="アプリ設定">
     <div class="phead">
-      <h2>設定</h2>
+      <h2>アプリ設定</h2>
       <button id="closeSettings" class="plain" type="button">閉じる</button>
     </div>
     <div class="pbody">
@@ -362,6 +397,10 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
         <h3>キーのあつかい</h3>
         <p>キーは、このiPadの中だけに保存します。会話を送るときに、そのAIの会社にだけ送ります。<br>料金は、1ドル162円で計算した目安です。</p>
       </div>
+      <div class="field">
+        <h3>アプリのようす</h3>
+        <p id="state"></p>
+      </div>
     </div>
   </section>
   <section id="finder" class="panel" hidden aria-label="さがす">
@@ -385,7 +424,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
         <button id="closeColorsX" class="x" type="button" aria-label="閉じる">✕</button>
       </div>
       <div class="cb">
-        <p class="hint">部屋ごとに、自分とAIの文字欄の色を選べます。選ぶと、すぐ変わります。</p>
+        <p class="hint">ペルソナごとに、自分とAIの文字欄の色を選べます。選ぶと、すぐ変わります。</p>
         <div id="colorsList" class="mlist"></div>
       </div>
       <div class="cf"><button id="closeColors" class="close2" type="button">閉じる</button></div>
@@ -415,13 +454,14 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
 <script>
 (function(){
   "use strict";
-  const VERSION = "0.9";
+  const VERSION = "1.0";
   const app = document.getElementById("app");
   const list = document.getElementById("list");
   const box = document.getElementById("msg");
   const send = document.getElementById("send");
   const mirror = document.getElementById("mirror");
-  const where = document.getElementById("where");
+  const pName = document.getElementById("pName");
+  const rName = document.getElementById("rName");
   const state = document.getElementById("state");
 
   /* ───────── たずねる小窓（名前を入れる、確かめる、知らせる） ───────── */
@@ -531,7 +571,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   function fail(status, msg, who){
     const d = status + (msg ? " " + msg : "");
     if(/credit balance/i.test(msg || "")) return trouble("APIの残高が足りないようです。\n" + who + "の管理画面で、残高を確かめてください。", d);
-    if(status === 401 || status === 403) return trouble(who + "のAPIキーが正しくないようです。\n「設定」で確かめてください。", d);
+    if(status === 401 || status === 403) return trouble(who + "のAPIキーが正しくないようです。\n「アプリ設定」で確かめてください。", d);
     if(status === 404) return trouble("このモデルは使えなくなったようです。\n別のモデルを選んでね。", d);
     if(status === 429) return trouble("今は、使いすぎの制限にかかっています。\n少し待ってから、もう一度ためしてください。", d);
     if(status >= 500) return trouble(who + "のほうが混んでいるようです。\n少し待ってから、もう一度ためしてください。", d);
@@ -779,24 +819,65 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
 
   let current = { roomId:null, threadId:null, roomName:"", threadName:"" };
 
-  // はじめて開いたときだけ、部屋とスレッドを1つずつ作る
+  const dayName = ms => { const d = new Date(ms); return (d.getMonth() + 1) + "月" + d.getDate() + "日"; };
+  /* 画面の言葉と、中の名前の対応：
+     画面の「ペルソナ」＝ 入れ物 rooms、画面の「部屋」＝ 入れ物 threads（入れ物の名前は、版 0.9 までと同じ）。
+     プロンプトは、ペルソナ（rooms）の中の prompts に、いくつも持てる。mainPrompt が「いつもの」。
+     部屋（threads）の promptId が空なら「いつもの」を使う。 */
+  function ensurePrompts(room){
+    if(!Array.isArray(room.prompts) || !room.prompts.length){
+      room.prompts = [{ id:newId(), name:"ふだん用", text:room.persona || "" }];
+      room.mainPrompt = room.prompts[0].id;
+      return true;
+    }
+    if(!room.prompts.some(p => p.id === room.mainPrompt)){ room.mainPrompt = room.prompts[0].id; return true; }
+    return false;
+  }
+  const mainOf = room => room.prompts.find(p => p.id === room.mainPrompt) || room.prompts[0];
+  const promptFor = (room, th) => (th && th.promptId && room.prompts.find(p => p.id === th.promptId)) || mainOf(room);
+  async function getRoom(id){
+    const r = await ask(db.transaction("rooms").objectStore("rooms").get(id));
+    if(r && ensurePrompts(r)) await tx("rooms", "readwrite", t => { t.objectStore("rooms").put(r); });
+    return r;
+  }
+  // 版 0.9 までの、最初に付いた名前を、見分けやすい名前に変える（1回だけ。自分で付けた名前は変えない）
+  async function renameDefaults(meta){
+    if(meta.names2) return;
+    const rooms = await ask(db.transaction("rooms").objectStore("rooms").getAll());
+    const threads = await ask(db.transaction("threads").objectStore("threads").getAll());
+    await tx(["meta","rooms","threads"], "readwrite", t => {
+      let n = 0;
+      rooms.forEach(r => { n++; if(r.name === "はじめの部屋"){ r.name = "ペルソナ " + n; t.objectStore("rooms").put(r); } });
+      threads.forEach(th => {
+        let v = null;
+        if(th.name === "はじめのスレッド") v = dayName(th.createdAt || Date.now());
+        else{ const m = /^スレッド (\d+)$/.exec(th.name || ""); if(m) v = "部屋 " + m[1]; }
+        if(v){ th.name = v; t.objectStore("threads").put(th); }
+      });
+      meta.names2 = true;
+      t.objectStore("meta").put(meta);
+    });
+  }
+  // はじめて開いたときだけ、ペルソナと部屋を1つずつ作る
   async function prepare(){
     const meta = await ask(db.transaction("meta").objectStore("meta").get("app"));
     if(meta && meta.currentThreadId){
+      await renameDefaults(meta);
       const th = await ask(db.transaction("threads").objectStore("threads").get(meta.currentThreadId));
-      const rm = th ? await ask(db.transaction("rooms").objectStore("rooms").get(th.roomId)) : null;
+      const rm = th ? await getRoom(th.roomId) : null;
       if(th && rm){
         current = { roomId:rm.id, threadId:th.id, roomName:rm.name, threadName:th.name };
         return;
       }
     }
     const now = Date.now();
-    const room = { id:newId(), name:"はじめの部屋", createdAt:now, order:0, persona:"", colors:{ me:"水色", ai:"白" } };
-    const thread = { id:newId(), roomId:room.id, name:"はじめのスレッド", createdAt:now, updatedAt:now };
+    const room = { id:newId(), name:"ペルソナ 1", createdAt:now, order:0, persona:"", colors:{ me:"水色", ai:"白" } };
+    ensurePrompts(room);
+    const thread = { id:newId(), roomId:room.id, name:dayName(now), createdAt:now, updatedAt:now };
     await tx(["meta","rooms","threads"], "readwrite", t => {
       t.objectStore("rooms").put(room);
       t.objectStore("threads").put(thread);
-      t.objectStore("meta").put({ key:"app", schema:SCHEMA, createdAt:now, currentRoomId:room.id, currentThreadId:thread.id });
+      t.objectStore("meta").put({ key:"app", schema:SCHEMA, createdAt:now, currentRoomId:room.id, currentThreadId:thread.id, names2:true });
     });
     current = { roomId:room.id, threadId:thread.id, roomName:room.name, threadName:thread.name };
   }
@@ -882,7 +963,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   function showHint(){
     if(count === 0 && !hint){
       hint = note((keys.claude || keys.gemini || keys.openai || keys.xai) ? "ここから会話を始められます。"
-        : "まだAPIキーが入っていません。\n上の「設定」からキーを入れると、AIと話せます。");
+        : "まだAPIキーが入っていません。\n上の「アプリ設定」からキーを入れると、AIと話せます。");
       hint.style.whiteSpace = "pre-line";
     }else if(count > 0 && hint){ hint.remove(); hint = null; }
   }
@@ -977,6 +1058,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       const mo = modelOf(m.model);
       let info = "使用モデル: " + (mo ? mo.name : (m.model || "不明"));
       if(typeof m.usd === "number") info += " ・ このターン " + yen(m.usd);
+      if(m.promptName) info += " ・ プロンプト: " + m.promptName;
       if(m.searches) info += " ・ 検索" + m.searches + "回";
       if(m.cut) info += " ・ 長くて途中で切れました";
       row.appendChild(el("div", "src", info));
@@ -1008,10 +1090,20 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     const mo = modelOf(await currentModelId());
     modelBtn.textContent = (mo ? mo.name : "モデルを選びなおしてね") + " ▾";
   }
+  function showWhere(){
+    pName.textContent = "⛵️ " + current.roomName;
+    rName.textContent = "部屋：" + current.threadName;
+  }
+  const promptBtn = document.getElementById("openPrompts");
+  async function showPromptBtn(){
+    const room = await getRoom(current.roomId), th = await getOne("threads", current.threadId);
+    promptBtn.textContent = "プロンプト：" + (room ? promptFor(room, th).name : "") + " ▾";
+    promptBtn.className = "pill" + (room && th && promptFor(room, th).id !== room.mainPrompt ? " on" : "");
+  }
   async function openCurrent(){
-    where.textContent = current.roomName + " ／ " + current.threadName;
+    showWhere();
     clearProblem();
-    await showModel(); await showSearchBtn(); showThinkBtn(); await applyColors();
+    await showModel(); await showPromptBtn(); await showSearchBtn(); showThinkBtn(); await applyColors();
     list.textContent = ""; hint = null;
     const msgs = await loadMessages();
     count = msgs.length;
@@ -1043,12 +1135,13 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     clearProblem();
     const threadId = current.threadId, roomId = current.roomId;
     const model = modelOf(await currentModelId());
-    if(!model){ problem("このモデルは使えなくなりました。\n上の「モデル」から、別のモデルを選んでね。", false); return; }
+    if(!model){ problem("このモデルは使えなくなりました。\n入力欄の上の「モデル」から、別のモデルを選んでね。", false); return; }
     const key = keys[model.by];
-    if(!key){ problem(COMPANY[model.by] + "のAPIキーがまだ入っていません。\n上の「設定」から入れてください。", true); return; }
-    if(capReached()){ problem("今月の料金の上限（¥" + Number(prefs.capYen).toLocaleString() + "）に達しました。\n「設定」で上限を変えると、続けられます。", true); return; }
-    const room = await getOne("rooms", roomId);
+    if(!key){ problem(COMPANY[model.by] + "のAPIキーがまだ入っていません。\n上の「アプリ設定」から入れてください。", true); return; }
+    if(capReached()){ problem("今月の料金の上限（¥" + Number(prefs.capYen).toLocaleString() + "）に達しました。\n「アプリ設定」で上限を変えると、続けられます。", true); return; }
+    const room = await getRoom(roomId);
     const th = await getOne("threads", threadId);
+    const pr = room ? promptFor(room, th) : null;
     const canUse = (model.by === "claude" || model.by === "gemini") && !/gemma/i.test(model.id);
     const wantSearch = !!(th && th.search);
     if(wantSearch && !canUse) toast("このモデルはウェブ検索に未対応です。今回は検索なしで返事します");
@@ -1075,10 +1168,11 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     toBottom();
     waiting = ctl; send.disabled = true;
     try{
-      const r = await ASK[model.by](model, key, (room && room.persona) || "", turns, ctl.signal, opt);
+      const r = await ASK[model.by](model, key, (pr && pr.text) || "", turns, ctl.signal, opt);
       const m = { id:newId(), threadId:threadId, roomId:roomId, role:"ai", text:r.text, createdAt:Date.now(),
         model:model.id, usage:r.usage, usd:r.usd, cut:r.cut, thinking:r.thinking || "", searches:r.searches || 0,
-        queries:r.queries || [], sources:r.sources || [] };
+        queries:r.queries || [], sources:r.sources || [],
+        promptName:(pr && room && pr.id !== room.mainPrompt) ? pr.name : "" };
       await saveMessage(m);
       await addUsage(r.usd);
       row.remove();
@@ -1100,7 +1194,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     showState();
   }
 
-  /* ───────── ウェブ検索のオン・オフ（スレッドごと。新しいスレッドは最初オフ） ───────── */
+  /* ───────── ウェブ検索のオン・オフ（部屋ごと。新しい部屋は最初オフ） ───────── */
   const searchBtn = document.getElementById("toggleSearch");
   async function showSearchBtn(){
     const th = await getOne("threads", current.threadId);
@@ -1138,7 +1232,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     }catch(e){ tell("切り替えられませんでした。もう一度ためしてください。"); }
   });
 
-  /* ───────── 文字欄の色（部屋ごと） ───────── */
+  /* ───────── 文字欄の色（ペルソナごと） ───────── */
   const PALETTE = [
     { name:"白",     bg:"#ffffff", line:"#e4dccc", text:"#37474f" },
     { name:"水色",   bg:"#eaf5f8", line:"#cfe4ea", text:"#37474f" },
@@ -1150,7 +1244,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   ];
   const palOf = n => PALETTE.find(p => p.name === n) || PALETTE[0];
   async function applyColors(){
-    const room = await getOne("rooms", current.roomId);
+    const room = await getRoom(current.roomId);
     const c = Object.assign({ me:"水色", ai:"白" }, room && room.colors);
     const me = palOf(c.me), ai = palOf(c.ai), r = document.documentElement.style;
     r.setProperty("--me-bg", me.bg); r.setProperty("--me-line", me.line); r.setProperty("--me-text", me.text);
@@ -1187,22 +1281,11 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   document.getElementById("closeColorsX").addEventListener("click", closeColors);
   colorsSheet.addEventListener("click", e => { if(e.target === colorsSheet) closeColors(); });
 
-  /* ───────── 上のボタン：文字欄の色、会話を保存、会話をコピー ───────── */
+  /* ───────── 上のボタン：ファイルに保存、全文コピー ───────── */
   async function currentPair(){
-    const th = await getOne("threads", current.threadId), room = await getOne("rooms", current.roomId);
+    const th = await getOne("threads", current.threadId), room = await getRoom(current.roomId);
     return (th && room) ? { th:th, room:room } : null;
   }
-  document.getElementById("btnColor").addEventListener("click", async () => {
-    if(!db) return;
-    box.blur();
-    try{
-      const p = await currentPair();
-      if(!p) return;
-      colorRoom = p.room;
-      document.getElementById("colorsTitle").textContent = "「" + p.room.name + "」の文字欄の色";
-      drawColors(); colorsSheet.hidden = false;
-    }catch(e){ tell("開けませんでした。もう一度ためしてください。"); }
-  });
   document.getElementById("btnSave").addEventListener("click", async () => {
     if(!db) return;
     box.blur();
@@ -1219,7 +1302,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       if(typeof ClipboardItem !== "undefined" && navigator.clipboard && navigator.clipboard.write){
         // 押した瞬間に使える形でコピーする（iPadは、押してから時間がたつとコピーを許可しないため）
         await navigator.clipboard.write([new ClipboardItem({ "text/plain": make().then(t => new Blob([t], { type:"text/plain" })) })]);
-        toast("会話をコピーしました");
+        toast("この部屋の会話を、全部コピーしました");
         return;
       }
     }catch(e){}
@@ -1458,7 +1541,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     if(!pack || pack.app !== "newapp" || !Array.isArray(pack.rooms) || !Array.isArray(pack.threads) || !Array.isArray(pack.messages) || !pack.rooms.length || !pack.threads.length){
       tell("このファイルは、このアプリの「まるごと保存」ではないようです。"); return;
     }
-    const ok = await dialog({ text:"保存した日： " + when(pack.savedAt) + "\n部屋 " + pack.rooms.length + "・スレッド " + pack.threads.length + "・発言 " + pack.messages.length + "件\n\nいまある会話は、すべてこのファイルの内容に置き換わります。元に戻せません。", yes:"置き換える" });
+    const ok = await dialog({ text:"保存した日： " + when(pack.savedAt) + "\nペルソナ " + pack.rooms.length + "・部屋 " + pack.threads.length + "・発言 " + pack.messages.length + "件\n\nいまある会話は、すべてこのファイルの内容に置き換わります。元に戻せません。", yes:"置き換える" });
     if(!ok) return;
     try{
       const cur = pack.threads.find(t => pack.current && t.id === pack.current.threadId) || pack.threads[0];
@@ -1486,14 +1569,12 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       if(level && level > backup.level && count > 0){
         backup.level = level;
         await putOne("meta", { key:"backup", last:backup.last, level:level });
-        await tell((backup.last ? "さいごの「まるごと保存」から " + days + "日" : "まだ「まるごと保存」をしていません。はじめてから " + days + "日") + "たちました。\n「設定」の「まるごと保存する」で、会話をファイルに取っておけます。");
+        await tell((backup.last ? "さいごの「まるごと保存」から " + days + "日" : "まだ「まるごと保存」をしていません。はじめてから " + days + "日") + "たちました。\n「アプリ設定」の「まるごと保存する」で、会話をファイルに取っておけます。");
       }
     }catch(e){}
   }
 
-  /* ───────── 部屋とスレッド ───────── */
-  const panel = document.getElementById("rooms");
-  const roomList = document.getElementById("roomList");
+  /* ───────── ペルソナと部屋（選ぶ小窓、ペルソナの設定） ───────── */
   function el(tag, cls, text){
     const e = document.createElement(tag);
     if(cls) e.className = cls;
@@ -1506,11 +1587,37 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     b.addEventListener("click", () => { Promise.resolve(fn()).catch(() => tell("うまくいきませんでした。もう一度ためしてください。")); });
     return b;
   }
+  // 選ぶための小窓（ペルソナ、部屋、プロンプトで、同じ窓を使う）
+  const pick = document.getElementById("pick");
+  const pickTitle = document.getElementById("pickTitle");
+  const pickHint = document.getElementById("pickHint");
+  const pickList = document.getElementById("pickList");
+  function openPick(title, hintText){
+    pickTitle.textContent = title;
+    pickHint.textContent = hintText || ""; pickHint.hidden = !hintText;
+    pickList.textContent = "";
+    pick.hidden = false;
+    return pickList;
+  }
+  const closePick = () => { pick.hidden = true; };
+  document.getElementById("closePick").addEventListener("click", closePick);
+  document.getElementById("closePickX").addEventListener("click", closePick);
+  pick.addEventListener("click", e => { if(e.target === pick) closePick(); });
+  function choice(name, sub, now, fn){
+    const b = btn("model" + (now ? " now" : ""), null, fn);
+    const left = el("span", "mname", name);
+    if(sub) left.appendChild(el("small", "", sub));
+    b.appendChild(left);
+    return b;
+  }
+  const sortedRooms = async () => (await getAll("rooms")).sort((a, b) => a.createdAt - b.createdAt);
+  const threadsOf = async roomId => (await ask(db.transaction("threads").objectStore("threads").index("roomId").getAll(roomId))).sort((a, b) => b.updatedAt - a.updatedAt);
+
   async function goThread(th, room){
     current = { roomId:room.id, threadId:th.id, roomName:room.name, threadName:th.name };
     await setCurrent(room.id, th.id);
     await openCurrent();
-    panel.hidden = true;
+    closePick();
   }
   async function makeThread(room, name){
     const now = Date.now();
@@ -1518,110 +1625,223 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     await putOne("threads", th);
     return th;
   }
-  async function drawRooms(){
-    const rooms = (await getAll("rooms")).sort((a, b) => a.createdAt - b.createdAt);
-    const threads = (await getAll("threads")).sort((a, b) => b.updatedAt - a.updatedAt);
-    roomList.textContent = "";
+  async function goPersona(room){
+    const mine = await threadsOf(room.id);
+    const th = mine[0] || await makeThread(room, dayName(Date.now()));
+    await goThread(th, room);
+  }
+
+  // ⛵️ ペルソナを選ぶ
+  async function openPersonaList(){
+    const rooms = await sortedRooms(), threads = await getAll("threads");
+    const box2 = openPick("ペルソナを選ぶ", "");
     rooms.forEach(room => {
-      const mine = threads.filter(t => t.roomId === room.id);
-      const card = el("div", "room");
-      const head = el("div", "rhead");
-      head.appendChild(el("h3", "", room.name));
-      head.appendChild(btn("small", "名前を変える", async () => {
-        const v = await dialog({ text:"部屋の名前", input:true, value:room.name, yes:"変える" });
-        if(!v) return;
-        room.name = v; await putOne("rooms", room);
-        if(current.roomId === room.id){ current.roomName = v; where.textContent = current.roomName + " ／ " + current.threadName; }
-        await drawRooms();
-      }));
-      head.appendChild(btn("small", "キャラ設定", async () => {
-        const r = await dialog({ text:"「" + room.name + "」のキャラ設定\nここに書いたことを、毎回AIに伝えます。", area:true, value:room.persona || "", yes:"保存する" });
-        if(!r) return;
-        room.persona = r.text; await putOne("rooms", room);
-        toast("キャラ設定を保存しました");
-      }));
-      head.appendChild(btn("small", "文字欄の色", async () => {
-        colorRoom = room;
-        document.getElementById("colorsTitle").textContent = "「" + room.name + "」の文字欄の色";
-        drawColors(); colorsSheet.hidden = false;
-      }));
-      head.appendChild(btn("small", "テキストで保存", async () => {
-        let out = "";
-        for(const t of mine.slice().sort((a, b) => a.createdAt - b.createdAt)) out += (out ? "\n────────────\n\n" : "") + await threadText(t, room);
-        await saveFile(fileSafe(room.name) + "_" + stamp() + ".txt", "text/plain", out);
-      }));
-      head.appendChild(btn("small danger", "部屋を削除", async () => {
-        if(rooms.length < 2){ await tell("部屋が1つだけのときは、削除できません。\n先に、別の部屋を作ってください。"); return; }
-        const ok = await dialog({ text:"「" + room.name + "」を削除しますか？\n中のスレッド " + mine.length + "個と、その会話がすべて消えます。元に戻せません。", yes:"削除する" });
-        if(!ok) return;
-        await removeThreads(mine.map(t => t.id), room.id);
-        if(current.roomId === room.id){
-          const other = rooms.find(r => r.id !== room.id);
-          let th = threads.find(t => t.roomId === other.id);
-          if(!th) th = await makeThread(other, "スレッド 1");
-          current = { roomId:other.id, threadId:th.id, roomName:other.name, threadName:th.name };
-          await setCurrent(other.id, th.id);
-          await openCurrent();
-        }
-        await drawRooms();
-      }));
-      card.appendChild(head);
-      mine.forEach(th => {
-        const row = el("div", "thread");
-        const now = th.id === current.threadId;
-        const open = btn("topen" + (now ? " now" : ""), th.name, () => goThread(th, room));
-        open.appendChild(el("small", "", (now ? "いま開いている ・ " : "") + "さいごに話した日 " + when(th.updatedAt)));
-        row.appendChild(open);
-        row.appendChild(btn("small", "名前を変える", async () => {
-          const v = await dialog({ text:"スレッドの名前", input:true, value:th.name, yes:"変える" });
-          if(!v) return;
-          th.name = v; await putOne("threads", th);
-          if(now){ current.threadName = v; where.textContent = current.roomName + " ／ " + current.threadName; }
-          await drawRooms();
-        }));
-        row.appendChild(btn("small", "テキストで保存", async () => {
-          await saveFile(fileSafe(room.name + "_" + th.name) + "_" + stamp() + ".txt", "text/plain", await threadText(th, room));
-        }));
-        row.appendChild(btn("small danger", "削除", async () => {
-          if(mine.length < 2){ await tell("部屋の中のスレッドが1つだけのときは、削除できません。\n先に、別のスレッドを作ってください。"); return; }
-          const ok = await dialog({ text:"スレッド「" + th.name + "」を削除しますか？\n中の会話がすべて消えます。元に戻せません。", yes:"削除する" });
-          if(!ok) return;
-          await removeThreads([th.id], null);
-          if(now){
-            const other = mine.find(t => t.id !== th.id);
-            current = { roomId:room.id, threadId:other.id, roomName:room.name, threadName:other.name };
-            await setCurrent(room.id, other.id);
-            await openCurrent();
-          }
-          await drawRooms();
-        }));
-        card.appendChild(row);
-      });
-      card.appendChild(btn("add", "＋ この部屋にスレッドを作る", async () => {
-        const v = await dialog({ text:"新しいスレッドの名前", input:true, value:"スレッド " + (mine.length + 1), yes:"作る" });
-        if(!v) return;
-        const th = await makeThread(room, v);
-        await goThread(th, room);
-      }));
-      roomList.appendChild(card);
+      const now = room.id === current.roomId;
+      const n = threads.filter(t => t.roomId === room.id).length;
+      box2.appendChild(choice("⛵️ " + room.name, (now ? "いま開いている ・ " : "") + "部屋 " + n + "個", now, () => now ? closePick() : goPersona(room)));
     });
-    roomList.appendChild(btn("add", "＋ 部屋を作る", async () => {
-      const v = await dialog({ text:"新しい部屋の名前", input:true, value:"", yes:"作る" });
+    box2.appendChild(btn("add", "＋ 新しいペルソナ", async () => {
+      const v = await dialog({ text:"新しいペルソナの名前", input:true, value:"", yes:"作る" });
       if(!v) return;
       const now = Date.now();
       const room = { id:newId(), name:v, createdAt:now, order:rooms.length, persona:"", colors:{ me:"水色", ai:"白" } };
+      ensurePrompts(room);
       await putOne("rooms", room);
-      const th = await makeThread(room, "スレッド 1");
-      await goThread(th, room);
+      await goPersona(room);
+      toast("「" + v + "」を作りました。プロンプトは「ペルソナの設定」から書けます");
     }));
   }
-  document.getElementById("openRooms").addEventListener("click", async () => {
+  document.getElementById("openPersonas").addEventListener("click", () => {
     if(!db) return;
     box.blur();
-    try{ await drawRooms(); panel.hidden = false; }
-    catch(e){ tell("部屋の一覧を開けませんでした。もう一度ためしてください。"); }
+    openPersonaList().catch(() => tell("一覧を開けませんでした。もう一度ためしてください。"));
   });
-  document.getElementById("closeRooms").addEventListener("click", () => { panel.hidden = true; });
+
+  // 部屋を選ぶ（manage が true のときは、名前を変える・削除する画面）
+  async function openRoomList(manage){
+    const room = await getRoom(current.roomId);
+    if(!room) return;
+    const mine = await threadsOf(room.id);
+    const box2 = openPick(manage ? "部屋の名前を変える・削除する" : "⛵️ " + room.name + " の部屋", manage ? "削除すると、中の会話も消えます。" : "");
+    mine.forEach(th => {
+      const now = th.id === current.threadId;
+      if(!manage){
+        box2.appendChild(choice(th.name, (now ? "いま開いている ・ " : "") + "さいごに話した日 " + when(th.updatedAt), now, () => now ? closePick() : goThread(th, room)));
+        return;
+      }
+      const row = el("div", "thread");
+      row.appendChild(el("span", "tname", th.name + (now ? "（いま開いている）" : "")));
+      row.appendChild(btn("small", "名前を変える", async () => {
+        const v = await dialog({ text:"部屋の名前", input:true, value:th.name, yes:"変える" });
+        if(!v) return;
+        th.name = v; await putOne("threads", th);
+        if(now){ current.threadName = v; showWhere(); }
+        await openRoomList(true);
+      }));
+      row.appendChild(btn("small danger", "削除", async () => {
+        if(mine.length < 2){ await tell("部屋が1つだけのときは、削除できません。\n先に、別の部屋を作ってください。"); return; }
+        const ok = await dialog({ text:"部屋「" + th.name + "」を削除しますか？\n中の会話がすべて消えます。元に戻せません。", yes:"削除する" });
+        if(!ok) return;
+        await removeThreads([th.id], null);
+        if(now){
+          const other = mine.find(t => t.id !== th.id);
+          current = { roomId:room.id, threadId:other.id, roomName:room.name, threadName:other.name };
+          await setCurrent(room.id, other.id);
+          await openCurrent();
+        }
+        await openRoomList(true);
+      }));
+      box2.appendChild(row);
+    });
+    box2.appendChild(btn("small", manage ? "もどる" : "部屋の名前を変える・削除する", () => openRoomList(!manage)));
+  }
+  document.getElementById("openRoomList").addEventListener("click", () => {
+    if(!db) return;
+    box.blur();
+    openRoomList(false).catch(() => tell("一覧を開けませんでした。もう一度ためしてください。"));
+  });
+  document.getElementById("newRoom").addEventListener("click", async () => {
+    if(!db) return;
+    box.blur();
+    try{
+      const room = await getRoom(current.roomId);
+      if(!room) return;
+      const v = await dialog({ text:"⛵️ " + room.name + " に、新しい部屋を作ります。\n部屋の名前", input:true, value:dayName(Date.now()), yes:"作る" });
+      if(!v) return;
+      const th = await makeThread(room, v);
+      await goThread(th, room);
+    }catch(e){ tell("部屋を作れませんでした。もう一度ためしてください。"); }
+  });
+
+  // プロンプトを切り替える（部屋ごと）
+  async function openPromptList(){
+    const room = await getRoom(current.roomId), th = await getOne("threads", current.threadId);
+    if(!room || !th) return;
+    const nowId = promptFor(room, th).id;
+    const box2 = openPick("この部屋のプロンプト", "ここで選ぶと、この部屋の次の返事から切り替わります。中身は「ペルソナの設定」で直せます。");
+    room.prompts.forEach(p => {
+      const main = p.id === room.mainPrompt, now = p.id === nowId;
+      box2.appendChild(choice(p.name, [main ? "いつもの" : "", now ? "いま選んでいる" : ""].filter(Boolean).join(" ・ "), now, async () => {
+        const t = await getOne("threads", current.threadId);
+        if(main) delete t.promptId; else t.promptId = p.id;
+        await putOne("threads", t);
+        await showPromptBtn();
+        closePick();
+        toast("次の返事から「" + p.name + "」を使います");
+      }));
+    });
+  }
+  promptBtn.addEventListener("click", () => {
+    if(!db) return;
+    box.blur();
+    openPromptList().catch(() => tell("一覧を開けませんでした。もう一度ためしてください。"));
+  });
+
+  // ペルソナの設定
+  const personaPanel = document.getElementById("persona");
+  const personaBody = document.getElementById("personaBody");
+  async function drawPersona(){
+    const room = await getRoom(current.roomId);
+    if(!room) return;
+    const mine = await threadsOf(room.id);
+    const save = async () => { room.persona = mainOf(room).text; await putOne("rooms", room); };
+    document.getElementById("personaTitle").textContent = "⛵️ " + room.name + " の設定";
+    personaBody.textContent = "";
+    const field = (title, text) => { const f = el("div", "field"); f.appendChild(el("h3", "", title)); if(text) f.appendChild(el("p", "", text)); personaBody.appendChild(f); return f; };
+
+    const f1 = field("ペルソナの名前", room.name);
+    f1.appendChild(btn("small", "名前を変える", async () => {
+      const v = await dialog({ text:"ペルソナの名前", input:true, value:room.name, yes:"変える" });
+      if(!v) return;
+      room.name = v; await putOne("rooms", room);
+      current.roomName = v; showWhere();
+      await drawPersona();
+    }));
+
+    const f2 = field("プロンプト", "ここに書いたことを、毎回AIに伝えます。「いつもの」は、どの部屋もふつうに使うプロンプトです。試したいときは、試しのプロンプトを作って、入力欄の上の「プロンプト」から、その部屋でだけ切り替えます。");
+    room.prompts.forEach(p => {
+      const main = p.id === room.mainPrompt;
+      const users = mine.filter(t => t.promptId === p.id);
+      const c = el("div", "pcard" + (main ? " main" : ""));
+      const h = el("h4", "", p.name);
+      if(main) h.appendChild(el("span", "", "いつもの"));
+      c.appendChild(h);
+      const body = (p.text || "").replace(/\s+/g, " ").trim();
+      c.appendChild(el("p", "", body ? "中身：" + body.slice(0, 60) + (body.length > 60 ? "…" : "") : "中身：（まだ何も書いていません）"));
+      c.appendChild(el("p", "", main ? "どの部屋も、ふつうはこれを使います。" : "使っている部屋：" + (users.length ? users.map(t => t.name).join("、") : "なし")));
+      const bar = el("div", "bar");
+      bar.appendChild(btn("small", "中身を直す", async () => {
+        const r = await dialog({ text:"プロンプト「" + p.name + "」の中身\nここに書いたことを、毎回AIに伝えます。", area:true, value:p.text || "", yes:"保存する" });
+        if(!r) return;
+        p.text = r.text; await save();
+        await drawPersona(); toast("プロンプトを保存しました");
+      }));
+      bar.appendChild(btn("small", "名前を変える", async () => {
+        const v = await dialog({ text:"プロンプトの名前", input:true, value:p.name, yes:"変える" });
+        if(!v) return;
+        p.name = v; await save();
+        await showPromptBtn(); await drawPersona();
+      }));
+      if(!main){
+        bar.appendChild(btn("small", "これをいつものにする", async () => {
+          const ok = await dialog({ text:"「" + p.name + "」を、いつものプロンプトにしますか？\n「いつもの」を使っている部屋は、すべてこれに変わります。\n（いままでの「" + mainOf(room).name + "」は、消えずに残ります）", yes:"いつものにする" });
+          if(!ok) return;
+          room.mainPrompt = p.id; await save();
+          for(const t of users){ delete t.promptId; await putOne("threads", t); }
+          await showPromptBtn(); await drawPersona();
+          toast("「" + p.name + "」を、いつものにしました");
+        }));
+        bar.appendChild(btn("small danger", "削除", async () => {
+          const ok = await dialog({ text:"プロンプト「" + p.name + "」を削除しますか？\n元に戻せません。" + (users.length ? "\nこれを使っている部屋 " + users.length + "個は、「いつもの」にもどります。" : "") + "\n（会話は消えません）", yes:"削除する" });
+          if(!ok) return;
+          room.prompts = room.prompts.filter(x => x.id !== p.id); await save();
+          for(const t of users){ delete t.promptId; await putOne("threads", t); }
+          await showPromptBtn(); await drawPersona();
+        }));
+      }
+      c.appendChild(bar);
+      f2.appendChild(c);
+    });
+    f2.appendChild(btn("add", "＋ 試しのプロンプトを作る", async () => {
+      const v = await dialog({ text:"試しのプロンプトの名前\n（中身は、いまの「いつもの」を写して作ります）", input:true, value:"試し " + room.prompts.length, yes:"作る" });
+      if(!v) return;
+      room.prompts.push({ id:newId(), name:v, text:mainOf(room).text || "" }); await save();
+      await drawPersona();
+      toast("「" + v + "」を作りました。「中身を直す」で書きかえられます");
+    }));
+
+    const f3 = field("文字欄の色", "このペルソナの部屋で使う、自分とAIの文字欄の色です。");
+    f3.appendChild(btn("small", "色を選ぶ", () => {
+      colorRoom = room;
+      document.getElementById("colorsTitle").textContent = "⛵️ " + room.name + " の文字欄の色";
+      drawColors(); colorsSheet.hidden = false;
+    }));
+
+    const f4 = field("まとめてファイルに保存", "このペルソナの部屋 " + mine.length + "個の会話を、1つのテキストにまとめて保存します。");
+    f4.appendChild(btn("small", "ファイルに保存", async () => {
+      let out = "";
+      for(const t of mine.slice().sort((a, b) => a.createdAt - b.createdAt)) out += (out ? "\n────────────\n\n" : "") + await threadText(t, room);
+      await saveFile(fileSafe(room.name) + "_" + stamp() + ".txt", "text/plain", out);
+    }));
+
+    const f5 = field("ペルソナを削除", "このペルソナと、中の部屋と会話が、すべて消えます。");
+    f5.appendChild(btn("small danger", "このペルソナを削除する", async () => {
+      const rooms = await sortedRooms();
+      if(rooms.length < 2){ await tell("ペルソナが1つだけのときは、削除できません。\n先に、別のペルソナを作ってください。"); return; }
+      const ok = await dialog({ text:"⛵️ 「" + room.name + "」を削除しますか？\n中の部屋 " + mine.length + "個と、その会話がすべて消えます。元に戻せません。", yes:"削除する" });
+      if(!ok) return;
+      await removeThreads(mine.map(t => t.id), room.id);
+      personaPanel.hidden = true;
+      await goPersona(rooms.find(r => r.id !== room.id));
+    }));
+  }
+  document.getElementById("openPersona").addEventListener("click", async () => {
+    if(!db) return;
+    box.blur();
+    try{ await drawPersona(); personaPanel.hidden = false; }
+    catch(e){ tell("ペルソナの設定を開けませんでした。もう一度ためしてください。"); }
+  });
+  document.getElementById("closePersona").addEventListener("click", () => { personaPanel.hidden = true; });
 
   /* ───────── 画面の土台（揺れの試し（3）と同じ作り） ───────── */
   let lastH = -1, lastT = "";
@@ -1707,7 +1927,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       }else{ keep = "ふつうの設定"; }
       showState();
     }catch(e){
-      where.textContent = "保存の入れ物を開けませんでした";
+      pName.textContent = "開けませんでした";
       note("保存の入れ物を開けませんでした。このままでは文字が残りません。\n画面の写真を撮って、Claudeに見せてください。\n（" + (e && e.message ? e.message : "理由は分かりません") + "）").style.whiteSpace = "pre-line";
       send.disabled = true;
     }
