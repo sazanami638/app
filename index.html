@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#fdf3e3">
 <title>新しいアプリ（仮）</title>
 <style>
-/* 新しいアプリ（仮） 版 0.4 ── 会話の画面、保存、部屋とスレッド、AIと話す（Claude・Gemini） */
+/* 新しいアプリ（仮） 版 0.5 ── 会話の画面、保存、部屋とスレッド、AIと話す（Claude・Gemini） */
 :root{
   --sand:#faf6ee; --text:#37474f; --soft:#5d6c73; --line:#e4dccc; --sea:#3f7585;
   --skyA:#fdf3e3; --skyB:#e8f3f5;
@@ -68,7 +68,13 @@ header h1 small{ font-size:13px; font-weight:400; color:var(--soft); margin-left
 footer{
   flex-shrink:0; display:flex; gap:10px; align-items:flex-end; position:relative;
   padding:10px 14px calc(env(safe-area-inset-bottom,0px) + 14px);
-  background:#fffdf9; border-top:1px solid var(--line);
+  background:#fffdf9;
+}
+#modelRow{ flex-shrink:0; padding:10px 14px 0; background:#fffdf9; border-top:1px solid var(--line); }
+.pill{
+  min-height:44px; max-width:100%; padding:0 18px; border:1px solid var(--line); border-radius:22px;
+  background:#ffffff; color:var(--text); font:inherit; font-size:16px;
+  white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
 }
 textarea{
   flex:1; min-width:0; resize:none; border:1px solid var(--line); border-radius:18px;
@@ -139,6 +145,13 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   width:100%; min-height:50px; border:none; border-radius:16px; background:var(--sea); color:#fff;
   font:inherit; font-size:17px; font-weight:700;
 }
+.hrow{ display:flex; align-items:center; gap:12px; padding:10px 0; border-top:1px solid var(--line); }
+.hrow:first-child{ border-top:none; }
+.hrow .mname{ font-size:16px; }
+.hrow .mname small{ display:block; font-size:12px; color:var(--soft); }
+.tog{ flex-shrink:0; min-height:44px; min-width:96px; border:1px solid var(--line); border-radius:14px; font:inherit; font-size:15px; }
+.tog.on{ background:#e3f1f4; color:var(--text); }
+.tog.off{ background:#ffffff; color:var(--soft); }
 .group{ margin:4px 4px -6px; font-size:14px; font-weight:700; color:var(--soft); }
 .model{
   width:100%; min-height:56px; text-align:left; padding:10px 14px; border:1px solid var(--line); border-radius:16px;
@@ -195,18 +208,20 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   <header>
     <div class="top">
       <div class="titles">
-        <h1>新しいアプリ<small>（仮）版 0.4</small></h1>
+        <h1>新しいアプリ<small>（仮）版 0.5</small></h1>
         <p id="where">じゅんび中…</p>
       </div>
     </div>
     <div class="bar">
       <button id="openRooms" class="plain" type="button">部屋の一覧</button>
-      <button id="openModels" class="plain" type="button">モデル</button>
       <button id="openSettings" class="plain" type="button">設定</button>
     </div>
     <p id="state" aria-hidden="true"></p>
   </header>
   <main id="list" aria-live="polite"></main>
+  <div id="modelRow">
+    <button id="openModels" class="pill" type="button">モデル ▾</button>
+  </div>
   <footer>
     <label class="label" for="msg">メッセージ</label>
     <textarea id="msg" rows="1" placeholder="メッセージを書く"></textarea>
@@ -246,6 +261,11 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       <button id="showKeys" class="small" type="button">キーを見えるようにする</button>
       <button id="saveKeys" class="go" type="button">キーを保存する</button>
       <div class="field">
+        <h3>モデルの表示／非表示</h3>
+        <p>使わないモデルを、選ぶ一覧からかくせます。会話の記録には影響しません。いま使っているモデルは、かくしても、その会話では選んだままです。</p>
+        <div id="hideList"></div>
+      </div>
+      <div class="field">
         <h3>キーのあつかい</h3>
         <p>キーは、このiPadの中だけに保存します。会話を送るときに、そのAIの会社にだけ送ります。<br>料金は、1ドル162円で計算した目安です。</p>
       </div>
@@ -267,7 +287,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
 <script>
 (function(){
   "use strict";
-  const VERSION = "0.4";
+  const VERSION = "0.5";
   const app = document.getElementById("app");
   const list = document.getElementById("list");
   const box = document.getElementById("msg");
@@ -560,12 +580,14 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     });
   }
   let keys = { claude:"", gemini:"" };
-  let prefs = { lastModel:DEFAULT_MODEL };
+  let prefs = { lastModel:DEFAULT_MODEL, hidden:[] };
+  const savePrefs = () => putOne("meta", { key:"prefs", lastModel:prefs.lastModel, hidden:prefs.hidden });
   async function loadSettings(){
     const k = await getOne("meta", "keys");
     if(k) keys = { claude:k.claude || "", gemini:k.gemini || "" };
     const p = await getOne("meta", "prefs");
     if(p && p.lastModel) prefs.lastModel = p.lastModel;
+    if(p && Array.isArray(p.hidden)) prefs.hidden = p.hidden;
   }
   function removeMessage(id){
     return tx("messages", "readwrite", t => { t.objectStore("messages").delete(id); });
@@ -641,7 +663,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   }
   async function showModel(){
     const mo = modelOf(await currentModelId());
-    modelBtn.textContent = "モデル：" + (mo ? mo.name.replace("Claude ", "").replace("（前の世代）", "") : "選びなおしてね");
+    modelBtn.textContent = (mo ? mo.name : "モデルを選びなおしてね") + " ▾";
   }
   async function openCurrent(){
     where.textContent = current.roomName + " ／ " + current.threadName;
@@ -727,7 +749,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     if(!modelOf(nowId)) modelList.appendChild(note("このモデルは使えなくなりました。別のモデルを選んでね。"));
     ["claude", "gemini"].forEach(by => {
       modelList.appendChild(el("p", "group", COMPANY[by] + (keys[by] ? "" : "（APIキーがまだ入っていません）")));
-      MODELS.filter(m => m.by === by).forEach(m => {
+      MODELS.filter(m => m.by === by && (m.id === nowId || !prefs.hidden.includes(m.id))).forEach(m => {
         const b = el("button", "model" + (m.id === nowId ? " now" : ""));
         b.type = "button";
         const left = el("span", "mname", m.name);
@@ -740,7 +762,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
           try{
             const th = await getOne("threads", current.threadId);
             th.model = m.id; await putOne("threads", th);
-            prefs.lastModel = m.id; await putOne("meta", { key:"prefs", lastModel:m.id });
+            prefs.lastModel = m.id; await savePrefs();
             await showModel(); clearProblem();
             modelsPanel.hidden = true;
             toast(m.name + " にしました");
@@ -770,8 +792,34 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     keyClaude.value = keys.claude; keyGemini.value = keys.gemini;
     keyClaude.type = keyGemini.type = "password";
     showKeys.textContent = "キーを見えるようにする";
+    drawHide();
     settingsPanel.hidden = false;
   });
+  const hideList = document.getElementById("hideList");
+  function drawHide(){
+    hideList.textContent = "";
+    MODELS.forEach(m => {
+      const row = el("div", "hrow");
+      const name = el("span", "mname", m.name);
+      name.appendChild(el("small", "", m.id));
+      const t = el("button", "tog");
+      t.type = "button";
+      const paint = () => {
+        const off = prefs.hidden.includes(m.id);
+        t.textContent = off ? "かくし中" : "表示中";
+        t.className = "tog " + (off ? "off" : "on");
+      };
+      paint();
+      t.addEventListener("click", async () => {
+        const off = prefs.hidden.includes(m.id);
+        prefs.hidden = off ? prefs.hidden.filter(x => x !== m.id) : prefs.hidden.concat(m.id);
+        paint();
+        try{ await savePrefs(); }catch(e){ tell("保存できませんでした。もう一度ためしてください。"); }
+      });
+      row.appendChild(name); row.appendChild(t);
+      hideList.appendChild(row);
+    });
+  }
   showKeys.addEventListener("click", () => {
     const hide = keyClaude.type !== "password";
     keyClaude.type = keyGemini.type = hide ? "password" : "text";
