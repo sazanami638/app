@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#fdf3e3">
 <title>新しいアプリ（仮）</title>
 <style>
-/* 新しいアプリ（仮） 版 0.3 ── 会話の画面、保存、部屋とスレッド、AIと話す（Claude・Gemini） */
+/* 新しいアプリ（仮） 版 0.4 ── 会話の画面、保存、部屋とスレッド、AIと話す（Claude・Gemini） */
 :root{
   --sand:#faf6ee; --text:#37474f; --soft:#5d6c73; --line:#e4dccc; --sea:#3f7585;
   --skyA:#fdf3e3; --skyB:#e8f3f5;
@@ -144,6 +144,9 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   width:100%; min-height:56px; text-align:left; padding:10px 14px; border:1px solid var(--line); border-radius:16px;
   background:#fffdf9; color:var(--text); font:inherit; font-size:17px; line-height:1.5;
 }
+.model{ display:flex; align-items:center; gap:12px; }
+.mname{ flex:1; min-width:0; }
+.mprice{ flex-shrink:0; text-align:right; padding:6px 10px; border-radius:12px; background:#e3f1f4; font-size:16px; font-weight:400; }
 .model.now{ background:var(--me-bg); border-color:var(--me-line); font-weight:700; }
 .model small{ display:block; font-size:13px; font-weight:400; color:var(--soft); }
 .note .detail{ display:block; margin-top:6px; font-size:12px; word-break:break-word; }
@@ -158,6 +161,13 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   background:#fff; color:var(--text); font:inherit; font-size:17px; line-height:1.7; outline:none; resize:none;
 }
 #dlgArea:focus{ border-color:#9cc3cf; }
+#toast{
+  position:absolute; left:50%; top:calc(env(safe-area-inset-top,0px) + 14px); z-index:12;
+  transform:translate(-50%,-12px); max-width:86%; padding:12px 20px; border-radius:18px;
+  background:#37474f; color:#fff; font-size:16px; line-height:1.6; text-align:center;
+  opacity:0; pointer-events:none; transition:opacity .25s, transform .25s;
+}
+#toast.on{ opacity:1; transform:translate(-50%,0); }
 /* たずねる小窓 */
 #dlg{
   position:absolute; inset:0; z-index:9; background:rgba(55,71,79,.28);
@@ -185,12 +195,12 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   <header>
     <div class="top">
       <div class="titles">
-        <h1>新しいアプリ<small>（仮）版 0.3</small></h1>
+        <h1>新しいアプリ<small>（仮）版 0.4</small></h1>
         <p id="where">じゅんび中…</p>
       </div>
     </div>
     <div class="bar">
-      <button id="openRooms" class="plain" type="button">部屋とスレッド</button>
+      <button id="openRooms" class="plain" type="button">部屋の一覧</button>
       <button id="openModels" class="plain" type="button">モデル</button>
       <button id="openSettings" class="plain" type="button">設定</button>
     </div>
@@ -203,9 +213,9 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     <button id="send" type="button">送る</button>
     <div id="mirror" aria-hidden="true"></div>
   </footer>
-  <section id="rooms" class="panel" hidden aria-label="部屋とスレッド">
+  <section id="rooms" class="panel" hidden aria-label="部屋の一覧">
     <div class="phead">
-      <h2>部屋とスレッド</h2>
+      <h2>部屋の一覧</h2>
       <button id="closeRooms" class="plain" type="button">閉じる</button>
     </div>
     <div id="roomList" class="pbody"></div>
@@ -237,10 +247,11 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       <button id="saveKeys" class="go" type="button">キーを保存する</button>
       <div class="field">
         <h3>キーのあつかい</h3>
-        <p>キーは、このiPadの中だけに保存します。会話を送るときに、そのAIの会社にだけ送ります。<br>料金は、1ドル155円で計算した目安です。</p>
+        <p>キーは、このiPadの中だけに保存します。会話を送るときに、そのAIの会社にだけ送ります。<br>料金は、1ドル162円で計算した目安です。</p>
       </div>
     </div>
   </section>
+  <div id="toast" role="status" aria-live="polite"></div>
   <div id="dlg" hidden role="dialog" aria-modal="true">
     <div class="card">
       <p id="dlgText"></p>
@@ -256,7 +267,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
 <script>
 (function(){
   "use strict";
-  const VERSION = "0.3";
+  const VERSION = "0.4";
   const app = document.getElementById("app");
   const list = document.getElementById("list");
   const box = document.getElementById("msg");
@@ -299,31 +310,56 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     }else dlgDone(true);
   });
   dlgNo.addEventListener("click", () => { if(dlgDone){ dlgInput.blur(); dlgArea.blur(); dlgDone(null); } });
-  const tell = text => dialog({ text:text, only:true, yes:"わかった" });
+  const tell = text => dialog({ text:text, only:true, yes:"閉じる" });
+  // 少し出て、自然に消えるお知らせ（押さなくてよい）
+  const toastEl = document.getElementById("toast");
+  let toastTimer = 0;
+  function toast(text){
+    toastEl.textContent = text;
+    toastEl.classList.add("on");
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(() => toastEl.classList.remove("on"), 2600);
+  }
 
   /* ───────── モデルの一覧（ここ1か所にまとめる） ─────────
      pin / pout は、100万トークンあたりの料金（ドル）。
      Claude は公式の料金表で 2026年11月11日に確認。Gemini は 2026年10月末の情報で、公式ページでは未確認。 */
-  const RATE = 155;            // 1ドル = 155円 で計算
+  const RATE = 162;            // 1ドル = 162円 で計算（今のCoveの表示に合わせた）
   const SEND_COUNT = 40;       // AIに送る発言の数
   const DEFAULT_MODEL = "claude-sonnet-5-5";
+  // 並びと添え書きは、Cove v19.27 と同じ。Fable 5.2 を足し、Opus 5.5 は公式の料金（$4/$20）にした。
   const MODELS = [
-    { id:"claude-sonnet-5-5", by:"claude", name:"Claude Sonnet 5.5", pin:2,    pout:10 },
-    { id:"claude-opus-5-5",   by:"claude", name:"Claude Opus 5.5",   pin:4,    pout:20 },
-    { id:"claude-haiku-5-5",  by:"claude", name:"Claude Haiku 5.5",  pin:0.1,  pout:0.5 },
-    { id:"claude-fable-5-2",  by:"claude", name:"Claude Fable 5.2",  pin:8,    pout:40 },
-    { id:"claude-opus-4-6",   by:"claude", name:"Claude Opus 4.6（前の世代）",   pin:5, pout:25 },
-    { id:"claude-sonnet-4-6", by:"claude", name:"Claude Sonnet 4.6（前の世代）", pin:3, pout:15 },
-    { id:"claude-sonnet-4-5", by:"claude", name:"Claude Sonnet 4.5（前の世代）", pin:3, pout:15 },
-    { id:"gemini-3.8-flash",       by:"gemini", name:"Gemini 3.8 Flash", pin:0.75, pout:3.75 },
-    { id:"gemini-3.1-pro-preview", by:"gemini", name:"Gemini 3.1 Pro",   pin:2,    pout:12 }
+    { id:"claude-fable-5-2",  by:"claude", name:"Claude Fable 5.2",  pin:8,   pout:40, note:"最新・最上位" },
+    { id:"claude-fable-5-1",  by:"claude", name:"Claude Fable 5.1",  pin:10,  pout:50, note:"" },
+    { id:"claude-fable-5",    by:"claude", name:"Claude Fable 5",    pin:10,  pout:50, note:"" },
+    { id:"claude-opus-5-5",   by:"claude", name:"Claude Opus 5.5",   pin:4,   pout:20, note:"Opus最新" },
+    { id:"claude-opus-4-8",   by:"claude", name:"Claude Opus 4.8",   pin:5,   pout:25, note:"" },
+    { id:"claude-opus-4-7",   by:"claude", name:"Claude Opus 4.7",   pin:5,   pout:25, note:"" },
+    { id:"claude-opus-4-6",   by:"claude", name:"Claude Opus 4.6",   pin:5,   pout:25, note:"" },
+    { id:"claude-opus-4-5",   by:"claude", name:"Claude Opus 4.5",   pin:5,   pout:25, note:"" },
+    { id:"claude-sonnet-5-5", by:"claude", name:"Claude Sonnet 5.5", pin:2,   pout:10, note:"バランス型・最新" },
+    { id:"claude-sonnet-4-6", by:"claude", name:"Claude Sonnet 4.6", pin:3,   pout:15, note:"" },
+    { id:"claude-sonnet-4-5", by:"claude", name:"Claude Sonnet 4.5", pin:3,   pout:15, note:"紬の生まれた海" },
+    { id:"claude-haiku-5-5",  by:"claude", name:"Claude Haiku 5.5",  pin:0.1, pout:0.5, note:"軽くて速い・最新" },
+    { id:"claude-haiku-4-5-20251001", by:"claude", name:"Claude Haiku 4.5", pin:1, pout:5, note:"軽くて速い" },
+    { id:"gemini-4-argon",         by:"gemini", name:"Gemini 4 Argon",        pin:2,    pout:10,   note:"Gemini最上位・12月1日に倍額・有料枠のみ" },
+    { id:"gemini-3.8-flash",       by:"gemini", name:"Gemini 3.8 Flash",      pin:0.75, pout:3.75, note:"Flash最新・2027年1月に倍額" },
+    { id:"gemini-3.6-flash",       by:"gemini", name:"Gemini 3.6 Flash",      pin:0.75, pout:3.75, note:"2027年1月に倍額" },
+    { id:"gemini-3.1-pro-preview", by:"gemini", name:"Gemini 3.1 Pro",        pin:2,    pout:12,   note:"Pro（プレビュー版・有料枠のみ）" },
+    { id:"gemini-3-flash-preview", by:"gemini", name:"Gemini 3 Flash",        pin:0.5,  pout:3,    note:"プレビュー版" },
+    { id:"gemini-3.5-flash-lite",  by:"gemini", name:"Gemini 3.5 Flash-Lite", pin:0.3,  pout:2.5,  note:"軽くて安い" },
+    { id:"gemini-3.1-flash-lite",  by:"gemini", name:"Gemini 3.1 Flash-Lite", pin:0.25, pout:1.5,  note:"3系で一番安い" },
+    { id:"gemini-2.5-flash",       by:"gemini", name:"Gemini 2.5 Flash",      pin:0.3,  pout:2.5,  note:"新規利用は制限あり" },
+    { id:"gemma-4-31b-it",         by:"gemini", name:"Gemma 4 31B",           pin:0,    pout:0,    note:"無料枠" }
   ];
   const COMPANY = { claude:"Claude", gemini:"Gemini" };
   const modelOf = id => MODELS.find(m => m.id === id) || null;
   const yen = usd => {
     const y = usd * RATE;
-    return y < 0.05 ? "0.1円未満" : "約" + (y < 10 ? y.toFixed(1) : Math.round(y)) + "円";
+    return "≈¥" + (y < 10 ? y.toFixed(1) : Math.round(y).toLocaleString());
   };
+  // 1往復の目安（送る文字1000トークン、返事1000トークン。今のCoveと同じ数え方）
+  const perTurn = (m, turns) => yen((m.pin + m.pout) / 1000 * turns);
 
   /* ───────── AIの会社に送る ───────── */
   function trouble(plain, detail){ const e = new Error(plain); e.plain = plain; e.detail = detail || ""; return e; }
@@ -367,6 +403,9 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   }
   async function askGemini(model, key, persona, turns, signal){
     const body = { contents:turns.map(t => ({ role:t.role === "assistant" ? "model" : "user", parts:[{ text:t.text }] })) };
+    body.safetySettings = ["HARM_CATEGORY_HARASSMENT","HARM_CATEGORY_HATE_SPEECH","HARM_CATEGORY_SEXUALLY_EXPLICIT","HARM_CATEGORY_DANGEROUS_CONTENT"]
+      .map(c => ({ category:c, threshold:"BLOCK_NONE" }));   // 今のCoveと同じ設定
+    body.generationConfig = { maxOutputTokens:4096 };
     if(persona.trim()) body.systemInstruction = { parts:[{ text:persona }] };
     const data = await post("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model.id) + ":generateContent", {
       "content-type":"application/json", "x-goog-api-key":key
@@ -581,8 +620,8 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     u.appendChild(t);
     if(m.role === "ai"){
       const mo = modelOf(m.model);
-      let info = mo ? mo.name : (m.model || "");
-      if(typeof m.usd === "number") info += " ・ " + yen(m.usd);
+      let info = "使用モデル: " + (mo ? mo.name : (m.model || "不明"));
+      if(typeof m.usd === "number") info += " ・ このターン " + yen(m.usd);
       if(m.cut) info += " ・ 長くて途中で切れました";
       if(info) u.appendChild(el("span", "", info));
     }
@@ -689,10 +728,14 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     ["claude", "gemini"].forEach(by => {
       modelList.appendChild(el("p", "group", COMPANY[by] + (keys[by] ? "" : "（APIキーがまだ入っていません）")));
       MODELS.filter(m => m.by === by).forEach(m => {
-        const b = el("button", "model" + (m.id === nowId ? " now" : ""), m.name);
+        const b = el("button", "model" + (m.id === nowId ? " now" : ""));
         b.type = "button";
-        b.appendChild(el("small", "", (m.id === nowId ? "いま選んでいる ・ " : "") +
-          "送る文字 $" + m.pin + " ／ 返事の文字 $" + m.pout + "（100万トークンあたり）"));
+        const left = el("span", "mname", m.name);
+        const sub = (m.id === nowId ? "いま選んでいる" : "") + (m.id === nowId && m.note ? " ・ " : "") + (m.note || "");
+        if(sub) left.appendChild(el("small", "", sub));
+        const price = el("span", "mprice", perTurn(m, 1));
+        price.appendChild(el("small", "", "10往復 " + perTurn(m, 10)));
+        b.appendChild(left); b.appendChild(price);
         b.addEventListener("click", async () => {
           try{
             const th = await getOne("threads", current.threadId);
@@ -700,12 +743,13 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
             prefs.lastModel = m.id; await putOne("meta", { key:"prefs", lastModel:m.id });
             await showModel(); clearProblem();
             modelsPanel.hidden = true;
+            toast(m.name + " にしました");
           }catch(e){ tell("モデルを変えられませんでした。もう一度ためしてください。"); }
         });
         modelList.appendChild(b);
       });
     });
-    modelList.appendChild(note("モデルは、スレッドごとに覚えます。\n料金は、返事ごとに、発言の下に出ます。")).style.whiteSpace = "pre-line";
+    modelList.appendChild(note("ここで選ぶと、このスレッドの次の返事から切り替わります。\n金額は、ふつうの長さの1往復の目安です。会話が長くなると、これより高くなります。")).style.whiteSpace = "pre-line";
   }
   modelBtn.addEventListener("click", async () => {
     if(!db) return;
@@ -741,7 +785,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       keyClaude.blur(); keyGemini.blur();
       if(hint){ hint.remove(); hint = null; showHint(); }
       settingsPanel.hidden = true;
-      await tell("キーを保存しました。");
+      toast("キーを保存しました");
     }catch(e){ tell("キーを保存できませんでした。もう一度ためしてください。"); }
   });
   document.getElementById("closeSettings").addEventListener("click", () => { keyClaude.blur(); keyGemini.blur(); settingsPanel.hidden = true; });
@@ -793,6 +837,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
         const r = await dialog({ text:"「" + room.name + "」のキャラ設定\nここに書いたことを、毎回AIに伝えます。", area:true, value:room.persona || "", yes:"保存する" });
         if(!r) return;
         room.persona = r.text; await putOne("rooms", room);
+        toast("キャラ設定を保存しました");
       }));
       head.appendChild(btn("small danger", "部屋を削除", async () => {
         if(rooms.length < 2){ await tell("部屋が1つだけのときは、削除できません。\n先に、別の部屋を作ってください。"); return; }
