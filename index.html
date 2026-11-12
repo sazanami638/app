@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#fdf3e3">
 <title>新しいアプリ（仮）</title>
 <style>
-/* 新しいアプリ（仮） 版 0.5 ── 会話の画面、保存、部屋とスレッド、AIと話す（Claude・Gemini） */
+/* 新しいアプリ（仮） 版 0.6 ── 会話の画面、保存、部屋とスレッド、AIと話す（Claude・Gemini） */
 :root{
   --sand:#faf6ee; --text:#37474f; --soft:#5d6c73; --line:#e4dccc; --sea:#3f7585;
   --skyA:#fdf3e3; --skyB:#e8f3f5;
@@ -152,6 +152,29 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
 .tog{ flex-shrink:0; min-height:44px; min-width:96px; border:1px solid var(--line); border-radius:14px; font:inherit; font-size:15px; }
 .tog.on{ background:#e3f1f4; color:var(--text); }
 .tog.off{ background:#ffffff; color:var(--soft); }
+/* 画面の上にふわっと出る小さな窓（モデルを選ぶ） */
+.sheet{
+  position:absolute; inset:0; z-index:8; background:rgba(55,71,79,.35);
+  display:flex; align-items:center; justify-content:center;
+  padding:calc(env(safe-area-inset-top,0px) + 20px) 20px calc(env(safe-area-inset-bottom,0px) + 20px);
+}
+.sheet[hidden]{ display:none; }
+.card2{
+  width:100%; max-width:440px; max-height:100%; display:flex; flex-direction:column; overflow:hidden;
+  background:#fffdf9; border-radius:22px; box-shadow:0 10px 40px rgba(0,0,0,.2);
+}
+.ch{ flex-shrink:0; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:14px 18px 4px 22px; }
+.ch h2{ margin:0; font-size:18px; }
+.x{ min-width:44px; min-height:44px; border:none; background:none; border-radius:14px; color:var(--soft); font:inherit; font-size:20px; }
+.cb{ flex:1 1 auto; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; padding:0 22px 12px; }
+.hint{ margin:6px 0 14px; font-size:14px; line-height:1.8; color:var(--soft); }
+.mlist{ display:flex; flex-direction:column; gap:10px; }
+.cf{ flex-shrink:0; padding:12px 22px 22px; border-top:1px solid var(--line); }
+.close2{
+  width:100%; min-height:52px; border:1px solid var(--line); border-radius:16px;
+  background:#faf5ec; color:var(--text); font:inherit; font-size:16px; font-weight:700;
+}
+.model.now{ box-shadow:0 0 0 2px #7fb0bf; }
 .group{ margin:4px 4px -6px; font-size:14px; font-weight:700; color:var(--soft); }
 .model{
   width:100%; min-height:56px; text-align:left; padding:10px 14px; border:1px solid var(--line); border-radius:16px;
@@ -208,7 +231,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   <header>
     <div class="top">
       <div class="titles">
-        <h1>新しいアプリ<small>（仮）版 0.5</small></h1>
+        <h1>新しいアプリ<small>（仮）版 0.6</small></h1>
         <p id="where">じゅんび中…</p>
       </div>
     </div>
@@ -235,12 +258,18 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     </div>
     <div id="roomList" class="pbody"></div>
   </section>
-  <section id="models" class="panel" hidden aria-label="モデルを選ぶ">
-    <div class="phead">
-      <h2>モデルを選ぶ</h2>
-      <button id="closeModels" class="plain" type="button">閉じる</button>
+  <section id="models" class="sheet" hidden aria-label="このスレッドのモデル">
+    <div class="card2">
+      <div class="ch">
+        <h2>このスレッドのモデル</h2>
+        <button id="closeModelsX" class="x" type="button" aria-label="閉じる">✕</button>
+      </div>
+      <div class="cb">
+        <p class="hint">ここで選ぶと、このスレッドの次の返事から切り替わります。過去の返事の下には、その返事で実際に使ったモデルが残ります。</p>
+        <div id="modelList" class="mlist"></div>
+      </div>
+      <div class="cf"><button id="closeModels" class="close2" type="button">閉じる</button></div>
     </div>
-    <div id="modelList" class="pbody"></div>
   </section>
   <section id="settings" class="panel" hidden aria-label="設定">
     <div class="phead">
@@ -287,7 +316,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
 <script>
 (function(){
   "use strict";
-  const VERSION = "0.5";
+  const VERSION = "0.6";
   const app = document.getElementById("app");
   const list = document.getElementById("list");
   const box = document.getElementById("msg");
@@ -771,15 +800,21 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
         modelList.appendChild(b);
       });
     });
-    modelList.appendChild(note("ここで選ぶと、このスレッドの次の返事から切り替わります。\n金額は、ふつうの長さの1往復の目安です。会話が長くなると、これより高くなります。")).style.whiteSpace = "pre-line";
   }
   modelBtn.addEventListener("click", async () => {
     if(!db) return;
     box.blur();
-    try{ await drawModels(); modelsPanel.hidden = false; }
+    try{
+      await drawModels(); modelsPanel.hidden = false;
+      const cur = modelList.querySelector(".now");
+      if(cur) cur.scrollIntoView({ block:"center" });
+    }
     catch(e){ tell("モデルの一覧を開けませんでした。もう一度ためしてください。"); }
   });
-  document.getElementById("closeModels").addEventListener("click", () => { modelsPanel.hidden = true; });
+  const closeModels = () => { modelsPanel.hidden = true; };
+  document.getElementById("closeModels").addEventListener("click", closeModels);
+  document.getElementById("closeModelsX").addEventListener("click", closeModels);
+  modelsPanel.addEventListener("click", e => { if(e.target === modelsPanel) closeModels(); });
 
   /* ───────── 設定（APIキー） ───────── */
   const settingsPanel = document.getElementById("settings");
