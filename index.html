@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#fdf3e3">
 <title>新しいアプリ（仮）</title>
 <style>
-/* 新しいアプリ（仮） 版 1.2 ── 会話の画面、保存、ペルソナと部屋、プロンプトの切り替え、記憶（項目ごと）、AIと話す（Claude・Gemini・GPT・Grok）、検索、思考、保存 */
+/* 新しいアプリ（仮） 版 1.3 ── 会話の画面、保存、ペルソナと部屋、プロンプトの切り替え、記憶（項目ごと、発言から記録）、AIと話す（Claude・Gemini・GPT・Grok）、検索、思考、保存 */
 :root{
   --sand:#faf6ee; --text:#37474f; --soft:#5d6c73; --line:#e4dccc; --sea:#3f7585;
   --skyA:#fdf3e3; --skyB:#e8f3f5;
@@ -272,7 +272,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     <div class="hl">
       <button id="openPersonas" class="pick" type="button"><span id="pName" class="pt">じゅんび中…</span><span class="pa">▾</span></button>
       <span class="gap"></span>
-      <span id="ver">版 1.2</span>
+      <span id="ver">版 1.3</span>
       <button id="openSettings" class="plain" type="button">設定</button>
     </div>
     <div class="hl">
@@ -460,7 +460,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
 <script>
 (function(){
   "use strict";
-  const VERSION = "1.2";
+  const VERSION = "1.3";
   const app = document.getElementById("app");
   const list = document.getElementById("list");
   const box = document.getElementById("msg");
@@ -1052,6 +1052,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     u.appendChild(el("span", "", when(m.createdAt)));
     const mk = (label, fn) => { const x = el("button", "", label); x.type = "button"; x.addEventListener("click", () => { Promise.resolve(fn()).catch(() => tell("うまくいきませんでした。もう一度ためしてください。")); }); u.appendChild(x); };
     mk("コピー", () => copyText(m.text));
+    mk("記録する", () => recordTo(m));
     mk("書きなおし", async () => {
       const r = await dialog({ text:"この発言を書きなおします。\n（これより後の発言は、そのまま残ります）", area:true, value:m.text, yes:"保存する" });
       if(!r || !r.text.trim()) return;
@@ -1958,6 +1959,33 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       if(!r) return;
       m.text = r.text; m.updatedAt = Date.now(); await save();
       await drawMemory(); toast("記憶を保存しました");
+    }));
+  }
+  // 発言を、記憶の項目に記録する（その項目のいちばん下に、日付つきで足す）
+  async function recordTo(m){
+    const first = await getRoom(current.roomId);
+    if(!first) return;
+    const add = async (id, title) => {
+      const room = await getRoom(current.roomId);
+      if(!Array.isArray(room.memories)) room.memories = [];
+      let it = id ? room.memories.find(x => x.id === id) : null;
+      const now = Date.now();
+      if(!it){ it = { id:newId(), title:title, text:"", show:true, createdAt:now, updatedAt:now }; room.memories.push(it); }
+      const line = "（" + dayName(m.createdAt || now) + " " + (m.role === "ai" ? room.name : "わたし") + "）\n" + (m.text || "").trim();
+      it.text = ((it.text || "").trim() ? it.text.replace(/\s+$/, "") + "\n\n" : "") + line;
+      it.updatedAt = now;
+      await putOne("rooms", room);
+      closePick();
+      toast("記憶「" + it.title + "」に記録しました");
+    };
+    const box2 = openPick("どの項目に記録しますか？", "この発言を、選んだ項目のいちばん下に足します。あとで「記憶」から編集できます。");
+    (first.memories || []).forEach(it => {
+      box2.appendChild(choice(it.title, it.show ? "AIに見せる" : "見せない", false, () => add(it.id)));
+    });
+    box2.appendChild(btn("add", "＋ 新しい項目", async () => {
+      const v = await dialog({ text:"新しい項目の名前\n（例：体のこと、音楽）", input:true, value:"", yes:"作って記録する" });
+      if(!v) return;
+      await add(null, v);
     }));
   }
   document.getElementById("openMemory").addEventListener("click", async () => {
