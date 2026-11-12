@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#fdf3e3">
 <title>新しいアプリ（仮）</title>
 <style>
-/* 新しいアプリ（仮） 版 0.7 ── 会話の画面、保存、部屋とスレッド、AIと話す（Claude・Gemini・GPT・Grok）、検索、思考、保存 */
+/* 新しいアプリ（仮） 版 0.8 ── 会話の画面、保存、部屋とスレッド、AIと話す（Claude・Gemini・GPT・Grok）、検索、思考、保存 */
 :root{
   --sand:#faf6ee; --text:#37474f; --soft:#5d6c73; --line:#e4dccc; --sea:#3f7585;
   --skyA:#fdf3e3; --skyB:#e8f3f5;
@@ -72,7 +72,7 @@ footer{
 }
 #modelRow{ flex-shrink:0; display:flex; gap:8px; padding:10px 14px 0; background:#fffdf9; border-top:1px solid var(--line); }
 #openModels{ flex:1; min-width:0; }
-#toggleSearch{ flex-shrink:0; }
+#toggleSearch, #toggleThink{ flex-shrink:0; }
 .pill.on{ background:#e3f1f4; border-color:#9cc3cf; font-weight:700; }
 .pill{
   min-height:44px; max-width:100%; padding:0 18px; border:1px solid var(--line); border-radius:22px;
@@ -251,12 +251,13 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   <header>
     <div class="top">
       <div class="titles">
-        <h1>新しいアプリ<small>（仮）版 0.7</small></h1>
+        <h1>新しいアプリ<small>（仮）版 0.8</small></h1>
         <p id="where">じゅんび中…</p>
       </div>
     </div>
     <div class="bar">
       <button id="openRooms" class="plain" type="button">部屋の一覧</button>
+      <button id="openThread" class="plain" type="button">このスレッド</button>
       <button id="openFinder" class="plain" type="button">さがす</button>
       <button id="openSettings" class="plain" type="button">設定</button>
       <button id="openCover" class="plain" type="button">表紙</button>
@@ -267,6 +268,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   <div id="modelRow">
     <button id="openModels" class="pill" type="button">モデル ▾</button>
     <button id="toggleSearch" class="pill" type="button">ウェブ検索：オフ</button>
+    <button id="toggleThink" class="pill" type="button">思考：オフ</button>
   </div>
   <footer>
     <label class="label" for="msg">メッセージ</label>
@@ -361,6 +363,23 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       </div>
     </div>
   </section>
+  <section id="threadSheet" class="sheet" hidden aria-label="このスレッド">
+    <div class="card2">
+      <div class="ch">
+        <h2>このスレッド</h2>
+        <button id="closeThreadX" class="x" type="button" aria-label="閉じる">✕</button>
+      </div>
+      <div class="cb">
+        <p class="hint" id="threadHint"></p>
+        <div class="mlist">
+          <button id="tsColor" class="model" type="button"><span class="mname">文字欄の色を変える<small>この部屋のほかのスレッドも、同じ色になります</small></span></button>
+          <button id="tsSave" class="model" type="button"><span class="mname">このスレッドを保存<small>読み物のファイル（テキスト）にします</small></span></button>
+          <button id="tsCopy" class="model" type="button"><span class="mname">このスレッドをコピー<small>会話を全部コピーして、メモなどに貼れます</small></span></button>
+        </div>
+      </div>
+      <div class="cf"><button id="closeThread" class="close2" type="button">閉じる</button></div>
+    </div>
+  </section>
   <section id="finder" class="panel" hidden aria-label="さがす">
     <div class="phead">
       <h2>さがす</h2>
@@ -412,7 +431,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
 <script>
 (function(){
   "use strict";
-  const VERSION = "0.7";
+  const VERSION = "0.8";
   const app = document.getElementById("app");
   const list = document.getElementById("list");
   const box = document.getElementById("msg");
@@ -534,19 +553,32 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     if(status >= 500) return trouble(who + "のほうが混んでいるようです。\n少し待ってから、もう一度ためしてください。", d);
     return trouble("送った内容を、" + who + "が受け付けませんでした。", d);
   }
+  const TIMEOUT_MS = 120000;     // 返事を待つ長さ（120秒）
   async function post(url, headers, body, signal, who){
-    let res;
+    const ctl = new AbortController();
+    let timedOut = false;
+    const timer = setTimeout(() => { timedOut = true; ctl.abort(); }, TIMEOUT_MS);
+    const relay = () => ctl.abort();
+    if(signal){ if(signal.aborted) ctl.abort(); else signal.addEventListener("abort", relay); }
+    const late = () => trouble(Math.round(TIMEOUT_MS / 1000) + "秒待ちましたが、" + who + "から返事が来ませんでした。\n混んでいるのかもしれません。別のモデルを選ぶか、少し待ってから、もう一度ためしてください。", "時間切れ");
     try{
-      res = await fetch(url, { method:"POST", headers:headers, body:JSON.stringify(body), signal:signal });
-    }catch(e){
-      if(e && e.name === "AbortError") throw e;
-      throw trouble("通信できませんでした。\n電波やWi-Fiを確かめて、もう一度ためしてください。", String(e && e.message || e));
+      let res;
+      try{
+        res = await fetch(url, { method:"POST", headers:headers, body:JSON.stringify(body), signal:ctl.signal });
+      }catch(e){
+        if(timedOut) throw late();
+        if(e && e.name === "AbortError") throw e;
+        throw trouble("通信できませんでした。\n電波やWi-Fiを確かめて、もう一度ためしてください。", String(e && e.message || e));
+      }
+      let data = null;
+      try{ data = await res.json(); }catch(e){ if(timedOut) throw late(); }
+      if(!res.ok) throw fail(res.status, data && data.error && data.error.message, who);
+      if(!data) throw trouble("返事を読み取れませんでした。もう一度ためしてください。");
+      return data;
+    }finally{
+      clearTimeout(timer);
+      if(signal) signal.removeEventListener("abort", relay);
     }
-    let data = null;
-    try{ data = await res.json(); }catch(e){}
-    if(!res.ok) throw fail(res.status, data && data.error && data.error.message, who);
-    if(!data) throw trouble("返事を読み取れませんでした。もう一度ためしてください。");
-    return data;
   }
   const SEARCH_MAX = 3;                                  // 1回の返事で調べる最大回数（Coveと同じ）
   const SEARCH_COST = { claude:0.01, gemini:0.014 };     // 1検索あたりのおおよその料金（ドル。Coveと同じ）
@@ -904,6 +936,22 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       reply();
     }catch(e){ tell("うまくいきませんでした。もう一度ためしてください。"); }
   }
+  // 自分の発言を、もう一度AIに送る（これより後ろのやりとりは消える）
+  async function resend(m){
+    if(waiting) return;
+    const msgs = await loadMessages();
+    const i = msgs.findIndex(x => x.id === m.id);
+    if(i < 0) return;
+    const later = msgs.slice(i + 1);
+    const text = later.length === 0 ? "この発言を、もう一度AIに送ります。"
+      : "この発言より後ろのやりとり " + later.length + "件を消して、この発言をもう一度AIに送ります。\n消したものは、元に戻せません。";
+    if(!await dialog({ text:text, yes:"再送信する", no:"やめる" })) return;
+    try{
+      if(later.length) await tx("messages", "readwrite", t => { later.forEach(x => t.objectStore("messages").delete(x.id)); });
+      await openCurrent();
+      reply();
+    }catch(e){ tell("うまくいきませんでした。もう一度ためしてください。"); }
+  }
   function draw(m){
     const row = document.createElement("div");
     row.className = "row " + (m.role === "ai" ? "ai" : "me");
@@ -929,6 +977,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       b.textContent = m.text;
       toast("書きなおしました");
     });
+    if(m.role === "me") mk("再送信", () => resend(m));
     if(m.role === "ai") mk("もう一度", () => again(m));
     mk("削除", async () => {
       if(!await dialog({ text:"この発言を削除しますか？\n削除すると、元に戻せません。", yes:"削除する" })) return;
@@ -978,7 +1027,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   async function openCurrent(){
     where.textContent = current.roomName + " ／ " + current.threadName;
     clearProblem();
-    await showModel(); await showSearchBtn(); await applyColors();
+    await showModel(); await showSearchBtn(); showThinkBtn(); await applyColors();
     list.textContent = ""; hint = null;
     const msgs = await loadMessages();
     count = msgs.length;
@@ -1024,11 +1073,19 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     if(!turns.length || turns[turns.length - 1].role !== "user") return;
     const ctl = new AbortController();
     const row = el("div", "row ai");
-    row.appendChild(el("div", "msg wait", opt.search ? "調べながら、返事を待っています…" : "返事を待っています…"));
+    const waitMsg = el("div", "msg wait");
+    const waitBase = opt.search ? "調べながら、返事を待っています" : "返事を待っています";
+    let secs = 0;
+    const tick = () => { waitMsg.textContent = waitBase + "…（" + secs + "秒）"; };
+    tick();
+    row.appendChild(waitMsg);
+    const waitTimer = setInterval(() => { secs++; tick(); }, 1000);
     const u = el("div", "under");
     const stop = el("button", "", "止める");
     stop.type = "button";
-    stop.addEventListener("click", () => ctl.abort());
+    stop.addEventListener("click", async () => {
+      if(await dialog({ text:"返事を待つのをやめますか？\n（ここまでにかかった料金は、戻りません）", yes:"やめる", no:"つづける" })) ctl.abort();
+    });
     u.appendChild(stop); row.appendChild(u);
     list.appendChild(row);
     toBottom();
@@ -1054,6 +1111,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
         else problem((e && e.plain) || "うまくいきませんでした。もう一度ためしてください。", true, e && (e.detail || (!e.plain && e.message)));
       }
     }
+    clearInterval(waitTimer);
     waiting = null; send.disabled = false;
     showState();
   }
@@ -1076,6 +1134,23 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       if(th.search && mo && !(mo.by === "claude" || mo.by === "gemini")) toast("オンにしました。ただ、このモデルはウェブ検索に未対応です");
       else if(th.search) toast("ウェブ検索をオンにしました（必要なときだけ調べます）");
       else toast("ウェブ検索をオフにしました");
+    }catch(e){ tell("切り替えられませんでした。もう一度ためしてください。"); }
+  });
+
+  /* ───────── 思考の表示のオン・オフ（設定の中のスイッチと同じもの） ───────── */
+  const thinkTop = document.getElementById("toggleThink");
+  function showThinkBtn(){
+    thinkTop.textContent = "思考：" + (prefs.think ? "オン" : "オフ");
+    thinkTop.className = "pill" + (prefs.think ? " on" : "");
+  }
+  thinkTop.addEventListener("click", async () => {
+    if(!db) return;
+    prefs.think = !prefs.think; showThinkBtn(); paintSettings();
+    try{
+      await savePrefs();
+      const mo = modelOf(await currentModelId());
+      if(prefs.think && mo && !(mo.by === "claude" || mo.by === "gemini")) toast("オンにしました。ただ、このモデルは思考の表示に未対応です");
+      else toast(prefs.think ? "思考の表示をオンにしました" : "思考の表示をオフにしました");
     }catch(e){ tell("切り替えられませんでした。もう一度ためしてください。"); }
   });
 
@@ -1127,6 +1202,47 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   document.getElementById("closeColors").addEventListener("click", closeColors);
   document.getElementById("closeColorsX").addEventListener("click", closeColors);
   colorsSheet.addEventListener("click", e => { if(e.target === colorsSheet) closeColors(); });
+
+  /* ───────── このスレッドの操作（色、保存、コピー） ───────── */
+  const threadSheet = document.getElementById("threadSheet");
+  let threadCache = "";
+  async function currentPair(){
+    const th = await getOne("threads", current.threadId), room = await getOne("rooms", current.roomId);
+    return (th && room) ? { th:th, room:room } : null;
+  }
+  document.getElementById("openThread").addEventListener("click", async () => {
+    if(!db) return;
+    box.blur();
+    try{
+      const p = await currentPair();
+      if(!p) return;
+      document.getElementById("threadHint").textContent = "「" + p.room.name + " ／ " + p.th.name + "」";
+      threadCache = await threadText(p.th, p.room);       // コピーは押した瞬間に使えるよう、先に用意しておく
+      threadSheet.hidden = false;
+    }catch(e){ tell("開けませんでした。もう一度ためしてください。"); }
+  });
+  const closeThread = () => { threadSheet.hidden = true; };
+  document.getElementById("closeThread").addEventListener("click", closeThread);
+  document.getElementById("closeThreadX").addEventListener("click", closeThread);
+  threadSheet.addEventListener("click", e => { if(e.target === threadSheet) closeThread(); });
+  document.getElementById("tsCopy").addEventListener("click", () => { closeThread(); copyText(threadCache); });
+  document.getElementById("tsSave").addEventListener("click", async () => {
+    closeThread();
+    try{
+      const p = await currentPair();
+      if(p) await saveFile(fileSafe(p.room.name + "_" + p.th.name) + "_" + stamp() + ".txt", "text/plain", threadCache || await threadText(p.th, p.room));
+    }catch(e){ tell("保存できませんでした。もう一度ためしてください。"); }
+  });
+  document.getElementById("tsColor").addEventListener("click", async () => {
+    closeThread();
+    try{
+      const p = await currentPair();
+      if(!p) return;
+      colorRoom = p.room;
+      document.getElementById("colorsTitle").textContent = "「" + p.room.name + "」の文字欄の色";
+      drawColors(); colorsSheet.hidden = false;
+    }catch(e){ tell("開けませんでした。もう一度ためしてください。"); }
+  });
 
   /* ───────── 表紙 ───────── */
   const splash = document.getElementById("splash");
@@ -1297,7 +1413,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     try{ await savePrefs(); }catch(e){ tell("保存できませんでした。もう一度ためしてください。"); }
   }));
   thinkBtn.addEventListener("click", async () => {
-    prefs.think = !prefs.think; paintSettings();
+    prefs.think = !prefs.think; paintSettings(); showThinkBtn();
     try{ await savePrefs(); toast(prefs.think ? "思考の表示をオンにしました" : "思考の表示をオフにしました"); }
     catch(e){ tell("保存できませんでした。もう一度ためしてください。"); }
   });
