@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#fdf3e3">
 <title>新しいアプリ（仮）</title>
 <style>
-/* 新しいアプリ（仮） 版 0.8 ── 会話の画面、保存、部屋とスレッド、AIと話す（Claude・Gemini・GPT・Grok）、検索、思考、保存 */
+/* 新しいアプリ（仮） 版 0.9 ── 会話の画面、保存、部屋とスレッド、AIと話す（Claude・Gemini・GPT・Grok）、検索、思考、保存 */
 :root{
   --sand:#faf6ee; --text:#37474f; --soft:#5d6c73; --line:#e4dccc; --sea:#3f7585;
   --skyA:#fdf3e3; --skyB:#e8f3f5;
@@ -251,16 +251,17 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   <header>
     <div class="top">
       <div class="titles">
-        <h1>新しいアプリ<small>（仮）版 0.8</small></h1>
+        <h1>新しいアプリ<small>（仮）版 0.9</small></h1>
         <p id="where">じゅんび中…</p>
       </div>
     </div>
     <div class="bar">
       <button id="openRooms" class="plain" type="button">部屋の一覧</button>
-      <button id="openThread" class="plain" type="button">このスレッド</button>
+      <button id="btnColor" class="plain" type="button">文字欄の色</button>
+      <button id="btnSave" class="plain" type="button">会話を保存</button>
+      <button id="btnCopy" class="plain" type="button">会話をコピー</button>
       <button id="openFinder" class="plain" type="button">さがす</button>
       <button id="openSettings" class="plain" type="button">設定</button>
-      <button id="openCover" class="plain" type="button">表紙</button>
     </div>
     <p id="state" aria-hidden="true"></p>
   </header>
@@ -363,23 +364,6 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       </div>
     </div>
   </section>
-  <section id="threadSheet" class="sheet" hidden aria-label="このスレッド">
-    <div class="card2">
-      <div class="ch">
-        <h2>このスレッド</h2>
-        <button id="closeThreadX" class="x" type="button" aria-label="閉じる">✕</button>
-      </div>
-      <div class="cb">
-        <p class="hint" id="threadHint"></p>
-        <div class="mlist">
-          <button id="tsColor" class="model" type="button"><span class="mname">文字欄の色を変える<small>この部屋のほかのスレッドも、同じ色になります</small></span></button>
-          <button id="tsSave" class="model" type="button"><span class="mname">このスレッドを保存<small>読み物のファイル（テキスト）にします</small></span></button>
-          <button id="tsCopy" class="model" type="button"><span class="mname">このスレッドをコピー<small>会話を全部コピーして、メモなどに貼れます</small></span></button>
-        </div>
-      </div>
-      <div class="cf"><button id="closeThread" class="close2" type="button">閉じる</button></div>
-    </div>
-  </section>
   <section id="finder" class="panel" hidden aria-label="さがす">
     <div class="phead">
       <h2>さがす</h2>
@@ -431,7 +415,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
 <script>
 (function(){
   "use strict";
-  const VERSION = "0.8";
+  const VERSION = "0.9";
   const app = document.getElementById("app");
   const list = document.getElementById("list");
   const box = document.getElementById("msg");
@@ -1203,38 +1187,14 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   document.getElementById("closeColorsX").addEventListener("click", closeColors);
   colorsSheet.addEventListener("click", e => { if(e.target === colorsSheet) closeColors(); });
 
-  /* ───────── このスレッドの操作（色、保存、コピー） ───────── */
-  const threadSheet = document.getElementById("threadSheet");
-  let threadCache = "";
+  /* ───────── 上のボタン：文字欄の色、会話を保存、会話をコピー ───────── */
   async function currentPair(){
     const th = await getOne("threads", current.threadId), room = await getOne("rooms", current.roomId);
     return (th && room) ? { th:th, room:room } : null;
   }
-  document.getElementById("openThread").addEventListener("click", async () => {
+  document.getElementById("btnColor").addEventListener("click", async () => {
     if(!db) return;
     box.blur();
-    try{
-      const p = await currentPair();
-      if(!p) return;
-      document.getElementById("threadHint").textContent = "「" + p.room.name + " ／ " + p.th.name + "」";
-      threadCache = await threadText(p.th, p.room);       // コピーは押した瞬間に使えるよう、先に用意しておく
-      threadSheet.hidden = false;
-    }catch(e){ tell("開けませんでした。もう一度ためしてください。"); }
-  });
-  const closeThread = () => { threadSheet.hidden = true; };
-  document.getElementById("closeThread").addEventListener("click", closeThread);
-  document.getElementById("closeThreadX").addEventListener("click", closeThread);
-  threadSheet.addEventListener("click", e => { if(e.target === threadSheet) closeThread(); });
-  document.getElementById("tsCopy").addEventListener("click", () => { closeThread(); copyText(threadCache); });
-  document.getElementById("tsSave").addEventListener("click", async () => {
-    closeThread();
-    try{
-      const p = await currentPair();
-      if(p) await saveFile(fileSafe(p.room.name + "_" + p.th.name) + "_" + stamp() + ".txt", "text/plain", threadCache || await threadText(p.th, p.room));
-    }catch(e){ tell("保存できませんでした。もう一度ためしてください。"); }
-  });
-  document.getElementById("tsColor").addEventListener("click", async () => {
-    closeThread();
     try{
       const p = await currentPair();
       if(!p) return;
@@ -1243,12 +1203,33 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       drawColors(); colorsSheet.hidden = false;
     }catch(e){ tell("開けませんでした。もう一度ためしてください。"); }
   });
+  document.getElementById("btnSave").addEventListener("click", async () => {
+    if(!db) return;
+    box.blur();
+    try{
+      const p = await currentPair();
+      if(p) await saveFile(fileSafe(p.room.name + "_" + p.th.name) + "_" + stamp() + ".txt", "text/plain", await threadText(p.th, p.room));
+    }catch(e){ tell("保存できませんでした。もう一度ためしてください。"); }
+  });
+  document.getElementById("btnCopy").addEventListener("click", async () => {
+    if(!db) return;
+    box.blur();
+    const make = () => currentPair().then(p => p ? threadText(p.th, p.room) : "");
+    try{
+      if(typeof ClipboardItem !== "undefined" && navigator.clipboard && navigator.clipboard.write){
+        // 押した瞬間に使える形でコピーする（iPadは、押してから時間がたつとコピーを許可しないため）
+        await navigator.clipboard.write([new ClipboardItem({ "text/plain": make().then(t => new Blob([t], { type:"text/plain" })) })]);
+        toast("会話をコピーしました");
+        return;
+      }
+    }catch(e){}
+    try{ await copyText(await make()); }catch(e){ tell("コピーできませんでした。もう一度ためしてください。"); }
+  });
 
   /* ───────── 表紙 ───────── */
   const splash = document.getElementById("splash");
   let reminded = false;
   splash.addEventListener("click", () => { splash.classList.add("hide"); backupRemind(); });
-  document.getElementById("openCover").addEventListener("click", () => { box.blur(); paintOrb(); splash.classList.remove("hide"); });
 
   /* ───────── さがす ───────── */
   const finder = document.getElementById("finder");
