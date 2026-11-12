@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#fdf3e3">
 <title>新しいアプリ（仮）</title>
 <style>
-/* 新しいアプリ（仮） 版 0.6 ── 会話の画面、保存、部屋とスレッド、AIと話す（Claude・Gemini） */
+/* 新しいアプリ（仮） 版 0.7 ── 会話の画面、保存、部屋とスレッド、AIと話す（Claude・Gemini・GPT・Grok）、検索、思考、保存 */
 :root{
   --sand:#faf6ee; --text:#37474f; --soft:#5d6c73; --line:#e4dccc; --sea:#3f7585;
   --skyA:#fdf3e3; --skyB:#e8f3f5;
@@ -57,10 +57,10 @@ header h1 small{ font-size:13px; font-weight:400; color:var(--soft); margin-left
 .row{ display:flex; flex-direction:column; max-width:80%; }
 .row.me{ align-self:flex-end; align-items:flex-end; }
 .row.ai{ align-self:flex-start; align-items:flex-start; }
-.msg{ padding:12px 15px; font-size:17px; line-height:1.8; white-space:pre-wrap; word-break:break-word; overflow-wrap:break-word; }
+.msg{ padding:12px 15px; font-size:var(--fs-msg,17px); line-height:1.8; white-space:pre-wrap; word-break:break-word; overflow-wrap:break-word; }
 .row.ai .msg{ background:var(--ai-bg); border:1px solid var(--ai-line); color:var(--ai-text); border-radius:20px 20px 20px 6px; }
 .row.me .msg{ background:var(--me-bg); border:1px solid var(--me-line); color:var(--me-text); border-radius:20px 20px 6px 20px; }
-.under{ display:flex; gap:12px; align-items:center; margin-top:4px; padding:0 6px; font-size:12px; color:var(--soft); }
+.under{ display:flex; flex-wrap:wrap; gap:4px 12px; align-items:center; margin-top:4px; padding:0 6px; font-size:12px; color:var(--soft); }
 .under button{
   border:none; background:none; color:var(--sea); font:inherit; font-size:13px;
   padding:6px 4px; min-height:32px;
@@ -70,7 +70,10 @@ footer{
   padding:10px 14px calc(env(safe-area-inset-bottom,0px) + 14px);
   background:#fffdf9;
 }
-#modelRow{ flex-shrink:0; padding:10px 14px 0; background:#fffdf9; border-top:1px solid var(--line); }
+#modelRow{ flex-shrink:0; display:flex; gap:8px; padding:10px 14px 0; background:#fffdf9; border-top:1px solid var(--line); }
+#openModels{ flex:1; min-width:0; }
+#toggleSearch{ flex-shrink:0; }
+.pill.on{ background:#e3f1f4; border-color:#9cc3cf; font-weight:700; }
 .pill{
   min-height:44px; max-width:100%; padding:0 18px; border:1px solid var(--line); border-radius:22px;
   background:#ffffff; color:var(--text); font:inherit; font-size:16px;
@@ -224,6 +227,23 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
 #dlgNo{ border:1px solid var(--line); background:#fff; color:var(--text); }
 #dlgYes{ border:none; background:var(--sea); color:#fff; }
 .label{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
+.think{ margin:0 0 8px; padding:4px 12px; font-size:14px; color:var(--soft); border-left:3px solid var(--line); background:#fffdf9; border-radius:0 12px 12px 0; }
+.think summary{ min-height:36px; display:flex; align-items:center; }
+.think div{ white-space:pre-wrap; line-height:1.7; padding:2px 0 8px; word-break:break-word; }
+.src{ margin:3px 6px 0; font-size:12px; line-height:1.7; color:var(--soft); word-break:break-all; }
+.src a{ color:var(--sea); }
+.hit{ width:100%; text-align:left; padding:10px 14px; border:1px solid var(--line); border-radius:16px; background:#fffdf9; color:var(--text); font:inherit; font-size:16px; line-height:1.6; word-break:break-word; }
+.hit small{ display:block; font-size:12px; color:var(--soft); }
+.sw{ width:100%; min-height:50px; text-align:left; padding:8px 14px; border-radius:14px; border:2px solid; font:inherit; font-size:16px; }
+.sw.now{ box-shadow:0 0 0 3px #7fb0bf; font-weight:700; }
+#splash{ position:absolute; inset:0; z-index:20; display:flex; align-items:center; justify-content:center; text-align:center;
+  background:linear-gradient(180deg,var(--skyA) 0%,var(--skyB) 60%,#cfe4ea 60%,#dcecef 76%,#f3e9d2 76%,#f6f0e4 100%); transition:opacity .4s; }
+#splash.hide{ opacity:0; pointer-events:none; }
+#orb{ position:absolute; width:84px; height:84px; margin:-42px 0 0 -42px; border-radius:50%; }
+.sp-words{ position:relative; margin-top:-8vh; padding:0 20px; }
+.sp-words h2{ margin:0; font-size:34px; letter-spacing:.08em; }
+.sp-words p{ margin:8px 0 0; font-size:16px; color:var(--soft); }
+.sp-words .tap{ margin-top:28px; font-size:17px; color:var(--sea); font-weight:700; }
 </style>
 </head>
 <body>
@@ -231,19 +251,22 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   <header>
     <div class="top">
       <div class="titles">
-        <h1>新しいアプリ<small>（仮）版 0.6</small></h1>
+        <h1>新しいアプリ<small>（仮）版 0.7</small></h1>
         <p id="where">じゅんび中…</p>
       </div>
     </div>
     <div class="bar">
       <button id="openRooms" class="plain" type="button">部屋の一覧</button>
+      <button id="openFinder" class="plain" type="button">さがす</button>
       <button id="openSettings" class="plain" type="button">設定</button>
+      <button id="openCover" class="plain" type="button">表紙</button>
     </div>
     <p id="state" aria-hidden="true"></p>
   </header>
   <main id="list" aria-live="polite"></main>
   <div id="modelRow">
     <button id="openModels" class="pill" type="button">モデル ▾</button>
+    <button id="toggleSearch" class="pill" type="button">ウェブ検索：オフ</button>
   </div>
   <footer>
     <label class="label" for="msg">メッセージ</label>
@@ -287,6 +310,16 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
         <p>Google AI Studio で作ったキーを貼ってください。使わないなら、空のままで大丈夫です。</p>
         <input id="keyGemini" type="password" autocomplete="off" autocapitalize="off" spellcheck="false">
       </div>
+      <div class="field">
+        <h3>OpenAIのAPIキー</h3>
+        <p>GPTを使うときに入れます。OpenAIの管理画面で作ったキーを貼ってください。使わないなら、空のままで大丈夫です。</p>
+        <input id="keyOpenai" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="sk-…">
+      </div>
+      <div class="field">
+        <h3>GrokのAPIキー</h3>
+        <p>xAIの管理画面で作ったキーを貼ってください。使わないなら、空のままで大丈夫です。</p>
+        <input id="keyXai" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="xai-…">
+      </div>
       <button id="showKeys" class="small" type="button">キーを見えるようにする</button>
       <button id="saveKeys" class="go" type="button">キーを保存する</button>
       <div class="field">
@@ -295,11 +328,74 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
         <div id="hideList"></div>
       </div>
       <div class="field">
+        <h3>文字の大きさ</h3>
+        <p>会話の文字の大きさです。</p>
+        <div id="fsRow" class="bar">
+          <button class="tog" type="button" data-fs="17">標準</button>
+          <button class="tog" type="button" data-fs="19">大きめ</button>
+          <button class="tog" type="button" data-fs="21">特大</button>
+        </div>
+      </div>
+      <div class="field">
+        <h3>思考の表示</h3>
+        <p>オンにすると、AIが考えたことを、返事の上に折りたたんで出します。考える分の料金が少し増えます。ClaudeとGeminiで使えます。</p>
+        <button id="thinkBtn" class="tog off" type="button">オフ</button>
+      </div>
+      <div class="field">
+        <h3>月の料金の上限</h3>
+        <p id="useLine"></p>
+        <input id="capYen" type="number" inputmode="numeric" min="0" step="100">
+        <p style="margin-top:8px">円で入れます。0にすると、上限なしです。上限に達すると、その月は返事をもらえなくなります。月が変わると、使用額は0にもどります。</p>
+      </div>
+      <div class="field">
+        <h3>まるごと保存と復元</h3>
+        <p id="backupLine"></p>
+        <button id="backupBtn" class="go" type="button">まるごと保存する</button>
+        <button id="restoreBtn" class="small" type="button" style="margin-top:10px">ファイルから復元する</button>
+        <input id="restoreFile" type="file" accept=".json,application/json" hidden>
+        <p style="margin-top:10px">会話と設定を、1つのファイルにして取っておきます。APIキーは入りません。復元すると、いまの会話はすべて置き換わります。</p>
+      </div>
+      <div class="field">
         <h3>キーのあつかい</h3>
         <p>キーは、このiPadの中だけに保存します。会話を送るときに、そのAIの会社にだけ送ります。<br>料金は、1ドル162円で計算した目安です。</p>
       </div>
     </div>
   </section>
+  <section id="finder" class="panel" hidden aria-label="さがす">
+    <div class="phead">
+      <h2>さがす</h2>
+      <button id="closeFinder" class="plain" type="button">閉じる</button>
+    </div>
+    <div class="pbody">
+      <div class="field">
+        <h3>前の会話から、言葉をさがす</h3>
+        <input id="findQ" type="text" autocomplete="off" placeholder="さがす言葉">
+        <button id="findGo" class="go" type="button" style="margin-top:10px">さがす</button>
+      </div>
+      <div id="findRes" class="mlist"></div>
+    </div>
+  </section>
+  <section id="colors" class="sheet" hidden aria-label="文字欄の色">
+    <div class="card2">
+      <div class="ch">
+        <h2 id="colorsTitle">文字欄の色</h2>
+        <button id="closeColorsX" class="x" type="button" aria-label="閉じる">✕</button>
+      </div>
+      <div class="cb">
+        <p class="hint">部屋ごとに、自分とAIの文字欄の色を選べます。選ぶと、すぐ変わります。</p>
+        <div id="colorsList" class="mlist"></div>
+      </div>
+      <div class="cf"><button id="closeColors" class="close2" type="button">閉じる</button></div>
+    </div>
+  </section>
+  <div id="splash" aria-label="表紙">
+    <div id="orb"></div>
+    <div class="sp-words">
+      <h2>新しいアプリ</h2>
+      <p>（仮）</p>
+      <p class="tap">タップして はじめる</p>
+    </div>
+  </div>
   <div id="toast" role="status" aria-live="polite"></div>
   <div id="dlg" hidden role="dialog" aria-modal="true">
     <div class="card">
@@ -316,7 +412,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
 <script>
 (function(){
   "use strict";
-  const VERSION = "0.6";
+  const VERSION = "0.7";
   const app = document.getElementById("app");
   const list = document.getElementById("list");
   const box = document.getElementById("msg");
@@ -401,7 +497,24 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     { id:"gemini-2.5-flash",       by:"gemini", name:"Gemini 2.5 Flash",      pin:0.3,  pout:2.5,  note:"新規利用は制限あり" },
     { id:"gemma-4-31b-it",         by:"gemini", name:"Gemma 4 31B",           pin:0,    pout:0,    note:"無料枠" }
   ];
-  const COMPANY = { claude:"Claude", gemini:"Gemini" };
+  // GPTは Cove v19.28 と同じ並びと料金。Grokは11月の料金記事より（公式ページは未確認）。
+  MODELS.push(
+    { id:"gpt-6-astra",   by:"openai", name:"GPT-6 Astra",   pin:10,  pout:50,  note:"OpenAI最上位" },
+    { id:"gpt-5.6-sol",   by:"openai", name:"GPT-5.6 Sol",   pin:4,   pout:20,  note:"5.6の上位" },
+    { id:"gpt-5.6-terra", by:"openai", name:"GPT-5.6 Terra", pin:2,   pout:12,  note:"5.6の標準" },
+    { id:"gpt-5.6-luna",  by:"openai", name:"GPT-5.6 Luna",  pin:0.2, pout:1.2, note:"軽くて安い" },
+    { id:"gpt-5.5",       by:"openai", name:"GPT-5.5",       pin:5,   pout:30,  note:"" },
+    { id:"gpt-5.5-pro",   by:"openai", name:"GPT-5.5 Pro",   pin:30,  pout:180, note:"高額・特別な日用" },
+    { id:"gpt-5.4",       by:"openai", name:"GPT-5.4",       pin:2.5, pout:15,  note:"OpenAI標準" },
+    { id:"gpt-5.4-mini",  by:"openai", name:"GPT-5.4 mini",  pin:0.75,pout:4.5, note:"軽くて安い" },
+    { id:"gpt-5.4-nano",  by:"openai", name:"GPT-5.4 nano",  pin:0.2, pout:1.25,note:"最安" },
+    { id:"gpt-4.1",       by:"openai", name:"GPT-4.1",       pin:2,   pout:8,   note:"旧世代の名機" },
+    { id:"gpt-4o",        by:"openai", name:"GPT-4o",        pin:2.5, pout:10,  note:"旧世代" },
+    { id:"grok-4.7",      by:"xai",    name:"Grok 4.7",      pin:2,    pout:6,    note:"Grok最新（料金は記事で確認）" },
+    { id:"grok-4.6",      by:"xai",    name:"Grok 4.6",      pin:2,    pout:6,    note:"" },
+    { id:"grok-4.3",      by:"xai",    name:"Grok 4.3",      pin:1.25, pout:2.5,  note:"安め" }
+  );
+  const COMPANY = { claude:"Claude", gemini:"Gemini", openai:"OpenAI", xai:"Grok" };
   const modelOf = id => MODELS.find(m => m.id === id) || null;
   const yen = usd => {
     const y = usd * RATE;
@@ -435,41 +548,126 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     if(!data) throw trouble("返事を読み取れませんでした。もう一度ためしてください。");
     return data;
   }
-  async function askClaude(model, key, persona, turns, signal){
+  const SEARCH_MAX = 3;                                  // 1回の返事で調べる最大回数（Coveと同じ）
+  const SEARCH_COST = { claude:0.01, gemini:0.014 };     // 1検索あたりのおおよその料金（ドル。Coveと同じ）
+  const legacyClaude = id => /^claude-(haiku-4-5|sonnet-4-5|sonnet-4-6|opus-4-5|opus-4-6)/.test(id);
+  const alwaysThink = id => /^claude-(fable|mythos)-/.test(id);
+  const BETWEEN = new Set(["claude-sonnet-5-5"]);        // 思考オフに "disabled" が使えず "between_tools" が要るモデル
+  const pickSources = (cited, found) => [...(cited.size ? cited : found).entries()].slice(0, 8).map(e => ({ url:e[0], title:String(e[1]).slice(0, 80) }));
+  async function askClaude(model, key, persona, turns, signal, opt){
     const body = { model:model.id, max_tokens:4096, messages:turns.map(t => ({ role:t.role, content:t.text })) };
-    if(persona.trim()) body.system = persona;
-    const data = await post("https://api.anthropic.com/v1/messages", {
-      "content-type":"application/json", "x-api-key":key, "anthropic-version":"2023-06-01",
-      "anthropic-dangerous-direct-browser-access":"true"
-    }, body, signal, "Claude");
-    const text = (data.content || []).filter(b => b.type === "text").map(b => b.text).join("");
-    if(!text.trim()) throw trouble("返事が空でした。もう一度ためしてください。", "stop_reason: " + data.stop_reason);
-    const u = data.usage || {};
-    const usd = ((u.input_tokens || 0) * model.pin + (u.cache_creation_input_tokens || 0) * model.pin * 1.25 +
-      (u.cache_read_input_tokens || 0) * model.pin * 0.1 + (u.output_tokens || 0) * model.pout) / 1e6;
-    return { text:text, usd:usd, cut:data.stop_reason === "max_tokens",
-      usage:{ input:(u.input_tokens || 0) + (u.cache_creation_input_tokens || 0) + (u.cache_read_input_tokens || 0), output:u.output_tokens || 0 } };
+    let sys = persona || "";
+    if(opt.think){
+      body.thinking = legacyClaude(model.id) ? { type:"enabled", budget_tokens:2000 } : { type:"adaptive", display:"summarized" };
+      body.max_tokens = 4096 + 2000;
+      sys += (sys ? "\n\n" : "") + "(内部の思考プロセスもすべて日本語で行うこと)";
+    }else if(alwaysThink(model.id)){
+      body.max_tokens = 4096 + 4000;     // 思考を切れないモデル。思考の分の余裕を持たせる
+    }else if(!legacyClaude(model.id)){
+      body.thinking = BETWEEN.has(model.id) ? { type:"between_tools" } : { type:"disabled" };
+    }
+    if(sys.trim()) body.system = sys;
+    if(opt.search) body.tools = [{ type:"web_search_20250305", name:"web_search", max_uses:SEARCH_MAX }];
+    const headers = { "content-type":"application/json", "x-api-key":key, "anthropic-version":"2023-06-01",
+      "anthropic-dangerous-direct-browser-access":"true" };
+    const go = () => post("https://api.anthropic.com/v1/messages", headers, body, signal, "Claude");
+    let data;
+    try{ data = await go(); }
+    catch(e){
+      const d = (e && e.detail) || "";
+      if(/^400/.test(d) && body.thinking && body.thinking.type === "disabled" && /between_tools/.test(d)){
+        BETWEEN.add(model.id); body.thinking = { type:"between_tools" };
+        data = await go();
+      }else{
+        if(opt.search && e && e.plain && /web.?search|tool/i.test(d)) e.plain += "\n（ウェブ検索が使えない設定かもしれません。検索をオフにすれば、ふつうに話せます）";
+        throw e;
+      }
+    }
+    let text = "", thinking = "", used = false, searches = 0, inT = 0, outT = 0, cw = 0, cr = 0, stop = "";
+    const queries = [], cited = new Map(), found = new Map();
+    for(let round = 0; round < 3; round++){
+      if(round > 0) data = await go();
+      const u = data.usage || {};
+      inT += u.input_tokens || 0; outT += u.output_tokens || 0;
+      cw += u.cache_creation_input_tokens || 0; cr += u.cache_read_input_tokens || 0;
+      searches += (u.server_tool_use && u.server_tool_use.web_search_requests) || 0;
+      stop = data.stop_reason || "";
+      (data.content || []).forEach(b => {
+        if(b.type === "text"){
+          if(used && text && !/\n$/.test(text)) text += "\n\n";
+          text += b.text || "";
+          (b.citations || []).forEach(c => { if(c && c.url) cited.set(c.url, c.title || c.url); });
+        }else if(b.type === "thinking"){
+          if(b.thinking) thinking += (thinking ? "\n\n" : "") + b.thinking;
+        }else if(b.type === "server_tool_use"){
+          used = true;
+          if(b.input && b.input.query) queries.push(String(b.input.query).slice(0, 100));
+        }else if(b.type === "web_search_tool_result" && Array.isArray(b.content)){
+          b.content.forEach(r => { if(r && r.url && !found.has(r.url)) found.set(r.url, r.title || r.url); });
+        }
+      });
+      if(stop === "pause_turn" && round < 2){     // 検索が長引いて途中で止まったときは、続きをお願いする
+        body.messages = body.messages.concat([{ role:"assistant", content:(data.content || []).filter(b => !(b.type === "text" && !b.text)) }]);
+        continue;
+      }
+      break;
+    }
+    if(!text.trim()) throw trouble("返事が空でした。もう一度ためしてください。", "stop_reason: " + stop);
+    if(!searches) searches = queries.length;
+    const usd = (inT * model.pin + cw * model.pin * 1.25 + cr * model.pin * 0.1 + outT * model.pout) / 1e6 + searches * SEARCH_COST.claude;
+    return { text:text, thinking:thinking, usd:usd, cut:stop === "max_tokens", searches:searches, queries:queries.slice(0, 5),
+      sources:pickSources(cited, found), usage:{ input:inT + cw + cr, output:outT } };
   }
-  async function askGemini(model, key, persona, turns, signal){
+  async function askGemini(model, key, persona, turns, signal, opt){
+    const gemma = /gemma/i.test(model.id);
     const body = { contents:turns.map(t => ({ role:t.role === "assistant" ? "model" : "user", parts:[{ text:t.text }] })) };
     body.safetySettings = ["HARM_CATEGORY_HARASSMENT","HARM_CATEGORY_HATE_SPEECH","HARM_CATEGORY_SEXUALLY_EXPLICIT","HARM_CATEGORY_DANGEROUS_CONTENT"]
       .map(c => ({ category:c, threshold:"BLOCK_NONE" }));   // 今のCoveと同じ設定
     body.generationConfig = { maxOutputTokens:4096 };
+    if(opt.think && !gemma) body.generationConfig.thinkingConfig = { includeThoughts:true };
     if(persona.trim()) body.systemInstruction = { parts:[{ text:persona }] };
+    if(opt.search && !gemma) body.tools = [{ google_search:{} }];
     const data = await post("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model.id) + ":generateContent", {
       "content-type":"application/json", "x-goog-api-key":key
     }, body, signal, "Gemini");
     const c = (data.candidates || [])[0];
-    const text = c && c.content && c.content.parts ? c.content.parts.filter(p => !p.thought && typeof p.text === "string").map(p => p.text).join("") : "";
+    const parts = (c && c.content && c.content.parts) || [];
+    const text = parts.filter(p => !p.thought && typeof p.text === "string").map(p => p.text).join("");
+    const thinking = parts.filter(p => p.thought && typeof p.text === "string").map(p => p.text).join("\n\n");
     if(!text.trim()){
       const why = (data.promptFeedback && data.promptFeedback.blockReason) || (c && c.finishReason) || "";
       throw trouble("Geminiが返事を出しませんでした。\n内容がGeminiの決まりに引っかかったのかもしれません。", why);
     }
+    const gm = (c && c.groundingMetadata) || {};
+    const queries = (gm.webSearchQueries || []).map(q => String(q).slice(0, 100)).slice(0, 5);
+    const found = new Map();
+    (gm.groundingChunks || []).forEach(g => { if(g.web && g.web.uri) found.set(g.web.uri, g.web.title || g.web.uri); });
+    const searches = queries.length;
     const u = data.usageMetadata || {};
     const out = (u.candidatesTokenCount || 0) + (u.thoughtsTokenCount || 0);
-    const usd = ((u.promptTokenCount || 0) * model.pin + out * model.pout) / 1e6;
-    return { text:text, usd:usd, cut:c.finishReason === "MAX_TOKENS", usage:{ input:u.promptTokenCount || 0, output:out } };
+    const usd = ((u.promptTokenCount || 0) * model.pin + out * model.pout) / 1e6 + searches * SEARCH_COST.gemini;
+    return { text:text, thinking:thinking, usd:usd, cut:c.finishReason === "MAX_TOKENS", searches:searches, queries:queries,
+      sources:pickSources(new Map(), found), usage:{ input:u.promptTokenCount || 0, output:out } };
   }
+  // GPT（OpenAI）と Grok（xAI）は、同じ送り方。送り先と名前だけ違う
+  async function askChat(model, key, persona, turns, signal, opt, url, who){
+    const messages = (persona.trim() ? [{ role:"system", content:persona }] : []).concat(turns.map(t => ({ role:t.role, content:t.text })));
+    const data = await post(url, { "content-type":"application/json", "authorization":"Bearer " + key },
+      { model:model.id, messages:messages, max_completion_tokens:4096 }, signal, who);
+    const c = (data.choices || [])[0];
+    const text = c && c.message && typeof c.message.content === "string" ? c.message.content : "";
+    if(!text.trim()) throw trouble(who + "が返事を出しませんでした。\nもう一度ためしてください。", (c && c.finish_reason) || "");
+    const u = data.usage || {};
+    const usd = ((u.prompt_tokens || 0) * model.pin + (u.completion_tokens || 0) * model.pout) / 1e6;
+    return { text:text, thinking:"", usd:usd, cut:!!(c && c.finish_reason === "length"), searches:0, queries:[], sources:[],
+      usage:{ input:u.prompt_tokens || 0, output:u.completion_tokens || 0 } };
+  }
+  const ASK = {
+    claude:askClaude,
+    gemini:askGemini,
+    openai:(m, k, p, t, s, o) => askChat(m, k, p, t, s, o, "https://api.openai.com/v1/chat/completions", "OpenAI"),
+    xai:(m, k, p, t, s, o) => askChat(m, k, p, t, s, o, "https://api.x.ai/v1/chat/completions", "Grok")
+  };
   // 発言を、AIに送る形にそろえる（同じ人の発言が続いたら1つにまとめ、自分の発言から始める）
   function buildTurns(msgs){
     const turns = [];
@@ -503,6 +701,17 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   }
   paintSky();
   setInterval(paintSky, 5 * 60 * 1000);
+  function paintOrb(){
+    const h = new Date().getHours(), o = document.getElementById("orb");
+    let c, left, top;
+    if(h >= 5 && h < 10){ c = "#fbdca0"; left = "22%"; top = "30%"; }
+    else if(h >= 10 && h < 16){ c = "#fff2b8"; left = "50%"; top = "14%"; }
+    else if(h >= 16 && h < 19){ c = "#f6a98a"; left = "76%"; top = "34%"; }
+    else{ c = "#f4f1e6"; left = "70%"; top = "20%"; }
+    o.style.background = c; o.style.left = left; o.style.top = top;
+    o.style.boxShadow = "0 0 60px 22px " + c + "99";
+  }
+  paintOrb();
 
   /* ───────── 保存の入れ物（この iPad の中だけ。IndexedDB を使う） ─────────
      部屋 → スレッド → 発言 の形。記憶などは、あとの版で入れ物を足す。
@@ -608,15 +817,34 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       if(roomId) t.objectStore("rooms").delete(roomId);
     });
   }
-  let keys = { claude:"", gemini:"" };
-  let prefs = { lastModel:DEFAULT_MODEL, hidden:[] };
-  const savePrefs = () => putOne("meta", { key:"prefs", lastModel:prefs.lastModel, hidden:prefs.hidden });
+  let keys = { claude:"", gemini:"", openai:"", xai:"" };
+  let prefs = { lastModel:DEFAULT_MODEL, hidden:[], fs:17, think:false, capYen:1600 };
+  const savePrefs = () => putOne("meta", { key:"prefs", lastModel:prefs.lastModel, hidden:prefs.hidden, fs:prefs.fs, think:prefs.think, capYen:prefs.capYen });
+  let usage = { month:"", usd:0 };
+  let backup = { last:0, level:0 };
+  const monthKey = () => { const d = new Date(); return d.getFullYear() + "-" + two(d.getMonth() + 1); };
+  const usageNow = () => usage.month === monthKey() ? usage : { month:monthKey(), usd:0 };
+  const capReached = () => prefs.capYen > 0 && usageNow().usd * RATE >= prefs.capYen;
+  async function addUsage(usd){
+    const u = usageNow();
+    usage = { month:u.month, usd:u.usd + (usd || 0) };
+    try{ await putOne("meta", { key:"usage", month:usage.month, usd:usage.usd }); }catch(e){}
+  }
   async function loadSettings(){
     const k = await getOne("meta", "keys");
-    if(k) keys = { claude:k.claude || "", gemini:k.gemini || "" };
+    if(k) keys = { claude:k.claude || "", gemini:k.gemini || "", openai:k.openai || "", xai:k.xai || "" };
     const p = await getOne("meta", "prefs");
-    if(p && p.lastModel) prefs.lastModel = p.lastModel;
-    if(p && Array.isArray(p.hidden)) prefs.hidden = p.hidden;
+    if(p){
+      if(p.lastModel) prefs.lastModel = p.lastModel;
+      if(Array.isArray(p.hidden)) prefs.hidden = p.hidden;
+      if(typeof p.fs === "number") prefs.fs = p.fs;
+      if(typeof p.think === "boolean") prefs.think = p.think;
+      if(typeof p.capYen === "number") prefs.capYen = p.capYen;
+    }
+    const us = await getOne("meta", "usage");
+    if(us) usage = { month:us.month || "", usd:us.usd || 0 };
+    const bk = await getOne("meta", "backup");
+    if(bk) backup = { last:bk.last || 0, level:bk.level || 0 };
   }
   function removeMessage(id){
     return tx("messages", "readwrite", t => { t.objectStore("messages").delete(id); });
@@ -637,7 +865,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   let hint = null;
   function showHint(){
     if(count === 0 && !hint){
-      hint = note((keys.claude || keys.gemini) ? "ここから会話を始められます。"
+      hint = note((keys.claude || keys.gemini || keys.openai || keys.xai) ? "ここから会話を始められます。"
         : "まだAPIキーが入っていません。\n上の「設定」からキーを入れると、AIと話せます。");
       hint.style.whiteSpace = "pre-line";
     }else if(count > 0 && hint){ hint.remove(); hint = null; }
@@ -647,20 +875,62 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     const d = new Date(ms);
     return (d.getMonth() + 1) + "月" + d.getDate() + "日 " + d.getHours() + ":" + two(d.getMinutes());
   }
+  async function copyText(t){
+    try{ await navigator.clipboard.writeText(t); toast("コピーしました"); return; }catch(e){}
+    try{
+      const ta = document.createElement("textarea");
+      ta.value = t; ta.setAttribute("readonly", "");
+      ta.style.cssText = "position:fixed;left:-9999px;top:0;opacity:0;font-size:16px;";
+      document.body.appendChild(ta); ta.select(); ta.setSelectionRange(0, t.length);
+      const ok = document.execCommand("copy");
+      ta.remove();
+      if(ok){ toast("コピーしました"); return; }
+    }catch(e){}
+    tell("コピーできませんでした。もう一度ためしてください。");
+  }
+  // この返事と、これ以降の発言を消して、同じ発言にもう一度返事をもらう
+  async function again(m){
+    if(waiting) return;
+    const msgs = await loadMessages();
+    const i = msgs.findIndex(x => x.id === m.id);
+    if(i < 1 || msgs[i - 1].role !== "me") return;
+    const later = msgs.slice(i);
+    const text = later.length === 1 ? "この返事を消して、同じ発言にもう一度返事してもらいます。"
+      : "この返事と、これ以降のやりとり " + (later.length - 1) + "件を消して、同じ発言にもう一度返事してもらいます。";
+    if(!await dialog({ text:text + "\n消したものは、元に戻せません。", yes:"もう一度" })) return;
+    try{
+      await tx("messages", "readwrite", t => { later.forEach(x => t.objectStore("messages").delete(x.id)); });
+      await openCurrent();
+      reply();
+    }catch(e){ tell("うまくいきませんでした。もう一度ためしてください。"); }
+  }
   function draw(m){
     const row = document.createElement("div");
     row.className = "row " + (m.role === "ai" ? "ai" : "me");
     const b = document.createElement("div");
     b.className = "msg";
     b.textContent = m.text;
+    if(m.role === "ai" && m.thinking){
+      const det = el("details", "think");
+      det.appendChild(el("summary", "", "考えたこと"));
+      det.appendChild(el("div", "", m.thinking));
+      row.appendChild(det);
+    }
     const u = document.createElement("div");
     u.className = "under";
-    const t = document.createElement("span");
-    t.textContent = when(m.createdAt);
-    const del = document.createElement("button");
-    del.type = "button";
-    del.textContent = "削除";
-    del.addEventListener("click", async () => {
+    u.appendChild(el("span", "", when(m.createdAt)));
+    const mk = (label, fn) => { const x = el("button", "", label); x.type = "button"; x.addEventListener("click", () => { Promise.resolve(fn()).catch(() => tell("うまくいきませんでした。もう一度ためしてください。")); }); u.appendChild(x); };
+    mk("コピー", () => copyText(m.text));
+    mk("書きなおし", async () => {
+      const r = await dialog({ text:"この発言を書きなおします。\n（これより後の発言は、そのまま残ります）", area:true, value:m.text, yes:"保存する" });
+      if(!r || !r.text.trim()) return;
+      m.text = r.text;
+      await putOne("messages", m);
+      b.textContent = m.text;
+      toast("書きなおしました");
+    });
+    if(m.role === "ai") mk("もう一度", () => again(m));
+    mk("削除", async () => {
       if(!await dialog({ text:"この発言を削除しますか？\n削除すると、元に戻せません。", yes:"削除する" })) return;
       try{
         await removeMessage(m.id);
@@ -668,17 +938,28 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
         count--; showHint(); showState();
       }catch(e){ tell("削除できませんでした。もう一度ためしてください。"); }
     });
-    u.appendChild(t);
+    row.id = "m-" + m.id;
+    row.appendChild(b); row.appendChild(u);
     if(m.role === "ai"){
       const mo = modelOf(m.model);
       let info = "使用モデル: " + (mo ? mo.name : (m.model || "不明"));
       if(typeof m.usd === "number") info += " ・ このターン " + yen(m.usd);
+      if(m.searches) info += " ・ 検索" + m.searches + "回";
       if(m.cut) info += " ・ 長くて途中で切れました";
-      if(info) u.appendChild(el("span", "", info));
+      row.appendChild(el("div", "src", info));
+      if(m.queries && m.queries.length) row.appendChild(el("div", "src", "調べた言葉： " + m.queries.join(" ／ ")));
+      if(m.sources && m.sources.length){
+        const s = el("div", "src", "参照したページ：");
+        m.sources.forEach(x => {
+          if(!/^https?:\/\//i.test(x.url)) return;
+          s.appendChild(document.createElement("br"));
+          const a = el("a", "", x.title || x.url);
+          a.href = x.url; a.target = "_blank"; a.rel = "noopener";
+          s.appendChild(a);
+        });
+        row.appendChild(s);
+      }
     }
-    u.appendChild(del);
-    row.id = "m-" + m.id;
-    row.appendChild(b); row.appendChild(u);
     list.appendChild(row);
     return row;
   }
@@ -697,7 +978,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   async function openCurrent(){
     where.textContent = current.roomName + " ／ " + current.threadName;
     clearProblem();
-    await showModel();
+    await showModel(); await showSearchBtn(); await applyColors();
     list.textContent = ""; hint = null;
     const msgs = await loadMessages();
     count = msgs.length;
@@ -732,12 +1013,18 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     if(!model){ problem("このモデルは使えなくなりました。\n上の「モデル」から、別のモデルを選んでね。", false); return; }
     const key = keys[model.by];
     if(!key){ problem(COMPANY[model.by] + "のAPIキーがまだ入っていません。\n上の「設定」から入れてください。", true); return; }
+    if(capReached()){ problem("今月の料金の上限（¥" + Number(prefs.capYen).toLocaleString() + "）に達しました。\n「設定」で上限を変えると、続けられます。", true); return; }
     const room = await getOne("rooms", roomId);
+    const th = await getOne("threads", threadId);
+    const canUse = (model.by === "claude" || model.by === "gemini") && !/gemma/i.test(model.id);
+    const wantSearch = !!(th && th.search);
+    if(wantSearch && !canUse) toast("このモデルはウェブ検索に未対応です。今回は検索なしで返事します");
+    const opt = { think:prefs.think && canUse, search:wantSearch && canUse };
     const turns = buildTurns((await loadMessages()).slice(-SEND_COUNT));
     if(!turns.length || turns[turns.length - 1].role !== "user") return;
     const ctl = new AbortController();
     const row = el("div", "row ai");
-    row.appendChild(el("div", "msg wait", "返事を待っています…"));
+    row.appendChild(el("div", "msg wait", opt.search ? "調べながら、返事を待っています…" : "返事を待っています…"));
     const u = el("div", "under");
     const stop = el("button", "", "止める");
     stop.type = "button";
@@ -747,10 +1034,12 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     toBottom();
     waiting = ctl; send.disabled = true;
     try{
-      const r = await (model.by === "claude" ? askClaude : askGemini)(model, key, (room && room.persona) || "", turns, ctl.signal);
+      const r = await ASK[model.by](model, key, (room && room.persona) || "", turns, ctl.signal, opt);
       const m = { id:newId(), threadId:threadId, roomId:roomId, role:"ai", text:r.text, createdAt:Date.now(),
-        model:model.id, usage:r.usage, usd:r.usd, cut:r.cut };
+        model:model.id, usage:r.usage, usd:r.usd, cut:r.cut, thinking:r.thinking || "", searches:r.searches || 0,
+        queries:r.queries || [], sources:r.sources || [] };
       await saveMessage(m);
+      await addUsage(r.usd);
       row.remove();
       if(current.threadId === threadId){
         count++; showHint();
@@ -769,6 +1058,124 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     showState();
   }
 
+  /* ───────── ウェブ検索のオン・オフ（スレッドごと。新しいスレッドは最初オフ） ───────── */
+  const searchBtn = document.getElementById("toggleSearch");
+  async function showSearchBtn(){
+    const th = await getOne("threads", current.threadId);
+    const on = !!(th && th.search);
+    searchBtn.textContent = "ウェブ検索：" + (on ? "オン" : "オフ");
+    searchBtn.className = "pill" + (on ? " on" : "");
+  }
+  searchBtn.addEventListener("click", async () => {
+    if(!db) return;
+    try{
+      const th = await getOne("threads", current.threadId);
+      th.search = !th.search; await putOne("threads", th);
+      await showSearchBtn();
+      const mo = modelOf(await currentModelId());
+      if(th.search && mo && !(mo.by === "claude" || mo.by === "gemini")) toast("オンにしました。ただ、このモデルはウェブ検索に未対応です");
+      else if(th.search) toast("ウェブ検索をオンにしました（必要なときだけ調べます）");
+      else toast("ウェブ検索をオフにしました");
+    }catch(e){ tell("切り替えられませんでした。もう一度ためしてください。"); }
+  });
+
+  /* ───────── 文字欄の色（部屋ごと） ───────── */
+  const PALETTE = [
+    { name:"白",     bg:"#ffffff", line:"#e4dccc", text:"#37474f" },
+    { name:"水色",   bg:"#eaf5f8", line:"#cfe4ea", text:"#37474f" },
+    { name:"ピンク", bg:"#fcecef", line:"#f0cdd5", text:"#4a2f35" },
+    { name:"オレンジ", bg:"#fdf0e2", line:"#f1d3b4", text:"#4a3220" },
+    { name:"黄色",   bg:"#fcf5d8", line:"#ecdc9c", text:"#40361a" },
+    { name:"砂色",   bg:"#f6f0e4", line:"#e4dccc", text:"#37474f" },
+    { name:"緑",     bg:"#ecf5e6", line:"#cfe3c4", text:"#33452c" }
+  ];
+  const palOf = n => PALETTE.find(p => p.name === n) || PALETTE[0];
+  async function applyColors(){
+    const room = await getOne("rooms", current.roomId);
+    const c = Object.assign({ me:"水色", ai:"白" }, room && room.colors);
+    const me = palOf(c.me), ai = palOf(c.ai), r = document.documentElement.style;
+    r.setProperty("--me-bg", me.bg); r.setProperty("--me-line", me.line); r.setProperty("--me-text", me.text);
+    r.setProperty("--ai-bg", ai.bg); r.setProperty("--ai-line", ai.line); r.setProperty("--ai-text", ai.text);
+  }
+  const colorsSheet = document.getElementById("colors");
+  const colorsList = document.getElementById("colorsList");
+  let colorRoom = null;
+  function drawColors(){
+    colorsList.textContent = "";
+    const c = Object.assign({ me:"水色", ai:"白" }, colorRoom.colors);
+    [["me", "わたしの文字欄"], ["ai", "AIの文字欄"]].forEach(g => {
+      colorsList.appendChild(el("p", "group", g[1]));
+      PALETTE.forEach(p => {
+        const now = c[g[0]] === p.name;
+        const b = el("button", "sw" + (now ? " now" : ""), p.name + (now ? "（いま）" : ""));
+        b.type = "button";
+        b.style.background = p.bg; b.style.borderColor = p.line; b.style.color = p.text;
+        b.addEventListener("click", async () => {
+          colorRoom.colors = Object.assign({ me:"水色", ai:"白" }, colorRoom.colors);
+          colorRoom.colors[g[0]] = p.name;
+          try{
+            await putOne("rooms", colorRoom);
+            if(current.roomId === colorRoom.id) await applyColors();
+            drawColors();
+          }catch(e){ tell("色を保存できませんでした。もう一度ためしてください。"); }
+        });
+        colorsList.appendChild(b);
+      });
+    });
+  }
+  const closeColors = () => { colorsSheet.hidden = true; };
+  document.getElementById("closeColors").addEventListener("click", closeColors);
+  document.getElementById("closeColorsX").addEventListener("click", closeColors);
+  colorsSheet.addEventListener("click", e => { if(e.target === colorsSheet) closeColors(); });
+
+  /* ───────── 表紙 ───────── */
+  const splash = document.getElementById("splash");
+  let reminded = false;
+  splash.addEventListener("click", () => { splash.classList.add("hide"); backupRemind(); });
+  document.getElementById("openCover").addEventListener("click", () => { box.blur(); paintOrb(); splash.classList.remove("hide"); });
+
+  /* ───────── さがす ───────── */
+  const finder = document.getElementById("finder");
+  const findQ = document.getElementById("findQ");
+  const findRes = document.getElementById("findRes");
+  function snippet(t, q){
+    const i = t.toLowerCase().indexOf(q.toLowerCase());
+    const s = Math.max(0, i - 24), e = Math.min(t.length, i + q.length + 40);
+    return (s > 0 ? "…" : "") + t.slice(s, e).replace(/\s+/g, " ") + (e < t.length ? "…" : "");
+  }
+  async function runFind(){
+    const q = findQ.value.trim();
+    findRes.textContent = "";
+    if(!q) return;
+    findQ.blur();
+    const [msgs, threads, rooms] = await Promise.all([getAll("messages"), getAll("threads"), getAll("rooms")]);
+    const tmap = new Map(threads.map(t => [t.id, t])), rmap = new Map(rooms.map(r => [r.id, r]));
+    const low = q.toLowerCase();
+    const hits = msgs.filter(m => String(m.text || "").toLowerCase().includes(low) && tmap.has(m.threadId)).sort((a, b) => b.createdAt - a.createdAt);
+    if(!hits.length){ findRes.appendChild(note("「" + q + "」は、見つかりませんでした。")); return; }
+    findRes.appendChild(el("p", "hint", "見つかった数： " + hits.length + "件" + (hits.length > 50 ? "（新しいほうから50件を出しています）" : "")));
+    hits.slice(0, 50).forEach(m => {
+      const th = tmap.get(m.threadId), rm = rmap.get(th.roomId);
+      const b = el("button", "hit", snippet(m.text, q));
+      b.type = "button";
+      b.appendChild(el("small", "", (rm ? rm.name : "") + " ／ " + th.name + " ・ " + (m.role === "ai" ? "AI" : "わたし") + " ・ " + when(m.createdAt)));
+      b.addEventListener("click", async () => {
+        try{
+          if(!rm) return;
+          await goThread(th, rm);
+          finder.hidden = true;
+          const r = document.getElementById("m-" + m.id);
+          if(r) list.scrollTop = Math.max(0, r.offsetTop - list.offsetTop - 12);
+        }catch(e){ tell("開けませんでした。もう一度ためしてください。"); }
+      });
+      findRes.appendChild(b);
+    });
+  }
+  document.getElementById("openFinder").addEventListener("click", () => { if(!db) return; box.blur(); finder.hidden = false; });
+  document.getElementById("closeFinder").addEventListener("click", () => { findQ.blur(); finder.hidden = true; });
+  document.getElementById("findGo").addEventListener("click", () => { runFind().catch(() => tell("さがせませんでした。もう一度ためしてください。")); });
+  findQ.addEventListener("keydown", e => { if(e.key === "Enter"){ e.preventDefault(); document.getElementById("findGo").click(); } });
+
   /* ───────── モデルを選ぶ ───────── */
   const modelsPanel = document.getElementById("models");
   const modelList = document.getElementById("modelList");
@@ -776,7 +1183,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     const nowId = await currentModelId();
     modelList.textContent = "";
     if(!modelOf(nowId)) modelList.appendChild(note("このモデルは使えなくなりました。別のモデルを選んでね。"));
-    ["claude", "gemini"].forEach(by => {
+    ["claude", "gemini", "openai", "xai"].forEach(by => {
       modelList.appendChild(el("p", "group", COMPANY[by] + (keys[by] ? "" : "（APIキーがまだ入っていません）")));
       MODELS.filter(m => m.by === by && (m.id === nowId || !prefs.hidden.includes(m.id))).forEach(m => {
         const b = el("button", "model" + (m.id === nowId ? " now" : ""));
@@ -816,21 +1223,34 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   document.getElementById("closeModelsX").addEventListener("click", closeModels);
   modelsPanel.addEventListener("click", e => { if(e.target === modelsPanel) closeModels(); });
 
-  /* ───────── 設定（APIキー） ───────── */
+  /* ───────── 設定 ───────── */
   const settingsPanel = document.getElementById("settings");
-  const keyClaude = document.getElementById("keyClaude");
-  const keyGemini = document.getElementById("keyGemini");
+  const KEYDEF = [["claude", "keyClaude"], ["gemini", "keyGemini"], ["openai", "keyOpenai"], ["xai", "keyXai"]];
+  const keyInputs = KEYDEF.map(d => document.getElementById(d[1]));
   const showKeys = document.getElementById("showKeys");
+  const thinkBtn = document.getElementById("thinkBtn");
+  const capInput = document.getElementById("capYen");
+  const useLine = document.getElementById("useLine");
+  const backupLine = document.getElementById("backupLine");
+  const hideList = document.getElementById("hideList");
+  const fsBtns = Array.prototype.slice.call(document.querySelectorAll("#fsRow button"));
+  function applyFont(){ document.documentElement.style.setProperty("--fs-msg", prefs.fs + "px"); }
+  function paintSettings(){
+    fsBtns.forEach(b => { b.className = "tog " + (Number(b.dataset.fs) === prefs.fs ? "on" : "off"); });
+    thinkBtn.textContent = prefs.think ? "オン" : "オフ";
+    thinkBtn.className = "tog " + (prefs.think ? "on" : "off");
+    capInput.value = prefs.capYen;
+    useLine.textContent = "今月の使用額： " + yen(usageNow().usd) + (prefs.capYen > 0 ? "（上限 ¥" + Number(prefs.capYen).toLocaleString() + "）" : "（上限なし）");
+    backupLine.textContent = backup.last ? "さいごの保存： " + when(backup.last) : "まだ、まるごと保存をしていません。";
+  }
   document.getElementById("openSettings").addEventListener("click", () => {
     if(!db) return;
     box.blur();
-    keyClaude.value = keys.claude; keyGemini.value = keys.gemini;
-    keyClaude.type = keyGemini.type = "password";
+    KEYDEF.forEach((d, i) => { keyInputs[i].value = keys[d[0]]; keyInputs[i].type = "password"; });
     showKeys.textContent = "キーを見えるようにする";
-    drawHide();
+    drawHide(); paintSettings();
     settingsPanel.hidden = false;
   });
-  const hideList = document.getElementById("hideList");
   function drawHide(){
     hideList.textContent = "";
     MODELS.forEach(m => {
@@ -856,22 +1276,123 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     });
   }
   showKeys.addEventListener("click", () => {
-    const hide = keyClaude.type !== "password";
-    keyClaude.type = keyGemini.type = hide ? "password" : "text";
+    const hide = keyInputs[0].type !== "password";
+    keyInputs.forEach(i => { i.type = hide ? "password" : "text"; });
     showKeys.textContent = hide ? "キーを見えるようにする" : "キーをかくす";
   });
   document.getElementById("saveKeys").addEventListener("click", async () => {
-    const k = { key:"keys", claude:keyClaude.value.trim(), gemini:keyGemini.value.trim() };
+    const k = { key:"keys" };
+    KEYDEF.forEach((d, i) => { k[d[0]] = keyInputs[i].value.trim(); });
     try{
       await putOne("meta", k);
-      keys = { claude:k.claude, gemini:k.gemini };
-      keyClaude.blur(); keyGemini.blur();
+      KEYDEF.forEach(d => { keys[d[0]] = k[d[0]]; });
+      keyInputs.forEach(i => i.blur());
       if(hint){ hint.remove(); hint = null; showHint(); }
       settingsPanel.hidden = true;
       toast("キーを保存しました");
     }catch(e){ tell("キーを保存できませんでした。もう一度ためしてください。"); }
   });
-  document.getElementById("closeSettings").addEventListener("click", () => { keyClaude.blur(); keyGemini.blur(); settingsPanel.hidden = true; });
+  fsBtns.forEach(b => b.addEventListener("click", async () => {
+    prefs.fs = Number(b.dataset.fs); applyFont(); paintSettings();
+    try{ await savePrefs(); }catch(e){ tell("保存できませんでした。もう一度ためしてください。"); }
+  }));
+  thinkBtn.addEventListener("click", async () => {
+    prefs.think = !prefs.think; paintSettings();
+    try{ await savePrefs(); toast(prefs.think ? "思考の表示をオンにしました" : "思考の表示をオフにしました"); }
+    catch(e){ tell("保存できませんでした。もう一度ためしてください。"); }
+  });
+  capInput.addEventListener("change", async () => {
+    prefs.capYen = Math.max(0, Math.round(Number(capInput.value) || 0));
+    paintSettings();
+    try{ await savePrefs(); toast(prefs.capYen > 0 ? "上限を ¥" + prefs.capYen.toLocaleString() + " にしました" : "上限なしにしました"); }
+    catch(e){ tell("保存できませんでした。もう一度ためしてください。"); }
+  });
+  document.getElementById("closeSettings").addEventListener("click", () => { keyInputs.forEach(i => i.blur()); capInput.blur(); settingsPanel.hidden = true; });
+
+  /* ───────── ファイルに保存（テキスト、まるごと保存） ─────────
+     iPadでは「共有」の画面から「ファイルに保存」を選ぶ形にする（アイコンから開いたアプリでは、これがいちばん確実）。 */
+  const stamp = () => { const d = new Date(); return d.getFullYear() + two(d.getMonth() + 1) + two(d.getDate()) + "-" + two(d.getHours()) + two(d.getMinutes()); };
+  const fileSafe = s => String(s).replace(/[\\\/:*?"<>|\s]+/g, "_").slice(0, 40);
+  async function saveFile(name, mime, text){
+    const ok = await dialog({ text:"「" + name + "」を保存します。\n次の画面で「ファイルに保存」を選んでください。", yes:"保存する" });
+    if(!ok) return false;
+    const file = new File([text], name, { type:mime });
+    try{
+      if(navigator.canShare && navigator.canShare({ files:[file] })){ await navigator.share({ files:[file] }); return true; }
+    }catch(e){ if(e && e.name === "AbortError") return false; }
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(file); a.download = name;
+    document.body.appendChild(a); a.click();
+    setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 4000);
+    return true;
+  }
+  async function threadText(th, room){
+    const all = await ask(db.transaction("messages").objectStore("messages").index("threadId").getAll(th.id));
+    all.sort((a, b) => a.createdAt - b.createdAt);
+    let out = "【" + room.name + " ／ " + th.name + "】\n\n";
+    all.forEach(m => {
+      const mo = modelOf(m.model);
+      out += (m.role === "ai" ? "AI" + (mo ? "（" + mo.name + "）" : "") : "わたし") + "　" + when(m.createdAt) + "\n" + m.text + "\n\n";
+    });
+    return out;
+  }
+  document.getElementById("backupBtn").addEventListener("click", async () => {
+    try{
+      const [rooms, threads, messages] = await Promise.all([getAll("rooms"), getAll("threads"), getAll("messages")]);
+      const pack = { app:"newapp", format:1, version:VERSION, savedAt:Date.now(), rooms:rooms, threads:threads, messages:messages,
+        current:{ roomId:current.roomId, threadId:current.threadId },
+        prefs:{ lastModel:prefs.lastModel, hidden:prefs.hidden, fs:prefs.fs, think:prefs.think, capYen:prefs.capYen }, usage:usageNow() };
+      const done = await saveFile("newapp-backup-" + stamp() + ".json", "application/json", JSON.stringify(pack));
+      if(done){
+        backup = { last:Date.now(), level:0 };
+        await putOne("meta", { key:"backup", last:backup.last, level:0 });
+        paintSettings(); toast("まるごと保存しました");
+      }
+    }catch(e){ tell("保存できませんでした。もう一度ためしてください。"); }
+  });
+  const restoreFile = document.getElementById("restoreFile");
+  document.getElementById("restoreBtn").addEventListener("click", () => { restoreFile.click(); });
+  restoreFile.addEventListener("change", async () => {
+    const f = restoreFile.files && restoreFile.files[0];
+    restoreFile.value = "";
+    if(!f) return;
+    let pack;
+    try{ pack = JSON.parse(await f.text()); }catch(e){ tell("このファイルは読めませんでした。このアプリの「まるごと保存」で作ったファイルを選んでください。"); return; }
+    if(!pack || pack.app !== "newapp" || !Array.isArray(pack.rooms) || !Array.isArray(pack.threads) || !Array.isArray(pack.messages) || !pack.rooms.length || !pack.threads.length){
+      tell("このファイルは、このアプリの「まるごと保存」ではないようです。"); return;
+    }
+    const ok = await dialog({ text:"保存した日： " + when(pack.savedAt) + "\n部屋 " + pack.rooms.length + "・スレッド " + pack.threads.length + "・発言 " + pack.messages.length + "件\n\nいまある会話は、すべてこのファイルの内容に置き換わります。元に戻せません。", yes:"置き換える" });
+    if(!ok) return;
+    try{
+      const cur = pack.threads.find(t => pack.current && t.id === pack.current.threadId) || pack.threads[0];
+      await tx(["rooms", "threads", "messages", "meta"], "readwrite", t => {
+        ["rooms", "threads", "messages"].forEach(n => t.objectStore(n).clear());
+        pack.rooms.forEach(r => t.objectStore("rooms").put(r));
+        pack.threads.forEach(x => t.objectStore("threads").put(x));
+        pack.messages.forEach(x => t.objectStore("messages").put(x));
+        t.objectStore("meta").put({ key:"app", schema:SCHEMA, createdAt:Date.now(), currentRoomId:cur.roomId, currentThreadId:cur.id });
+        if(pack.prefs) t.objectStore("meta").put(Object.assign({ key:"prefs" }, pack.prefs));
+      });
+      toast("復元しました。開きなおします");
+      setTimeout(() => location.reload(), 900);
+    }catch(e){ tell("復元できませんでした。もう一度ためしてください。"); }
+  });
+  // 「まるごと保存」のお知らせ（3日・7日・14日）
+  async function backupRemind(){
+    if(reminded || !db) return;
+    reminded = true;
+    try{
+      const app = await getOne("meta", "app");
+      const base = backup.last || (app && app.createdAt) || Date.now();
+      const days = Math.floor((Date.now() - base) / 86400000);
+      const level = days >= 14 ? 14 : days >= 7 ? 7 : days >= 3 ? 3 : 0;
+      if(level && level > backup.level && count > 0){
+        backup.level = level;
+        await putOne("meta", { key:"backup", last:backup.last, level:level });
+        await tell((backup.last ? "さいごの「まるごと保存」から " + days + "日" : "まだ「まるごと保存」をしていません。はじめてから " + days + "日") + "たちました。\n「設定」の「まるごと保存する」で、会話をファイルに取っておけます。");
+      }
+    }catch(e){}
+  }
 
   /* ───────── 部屋とスレッド ───────── */
   const panel = document.getElementById("rooms");
@@ -922,6 +1443,16 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
         room.persona = r.text; await putOne("rooms", room);
         toast("キャラ設定を保存しました");
       }));
+      head.appendChild(btn("small", "文字欄の色", async () => {
+        colorRoom = room;
+        document.getElementById("colorsTitle").textContent = "「" + room.name + "」の文字欄の色";
+        drawColors(); colorsSheet.hidden = false;
+      }));
+      head.appendChild(btn("small", "テキストで保存", async () => {
+        let out = "";
+        for(const t of mine.slice().sort((a, b) => a.createdAt - b.createdAt)) out += (out ? "\n────────────\n\n" : "") + await threadText(t, room);
+        await saveFile(fileSafe(room.name) + "_" + stamp() + ".txt", "text/plain", out);
+      }));
       head.appendChild(btn("small danger", "部屋を削除", async () => {
         if(rooms.length < 2){ await tell("部屋が1つだけのときは、削除できません。\n先に、別の部屋を作ってください。"); return; }
         const ok = await dialog({ text:"「" + room.name + "」を削除しますか？\n中のスレッド " + mine.length + "個と、その会話がすべて消えます。元に戻せません。", yes:"削除する" });
@@ -950,6 +1481,9 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
           th.name = v; await putOne("threads", th);
           if(now){ current.threadName = v; where.textContent = current.roomName + " ／ " + current.threadName; }
           await drawRooms();
+        }));
+        row.appendChild(btn("small", "テキストで保存", async () => {
+          await saveFile(fileSafe(room.name + "_" + th.name) + "_" + stamp() + ".txt", "text/plain", await threadText(th, room));
         }));
         row.appendChild(btn("small danger", "削除", async () => {
           if(mine.length < 2){ await tell("部屋の中のスレッドが1つだけのときは、削除できません。\n先に、別のスレッドを作ってください。"); return; }
@@ -1066,6 +1600,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       db.onversionchange = () => { db.close(); };
       await prepare();
       await loadSettings();
+      applyFont();
       await openCurrent();
       // 「勝手に消さないで」とiPadにお願いする（聞き入れられたかを表示する）
       if(navigator.storage && navigator.storage.persist){
