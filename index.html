@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#fdf3e3">
 <title>新しいアプリ（仮）</title>
 <style>
-/* 新しいアプリ（仮） 版 1.5 ── 会話の画面、保存、ペルソナと部屋、プロンプトの切り替え、記憶（項目ごと、発言から記録、必要なときにAIが開く）、日記（ペルソナが書く。押したときだけ）、AIと話す（Claude・Gemini・GPT・Grok）、検索、思考、保存 */
+/* 新しいアプリ（仮） 版 1.6 ── 会話の画面、保存、ペルソナと部屋、プロンプトの切り替え、記憶（項目ごと、発言から記録、必要なときにAIが開く）、日記（ペルソナが書く。押したときだけ）、部屋のログを読んでもらう、あらすじの下書き、AIと話す（Claude・Gemini・GPT・Grok）、検索、思考、保存 */
 :root{
   --sand:#faf6ee; --text:#37474f; --soft:#5d6c73; --line:#e4dccc; --sea:#3f7585;
   --skyA:#fdf3e3; --skyB:#e8f3f5;
@@ -64,7 +64,7 @@ header{
 .pcard p{ margin:0 0 8px; font-size:13px; }
 .pcard .bar{ margin-top:0; }
 .pcard p.dtext{ font-size:15px; line-height:1.8; color:var(--text); white-space:pre-wrap; word-break:break-word; }
-.plain.due{ background:#e3f1f4; border-color:#9cc3cf; }
+.plain.due, .plain.on{ background:#e3f1f4; border-color:#9cc3cf; }
 .tname{ flex:1; min-width:8em; font-size:16px; word-break:break-word; }
 #list{
   flex:1 1 auto; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch;
@@ -94,7 +94,7 @@ footer{
 #modelRow{ flex-shrink:0; display:flex; flex-wrap:wrap; gap:8px; padding:10px 14px 0; background:#fffdf9; border-top:1px solid var(--line); }
 #openModels{ flex:1 1 9em; min-width:0; }
 #openPrompts{ flex:0 1 auto; min-width:0; }
-#toggleSearch, #toggleThink{ flex-shrink:0; }
+#toggleSearch, #toggleThink, #insertNow{ flex-shrink:0; }
 .pill.on{ background:#e3f1f4; border-color:#9cc3cf; font-weight:700; }
 .pill{
   min-height:44px; max-width:100%; padding:0 18px; border:1px solid var(--line); border-radius:22px;
@@ -274,7 +274,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     <div class="hl">
       <button id="openPersonas" class="pick" type="button"><span id="pName" class="pt">じゅんび中…</span><span class="pa">▾</span></button>
       <span class="gap"></span>
-      <span id="ver">版 1.5</span>
+      <span id="ver">版 1.6</span>
       <button id="openSettings" class="plain" type="button">設定</button>
     </div>
     <div class="hl">
@@ -295,10 +295,10 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   </header>
   <main id="list" aria-live="polite"></main>
   <div id="modelRow">
-    <button id="openPrompts" class="pill" type="button">プロンプト ▾</button>
     <button id="openModels" class="pill" type="button">モデル ▾</button>
     <button id="toggleSearch" class="pill" type="button">ウェブ検索：オフ</button>
     <button id="toggleThink" class="pill" type="button">思考：オフ</button>
+    <button id="insertNow" class="pill" type="button">今の日時</button>
   </div>
   <footer>
     <label class="label" for="msg">メッセージ</label>
@@ -470,7 +470,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
 <script>
 (function(){
   "use strict";
-  const VERSION = "1.5";
+  const VERSION = "1.6";
   const app = document.getElementById("app");
   const list = document.getElementById("list");
   const box = document.getElementById("msg");
@@ -629,6 +629,17 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   // 「必要なとき」の記憶を、AIが自分で開くための道具
   const MEM_TOOL = "open_memory";
   const MEM_DESC = "ユーザーが書きのこした記憶の項目を1つ開いて、中身を読む。会話に関係がありそうなときに使う。";
+  const LOG_TOOL = "open_room_log";
+  const LOG_DESC = "同じペルソナの、別の部屋の会話を読む。ユーザーに「読んできて」と頼まれたときだけ使う。";
+  const LOG_MAX = 40;
+  // AIに渡す道具の一覧（会社ごとの形にする前の、共通の形）
+  function toolDefs(mem){
+    const out = [];
+    if(mem.titles.length) out.push({ name:MEM_TOOL, desc:MEM_DESC, props:{ title:{ type:"string", enum:mem.titles } }, req:["title"] });
+    if(mem.rooms.length) out.push({ name:LOG_TOOL, desc:LOG_DESC, props:{ name:{ type:"string", enum:mem.rooms },
+      count:{ type:"integer", description:"読む件数（さいごから数えて）。言われなければ " + LOG_MAX + "。最大 " + LOG_MAX } }, req:["name"] });
+    return out;
+  }
   async function askClaude(model, key, persona, turns, signal, opt){
     const body = { model:model.id, max_tokens:4096, messages:turns.map(t => ({ role:t.role, content:t.text })) };
     let sys = persona || "";
@@ -643,8 +654,8 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     }
     if(sys.trim()) body.system = sys;
     if(opt.search) body.tools = [{ type:"web_search_20250305", name:"web_search", max_uses:SEARCH_MAX }];
-    if(opt.mem) body.tools = (body.tools || []).concat([{ name:MEM_TOOL, description:MEM_DESC,
-      input_schema:{ type:"object", properties:{ title:{ type:"string", enum:opt.mem.titles } }, required:["title"] } }]);
+    if(opt.mem) body.tools = (body.tools || []).concat(toolDefs(opt.mem).map(d => ({ name:d.name, description:d.desc,
+      input_schema:{ type:"object", properties:d.props, required:d.req } })));
     const headers = { "content-type":"application/json", "x-api-key":key, "anthropic-version":"2023-06-01",
       "anthropic-dangerous-direct-browser-access":"true" };
     const go = () => post("https://api.anthropic.com/v1/messages", headers, body, signal, "Claude");
@@ -687,9 +698,11 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
         }
       });
       if(stop === "tool_use" && calls.length && opt.mem && round < 5){     // 記憶を開きたいと言われたら、中身を渡して続きをお願いする
+        const res = [];
+        for(const c of calls) res.push({ type:"tool_result", tool_use_id:c.id, content:await opt.mem.call(c.name, c.input) });
         body.messages = body.messages.concat([
           { role:"assistant", content:(data.content || []).filter(b => !(b.type === "text" && !b.text)) },
-          { role:"user", content:calls.map(c => ({ type:"tool_result", tool_use_id:c.id, content:opt.mem.read(c.input && c.input.title) })) }
+          { role:"user", content:res }
         ]);
         continue;
       }
@@ -717,8 +730,11 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     if(opt.search && !gemma) tools.push({ google_search:{} });
     const useMem = !!opt.mem && !gemma;
     if(opt.mem && gemma) opt.mem.failed = true;     // Gemma は、自分で開く動きを確かめられていないので、渡さない
-    if(useMem) tools.push({ functionDeclarations:[{ name:MEM_TOOL, description:MEM_DESC,
-      parameters:{ type:"OBJECT", properties:{ title:{ type:"STRING", enum:opt.mem.titles } }, required:["title"] } }] });
+    if(useMem) tools.push({ functionDeclarations:toolDefs(opt.mem).map(d => {
+      const props = {};
+      Object.keys(d.props).forEach(k => { props[k] = Object.assign({}, d.props[k], { type:d.props[k].type.toUpperCase() }); });
+      return { name:d.name, description:d.desc, parameters:{ type:"OBJECT", properties:props, required:d.req } };
+    }) });
     if(tools.length) body.tools = tools;
     const go = () => post("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model.id) + ":generateContent", {
       "content-type":"application/json", "x-goog-api-key":key
@@ -748,11 +764,10 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       (g1.groundingChunks || []).forEach(g => { if(g.web && g.web.uri) found.set(g.web.uri, g.web.title || g.web.uri); });
       const calls = parts.filter(p => p.functionCall);
       if(calls.length && useMem && !opt.mem.failed && round < 4){
-        body.contents = body.contents.concat([
-          { role:"model", parts:parts },
-          { role:"user", parts:calls.map(p => ({ functionResponse:Object.assign({ name:p.functionCall.name,
-              response:{ content:opt.mem.read(p.functionCall.args && p.functionCall.args.title) } }, p.functionCall.id ? { id:p.functionCall.id } : {}) })) }
-        ]);
+        const res = [];
+        for(const p of calls) res.push({ functionResponse:Object.assign({ name:p.functionCall.name,
+          response:{ content:await opt.mem.call(p.functionCall.name, p.functionCall.args) } }, p.functionCall.id ? { id:p.functionCall.id } : {}) });
+        body.contents = body.contents.concat([{ role:"model", parts:parts }, { role:"user", parts:res }]);
         continue;
       }
       break;
@@ -771,8 +786,8 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   async function askChat(model, key, persona, turns, signal, opt, url, who){
     const body = { model:model.id, max_completion_tokens:4096,
       messages:(persona.trim() ? [{ role:"system", content:persona }] : []).concat(turns.map(t => ({ role:t.role, content:t.text }))) };
-    if(opt.mem) body.tools = [{ type:"function", function:{ name:MEM_TOOL, description:MEM_DESC,
-      parameters:{ type:"object", properties:{ title:{ type:"string", enum:opt.mem.titles } }, required:["title"] } } }];
+    if(opt.mem) body.tools = toolDefs(opt.mem).map(d => ({ type:"function", function:{ name:d.name, description:d.desc,
+      parameters:{ type:"object", properties:d.props, required:d.req } } }));
     const go = () => post(url, { "content-type":"application/json", "authorization":"Bearer " + key }, body, signal, who);
     let data = null, c = null, text = "", inT = 0, outT = 0;
     for(let round = 0; round < 5; round++){
@@ -790,11 +805,13 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       inT += u1.prompt_tokens || 0; outT += u1.completion_tokens || 0;
       const calls = Array.isArray(msg.tool_calls) ? msg.tool_calls : [];
       if(calls.length && body.tools && round < 4){
-        body.messages = body.messages.concat([msg], calls.map(tc => {
+        const res = [];
+        for(const tc of calls){
           let a = {};
           try{ a = JSON.parse((tc.function && tc.function.arguments) || "{}"); }catch(e){}
-          return { role:"tool", tool_call_id:tc.id, content:opt.mem.read(a && a.title) };
-        }));
+          res.push({ role:"tool", tool_call_id:tc.id, content:await opt.mem.call(tc.function && tc.function.name, a) });
+        }
+        body.messages = body.messages.concat([msg], res);
         continue;
       }
       break;
@@ -935,22 +952,23 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   const OLD_DIARY = "古い日記";
   const diariesOf = room => (room.diaries || []).slice().sort((a, b) => a.createdAt - b.createdAt);
   const diaryLine = d => "■ " + dayName(d.createdAt) + (d.threadName ? "（部屋：" + d.threadName + "）" : "") + "\n" + (d.text || "").trim();
+  const diariesOn = room => diariesOf(room).filter(d => !d.hide);     // 「見せない」にした日記は、AIに渡さない
   function oldDiaryItem(room){
-    const all = diariesOf(room);
+    const all = diariesOn(room);
     const old = all.slice(0, Math.max(0, all.length - DIARY_SHOW)).slice(-DIARY_OLD_MAX);
     if(!old.length) return null;
     const clash = (room.memories || []).some(m => (m.title || "").trim() === OLD_DIARY);
     return { title:clash ? OLD_DIARY + "（日記のページ）" : OLD_DIARY, text:old.map(diaryLine).join("\n\n") };
   }
   const needItems = room => { const o = oldDiaryItem(room); return needMemories(room).concat(o ? [o] : []); };
-  function systemFor(room, pr, canOpen){
+  function systemFor(room, pr, canOpen, logs){
     let out = (pr && pr.text) || "";
     const ms = shownMemories(room);
     if(ms.length){
       out += (out.trim() ? "\n\n" : "") + "【記憶】\n（ユーザーが書きのこした、覚えておいてほしいことです）";
       ms.forEach(m => { out += "\n\n■ " + m.title + "\n" + m.text.trim(); });
     }
-    const ds = diariesOf(room).slice(-DIARY_SHOW);
+    const ds = diariesOn(room).slice(-DIARY_SHOW);
     if(ds.length){
       out += (out.trim() ? "\n\n" : "") + "【日記】\n（あなた自身が、これまでに書いた日記です。新しい" + ds.length + "回分）";
       ds.forEach(d => { out += "\n\n" + diaryLine(d); });
@@ -960,19 +978,46 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       out += (out.trim() ? "\n\n" : "") + "【必要なときに開ける記憶】\n（次の項目は、名前だけを伝えています。会話に関係がありそうなときは、" + MEM_TOOL + " で中身を読んでから、返事をしてください。関係がなければ、開かなくてかまいません）";
       ns.forEach(m => { out += "\n・" + m.title; });
     }
+    const ls = canOpen ? (logs || []) : [];
+    if(ls.length){
+      out += (out.trim() ? "\n\n" : "") + "【読みに行ける部屋】\n（あなたとユーザーが、別の部屋で話した会話です。ユーザーに「読んできて」と頼まれたときだけ、" + LOG_TOOL + " で読んでください。頼まれていないときは、開かないでください。件数を言われたら、count にその数を入れてください）";
+      ls.forEach(n => { out += "\n・" + n; });
+    }
     return out;
   }
   // AIが開くときの窓口。開いた項目の名前を opened に残す
-  function memFor(room){
+  function memFor(room, others){
     const items = needItems(room);
-    if(!items.length) return null;
-    return { titles:items.map(m => m.title), opened:[], failed:false,
+    const list = (others || []).slice().sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+    const names = [];
+    list.forEach(t => { if(t.name && !names.includes(t.name)) names.push(t.name); });
+    if(!items.length && !names.length) return null;
+    return { titles:items.map(m => m.title), rooms:names, opened:[], logs:[], failed:false,
       read(t){
         const k = String(t == null ? "" : t).trim();
         const it = items.find(m => m.title === k) || items.find(m => m.title.trim() === k);
         if(!it) return "その名前の項目はありません。";
         if(!this.opened.includes(it.title)) this.opened.push(it.title);
         return it.text.trim();
+      },
+      // 別の部屋の会話を読む（さいごの count 件。最大 LOG_MAX 件）
+      async readLog(n, count){
+        const k = String(n == null ? "" : n).trim();
+        const th = list.find(t => t.name === k) || list.find(t => (t.name || "").trim() === k);
+        if(!th) return "その名前の部屋はありません。";
+        const all = await ask(db.transaction("messages").objectStore("messages").index("threadId").getAll(th.id));
+        all.sort((a, b) => a.createdAt - b.createdAt);
+        let c = parseInt(count, 10);
+        if(!(c > 0)) c = LOG_MAX;
+        const part = all.slice(-Math.min(c, LOG_MAX));
+        if(!part.length) return "この部屋には、まだ会話がありません。";
+        this.logs = this.logs.filter(x => x.name !== th.name).concat([{ name:th.name, n:part.length }]);
+        return "部屋「" + th.name + "」の会話（全部で " + all.length + " 件のうち、さいごの " + part.length + " 件）\n\n"
+          + part.map(m => (m.role === "ai" ? room.name : "ユーザー") + "：\n" + (m.text || "").trim()).join("\n\n");
+      },
+      async call(name, a){
+        if(name === LOG_TOOL) return await this.readLog(a && a.name, a && a.count);
+        return this.read(a && a.title);
       } };
   }
   const promptFor = (room, th) => (th && th.promptId && room.prompts.find(p => p.id === th.promptId)) || mainOf(room);
@@ -1203,6 +1248,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       if(m.promptName) info += " ・ プロンプト: " + m.promptName;
       if(m.searches) info += " ・ 検索" + m.searches + "回";
       if(m.opened && m.opened.length) info += " ・ 開いた記憶: " + m.opened.join("、");
+      if(m.logsRead && m.logsRead.length) info += " ・ 読んだ部屋: " + m.logsRead.map(x => x.name + "（" + x.n + "件）").join("、");
       if(m.memFail) info += " ・ このモデルは、記憶を自分で開けませんでした";
       if(m.cut) info += " ・ 長くて途中で切れました";
       row.appendChild(el("div", "src", info));
@@ -1238,11 +1284,11 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     pName.textContent = "⛵️ " + current.roomName;
     rName.textContent = "部屋：" + current.threadName;
   }
-  const promptBtn = document.getElementById("openPrompts");
+  // 「いつもの」以外のプロンプトを使っている部屋では、上の「プロンプト」ボタンに色を付ける
+  const promptTop = document.getElementById("openPersona");
   async function showPromptBtn(){
     const room = await getRoom(current.roomId), th = await getOne("threads", current.threadId);
-    promptBtn.textContent = "プロンプト：" + (room ? promptFor(room, th).name : "") + " ▾";
-    promptBtn.className = "pill" + (room && th && promptFor(room, th).id !== room.mainPrompt ? " on" : "");
+    promptTop.className = "plain" + (room && th && promptFor(room, th).id !== room.mainPrompt ? " on" : "");
   }
   async function openCurrent(){
     showWhere();
@@ -1313,14 +1359,15 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     waiting = ctl; send.disabled = true;
     try{
       const noOpen = /gemma/i.test(model.id);
-      const mem = room ? memFor(room) : null;
-      if(mem && noOpen) mem.failed = true;
-      const r = await ASK[model.by](model, key, room ? systemFor(room, pr, !!mem && !noOpen) : "", turns, ctl.signal, Object.assign({}, opt, { mem:(mem && !noOpen) ? mem : null }));
+      const others = room ? (await getAll("threads")).filter(t => t.roomId === roomId && t.id !== threadId) : [];
+      const mem = room ? memFor(room, others) : null;
+      if(mem && noOpen && mem.titles.length) mem.failed = true;
+      const r = await ASK[model.by](model, key, room ? systemFor(room, pr, !!mem && !noOpen, mem ? mem.rooms : []) : "", turns, ctl.signal, Object.assign({}, opt, { mem:(mem && !noOpen) ? mem : null }));
       const m = { id:newId(), threadId:threadId, roomId:roomId, role:"ai", text:r.text, createdAt:Date.now(),
         model:model.id, usage:r.usage, usd:r.usd, cut:r.cut, thinking:r.thinking || "", searches:r.searches || 0,
         queries:r.queries || [], sources:r.sources || [],
         promptName:(pr && room && pr.id !== room.mainPrompt) ? pr.name : "",
-        opened:mem ? mem.opened.slice() : [], memFail:!!(mem && mem.failed) };
+        opened:mem ? mem.opened.slice() : [], logsRead:mem ? mem.logs.slice() : [], memFail:!!(mem && mem.failed) };
       await saveMessage(m);
       await addUsage(r.usd);
       row.remove();
@@ -1925,30 +1972,6 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     }catch(e){ tell("部屋を作れませんでした。もう一度ためしてください。"); }
   });
 
-  // プロンプトを切り替える（部屋ごと）
-  async function openPromptList(){
-    const room = await getRoom(current.roomId), th = await getOne("threads", current.threadId);
-    if(!room || !th) return;
-    const nowId = promptFor(room, th).id;
-    const box2 = openPick("この部屋のプロンプト", "ここで選ぶと、この部屋の次の返事から切り替わります。中身は、上の「プロンプト」で直せます。");
-    room.prompts.forEach(p => {
-      const main = p.id === room.mainPrompt, now = p.id === nowId;
-      box2.appendChild(choice(p.name, [main ? "いつもの" : "", now ? "いま選んでいる" : ""].filter(Boolean).join(" ・ "), now, async () => {
-        const t = await getOne("threads", current.threadId);
-        if(main) delete t.promptId; else t.promptId = p.id;
-        await putOne("threads", t);
-        await showPromptBtn();
-        closePick();
-        toast("次の返事から「" + p.name + "」を使います");
-      }));
-    });
-  }
-  promptBtn.addEventListener("click", () => {
-    if(!db) return;
-    box.blur();
-    openPromptList().catch(() => tell("一覧を開けませんでした。もう一度ためしてください。"));
-  });
-
   // プロンプト（いま開いているペルソナの分）
   const personaPanel = document.getElementById("persona");
   const personaBody = document.getElementById("personaBody");
@@ -2097,6 +2120,51 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       m.text = r.text; m.updatedAt = Date.now(); await save();
       await drawMemory(); toast("記憶を保存しました");
     }));
+    if(sideJob && sideJob.kind === "sum" && sideJob.roomId === room.id) f.appendChild(sideJob.el);
+    else f.appendChild(btn("add", "いまの部屋のあらすじを、AIに下書きしてもらう", writeSum));
+    const s0 = room.sumDraft;
+    if(s0){
+      const c = el("div", "pcard main");
+      const h = el("h4", "", "あらすじの下書き");
+      h.appendChild(el("span", "off", "まだ記憶に入っていません"));
+      c.appendChild(h);
+      c.appendChild(el("p", "", dayTime(s0.createdAt) + (s0.threadName ? " ・ 部屋：" + s0.threadName : "")));
+      c.appendChild(el("p", "dtext", s0.text));
+      const bar = el("div", "bar");
+      const put = async (id, title) => {
+        const now = Date.now();
+        let it = id ? room.memories.find(x => x.id === id) : null;
+        if(!it){ it = { id:newId(), title:title, text:"", show:false, mode:"need", createdAt:now, updatedAt:now }; room.memories.push(it); }
+        const head = "（" + dayName(s0.createdAt) + (s0.threadName ? " 部屋：" + s0.threadName : "") + " のあらすじ）\n";
+        it.text = ((it.text || "").trim() ? it.text.replace(/\s+$/, "") + "\n\n" : "") + head + s0.text;
+        it.updatedAt = now;
+        delete room.sumDraft; await save();
+        closePick(); await drawMemory();
+        toast("記憶「" + it.title + "」に入れました（見せ方：" + MODE_NAME[memMode(it)] + "）");
+      };
+      bar.appendChild(btn("small", "保存", () => {
+        const box2 = openPick("どの項目に入れますか？", "下書きを、選んだ項目のいちばん下に足します。あとで「編集」から直せます。");
+        room.memories.forEach(it => { box2.appendChild(choice(it.title, MODE_NAME[memMode(it)], false, () => put(it.id))); });
+        box2.appendChild(btn("add", "＋ 新しい項目", async () => {
+          const v = await dialog({ text:"新しい項目の名前\n（見せ方は「必要なとき」で作ります。あとで変えられます）", input:true,
+            value:room.memories.some(x => x.title === "これまでのこと") ? "" : "これまでのこと", yes:"作って入れる" });
+          if(!v) return;
+          await put(null, v);
+        }));
+      }));
+      bar.appendChild(btn("small", "直す", async () => {
+        const r = await dialog({ text:"あらすじの下書き", area:true, value:s0.text, yes:"直す" });
+        if(!r || !r.text.trim()) return;
+        s0.text = r.text.trim(); await save(); await drawMemory();
+      }));
+      bar.appendChild(btn("small", "もう一度書いてもらう", writeSum));
+      bar.appendChild(btn("small danger", "やめる", async () => {
+        if(!await dialog({ text:"この下書きを消しますか？\n元に戻せません。", yes:"消す", no:"のこす" })) return;
+        delete room.sumDraft; await save(); await drawMemory();
+      }));
+      c.appendChild(bar);
+      memoryBody.appendChild(c);
+    }
   }
   // 発言を、記憶の項目に記録する（その項目のいちばん下に、日付つきで足す）
   async function recordTo(m){
@@ -2157,9 +2225,12 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       if(due && nudge && !nudged.has(k)){ nudged.add(k); toast("会話がたまってきました。そろそろ日記を書く？（上の「日記」から）"); }
     }catch(e){}
   }
-  let diaryJob = null;      // 書いてもらっている間だけ入る { roomId, el, ctl }
-  async function writeDiary(){
-    if(diaryJob || !db) return;
+  /* 会話の外で、AIに下書きを書いてもらう（日記と、あらすじで、同じ作りを使う）
+     o = { kind, field（下書きを入れる場所）, label（待つ間の文字）, plan（確認の文と、お願いの文を作る）, redraw } */
+  let sideJob = null;      // 書いてもらっている間だけ入る { roomId, kind, el }
+  async function sideWrite(o){
+    if(!db) return;
+    if(sideJob){ toast("いま、別の下書きを書いているところです"); return; }
     const roomId = current.roomId, threadId = current.threadId;
     const room = await getRoom(roomId), th = await getOne("threads", threadId);
     if(!room || !th) return;
@@ -2169,60 +2240,83 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     if(!key){ await tell(COMPANY[model.by] + "のAPIキーがまだ入っていません。\n「設定」から入れてください。"); return; }
     if(capReached()){ await tell("今月の料金の上限（¥" + Number(prefs.capYen).toLocaleString() + "）に達しました。\n「設定」で上限を変えると、続けられます。"); return; }
     const msgs = await loadMessages();
-    const mark = diaryMark(room, threadId);
-    const fresh = msgs.filter(m => m.createdAt > mark);
-    if(!fresh.length){ await tell(mark ? "前の日記のあと、この部屋ではまだ話していません。" : "この部屋には、まだ会話がありません。"); return; }
-    let q = "部屋「" + th.name + "」の会話から、日記を書いてもらいますか？\n\n・使うモデル：" + model.name + "\n・返事1回分くらいの料金がかかります。\n・書いたものは、下書きとして出ます。「保存」を押すまでは残りません。";
-    if(fresh.length < 10) q += "\n\n（" + (mark ? "前の日記のあとの会話" : "この部屋の会話") + "は、まだ " + fresh.length + " 件です。少ないと、書くことがあまりないかもしれません）";
-    if(fresh.length > SEND_COUNT) q += "\n\n（会話が " + fresh.length + " 件たまっています。AIに渡せるのは新しい " + SEND_COUNT + " 件までなので、それより前のことは日記に入りません）";
-    if(room.diaryDraft) q += "\n\n（いまの下書きは、新しいものに置きかわります）";
-    if(!await dialog({ text:q, yes:"書いてもらう" })) return;
+    const plan = await o.plan(room, th, msgs, model);
+    if(!plan) return;
+    if(!await dialog({ text:plan.q, yes:"書いてもらう" })) return;
     const use = msgs.slice(-SEND_COUNT);
-    const req = "【ここからは、会話の外からのお願いです】\nここまでの会話をふり返って、あなた（" + room.name + "）自身の日記を書いてください。\n"
-      + "・あなた自身の言葉で、一人称で書く。出来事の報告ではなく、そのとき自分がどう感じたか、何を思ったかを書く。\n"
-      + "・3〜5文くらいで、短く。\n"
-      + "・会話に出てこなかった出来事は書かない。気持ちを大げさにしない。\n"
-      + (mark ? "・前の日記に書いたことはくり返さず、そのあとの会話について書く。\n" : "")
-      + "・日記の本文だけを書く。あいさつ、見出し、日付、かっこ書きの説明、相手への呼びかけは付けない。";
-    const turns = buildTurns(use.concat([{ role:"me", text:req }]));
+    const turns = buildTurns(use.concat([{ role:"me", text:plan.req }]));
     const ctl = new AbortController();
     const wrap = el("div", "note");
     const line = el("span", "", "");
     let secs = 0;
-    const tick = () => { line.textContent = "日記を書いています…（" + secs + "秒）"; };
+    const tick = () => { line.textContent = o.label + "…（" + secs + "秒）"; };
     tick();
     wrap.appendChild(line);
     const stop = el("button", "", "止める");
     stop.type = "button";
     stop.addEventListener("click", async () => {
-      if(await dialog({ text:"日記を書くのをやめますか？\n（ここまでにかかった料金は、戻りません）", yes:"やめる", no:"つづける" })) ctl.abort();
+      if(await dialog({ text:"書いてもらうのをやめますか？\n（ここまでにかかった料金は、戻りません）", yes:"やめる", no:"つづける" })) ctl.abort();
     });
     wrap.appendChild(stop);
     const timer = setInterval(() => { secs++; tick(); }, 1000);
-    diaryJob = { roomId:roomId, el:wrap, ctl:ctl };
-    const redraw = async () => { if(!diaryPanel.hidden && current.roomId === roomId) await drawDiary(); };
+    sideJob = { roomId:roomId, kind:o.kind, el:wrap };
+    const redraw = async () => { if(current.roomId === roomId) await o.redraw(); };
     await redraw();
     try{
       const r = await ASK[model.by](model, key, systemFor(room, promptFor(room, th), false), turns, ctl.signal, { think:false, search:false, mem:null });
       await addUsage(r.usd);
       const text = (r.text || "").trim();
-      if(!text) throw trouble("日記が空のまま返ってきました。もう一度ためしてください。");
+      if(!text) throw trouble("空のまま返ってきました。もう一度ためしてください。");
       const now = await getRoom(roomId);
       if(now){
-        now.diaryDraft = { text:text, createdAt:Date.now(), threadId:threadId, threadName:th.name, model:model.id, usd:r.usd || 0, lastMsgAt:use[use.length - 1].createdAt };
+        now[o.field] = { text:text, createdAt:Date.now(), threadId:threadId, threadName:th.name, model:model.id, usd:r.usd || 0, lastMsgAt:use[use.length - 1].createdAt };
         await putOne("rooms", now);
       }
-      clearInterval(timer); diaryJob = null;
+      clearInterval(timer); sideJob = null;
       await redraw();
       toast("下書きができました");
     }catch(e){
-      clearInterval(timer); diaryJob = null;
+      clearInterval(timer); sideJob = null;
       await redraw();
-      if(e && e.name === "AbortError") toast("日記を書くのをやめました");
+      if(e && e.name === "AbortError") toast("書いてもらうのをやめました");
       else await tell(((e && e.plain) || "うまくいきませんでした。もう一度ためしてください。") + ((e && e.detail) ? "\n\nくわしい内容： " + e.detail : ""));
     }
     showState();
   }
+  const writeDiary = () => sideWrite({ kind:"diary", field:"diaryDraft", label:"日記を書いています",
+    redraw:async () => { if(!diaryPanel.hidden) await drawDiary(); },
+    plan:async (room, th, msgs, model) => {
+      const mark = diaryMark(room, th.id);
+      const fresh = msgs.filter(m => m.createdAt > mark);
+      if(!fresh.length){ await tell(mark ? "前の日記のあと、この部屋ではまだ話していません。" : "この部屋には、まだ会話がありません。"); return null; }
+      let q = "部屋「" + th.name + "」の会話から、日記を書いてもらいますか？\n\n・使うモデル：" + model.name + "\n・返事1回分くらいの料金がかかります。\n・書いたものは、下書きとして出ます。「保存」を押すまでは残りません。";
+      if(fresh.length < 10) q += "\n\n（" + (mark ? "前の日記のあとの会話" : "この部屋の会話") + "は、まだ " + fresh.length + " 件です。少ないと、書くことがあまりないかもしれません）";
+      if(fresh.length > SEND_COUNT) q += "\n\n（会話が " + fresh.length + " 件たまっています。AIに渡せるのは新しい " + SEND_COUNT + " 件までなので、それより前のことは日記に入りません）";
+      if(room.diaryDraft) q += "\n\n（いまの下書きは、新しいものに置きかわります）";
+      const req = "【ここからは、会話の外からのお願いです】\nここまでの会話をふり返って、あなた（" + room.name + "）自身の日記を書いてください。\n"
+        + "・あなた自身の言葉で、一人称で書く。出来事の報告ではなく、そのとき自分がどう感じたか、何を思ったかを書く。\n"
+        + "・かたい書き言葉にしない。この会話でのあなたの、ふだんの話し方と口調のままで書く。\n"
+        + "・3〜5文くらいで、短く。\n"
+        + "・会話に出てこなかった出来事は書かない。気持ちを大げさにしない。\n"
+        + (mark ? "・前の日記に書いたことはくり返さず、そのあとの会話について書く。\n" : "")
+        + "・日記の本文だけを書く。あいさつ、見出し、日付、かっこ書きの説明、相手への呼びかけは付けない。";
+      return { q:q, req:req };
+    } });
+  const writeSum = () => sideWrite({ kind:"sum", field:"sumDraft", label:"あらすじを書いています",
+    redraw:async () => { if(!memoryPanel.hidden) await drawMemory(); },
+    plan:async (room, th, msgs, model) => {
+      if(!msgs.length){ await tell("この部屋には、まだ会話がありません。"); return null; }
+      let q = "部屋「" + th.name + "」の会話から、あらすじの下書きを作ってもらいますか？\n\n・使うモデル：" + model.name + "\n・返事1回分くらいの料金がかかります。\n・下書きとして出ます。入れる項目を選んで保存するまでは、記憶に入りません。";
+      if(msgs.length > SEND_COUNT) q += "\n\n（会話が " + msgs.length + " 件あります。AIに渡せるのは新しい " + SEND_COUNT + " 件までなので、それより前のことは、あらすじに入りません）";
+      if(room.sumDraft) q += "\n\n（いまの下書きは、新しいものに置きかわります）";
+      const req = "【ここからは、会話の外からのお願いです】\nここまでの会話のあらすじを、短くまとめてください。あとであなた（" + room.name + "）自身が読み返して、思い出すためのメモです。\n"
+        + "・何を話したか、何があったかを、ざっくりと書く。\n"
+        + "・5〜8文くらい。\n"
+        + "・会話に出てこなかったことは書かない。\n"
+        + "・あなたの立場から、ふだんの話し方のままで書く。相手のことは、会話で呼んでいる呼び名で書く。\n"
+        + "・あらすじの本文だけを書く。あいさつ、見出し、日付、かっこ書きの説明は付けない。";
+      return { q:q, req:req };
+    } });
   async function drawDiary(){
     const room = await getRoom(current.roomId);
     if(!room) return;
@@ -2232,11 +2326,11 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     diaryBody.textContent = "";
     const f = el("div", "field");
     f.appendChild(el("p", "", "⛵️ " + room.name + " が、自分の言葉で書く日記です。「日記を書く」を押したときだけ書きます。"));
-    f.appendChild(el("p", "", "・新しい " + DIARY_SHOW + " 回分は、毎回AIに伝えます。\n・それより古い日記は、AIが必要だと思ったときに自分で開きます。")).style.whiteSpace = "pre-line";
+    f.appendChild(el("p", "", "・新しい " + DIARY_SHOW + " 回分は、毎回AIに伝えます。\n・それより古い日記は、AIが必要だと思ったときに自分で開きます。\n・「見せない」にした日記は、AIに渡しません。")).style.whiteSpace = "pre-line";
     const mark = diaryMark(room, current.threadId);
     const n = (await loadMessages()).filter(m => m.createdAt > mark).length;
     f.appendChild(el("p", "", (mark ? "前の日記のあと、" : "") + "いまの部屋（" + current.threadName + "）の会話：" + n + " 件"));
-    if(diaryJob && diaryJob.roomId === room.id) f.appendChild(diaryJob.el);
+    if(sideJob && sideJob.kind === "diary" && sideJob.roomId === room.id) f.appendChild(sideJob.el);
     else f.appendChild(btn("go", "日記を書く", writeDiary));
     diaryBody.appendChild(f);
     const d0 = room.diaryDraft;
@@ -2267,14 +2361,14 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       diaryBody.appendChild(c);
     }
     const all = diariesOf(room);
-    const shown = new Set(all.slice(-DIARY_SHOW).map(d => d.id));
+    const shown = new Set(diariesOn(room).slice(-DIARY_SHOW).map(d => d.id));
     const g = el("div", "field");
     g.appendChild(el("h3", "", "これまでの日記"));
     if(!all.length) g.appendChild(el("p", "", "まだ日記はありません。"));
     all.slice().reverse().forEach(d => {
       const c = el("div", "pcard");
       const h = el("h4", "", dayTime(d.createdAt));
-      h.appendChild(el("span", shown.has(d.id) ? "" : "off", shown.has(d.id) ? "毎回AIに伝える" : "必要なときにAIが開く"));
+      h.appendChild(el("span", shown.has(d.id) ? "" : "off", d.hide ? "見せない" : shown.has(d.id) ? "毎回AIに伝える" : "必要なときにAIが開く"));
       c.appendChild(h);
       if(d.threadName) c.appendChild(el("p", "", "部屋：" + d.threadName));
       c.appendChild(el("p", "dtext", d.text));
@@ -2283,6 +2377,15 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
         const r = await dialog({ text:dayTime(d.createdAt) + " の日記", area:true, value:d.text, yes:"保存する" });
         if(!r || !r.text.trim()) return;
         d.text = r.text.trim(); await save(); await drawDiary(); toast("日記を保存しました");
+      }));
+      bar.appendChild(btn("small", "見せ方を変える", () => {
+        const box2 = openPick(dayTime(d.createdAt) + " の日記の見せ方", "");
+        [[false, "見せる", "新しい " + DIARY_SHOW + " 回分に入っている間は、毎回AIに伝える。古くなったら、AIが必要なときに開く"], [true, "見せない", "AIには伝えない。取っておくだけ"]].forEach(o => {
+          box2.appendChild(choice(o[1], o[2], !!d.hide === o[0], async () => {
+            if(o[0]) d.hide = true; else delete d.hide;
+            await save(); closePick(); await drawDiary();
+          }));
+        });
       }));
       bar.appendChild(btn("small danger", "削除", async () => {
         if(!await dialog({ text:dayTime(d.createdAt) + " の日記を削除しますか？\n元に戻せません。", yes:"削除する" })) return;
@@ -2367,6 +2470,14 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     busy = false;
   }
   send.addEventListener("click", () => { submit(); box.focus(); });
+  document.getElementById("insertNow").addEventListener("click", () => {
+    const d = new Date();
+    const t = "（いま：" + (d.getMonth() + 1) + "月" + d.getDate() + "日（" + "日月火水木金土".charAt(d.getDay()) + "）" + d.getHours() + ":" + two(d.getMinutes()) + "）";
+    box.value = box.value + t;
+    grow();
+    box.focus();
+    try{ box.setSelectionRange(box.value.length, box.value.length); }catch(e){}
+  });
 
   /* ───────── はじまり ───────── */
   (async function start(){
