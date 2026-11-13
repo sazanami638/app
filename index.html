@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#fdf3e3">
 <title>新しいアプリ（仮）</title>
 <style>
-/* 新しいアプリ（仮） 版 1.6 ── 会話の画面、保存、ペルソナと部屋、プロンプトの切り替え、記憶（項目ごと、発言から記録、必要なときにAIが開く）、日記（ペルソナが書く。押したときだけ）、部屋のログを読んでもらう、あらすじの下書き、AIと話す（Claude・Gemini・GPT・Grok）、検索、思考、保存 */
+/* 新しいアプリ（仮） 版 1.7 ── 写真とファイルの添付、会話の画面、保存、ペルソナと部屋、プロンプトの切り替え、記憶（項目ごと、発言から記録、必要なときにAIが開く）、日記（ペルソナが書く。押したときだけ）、部屋のログを読んでもらう、あらすじの下書き、AIと話す（Claude・Gemini・GPT・Grok）、検索、思考、保存 */
 :root{
   --sand:#faf6ee; --text:#37474f; --soft:#5d6c73; --line:#e4dccc; --sea:#3f7585;
   --skyA:#fdf3e3; --skyB:#e8f3f5;
@@ -112,6 +112,23 @@ textarea:focus{ border-color:#9cc3cf; }
   flex-shrink:0; min-height:48px; min-width:84px; padding:0 18px; border:none; border-radius:16px;
   background:var(--sea); color:#fff; font:inherit; font-size:16px; font-weight:700;
 }
+#attach{
+  flex-shrink:0; min-height:48px; padding:0 14px; border:1px solid var(--line); border-radius:16px;
+  background:#ffffff; color:var(--text); font:inherit; font-size:16px; white-space:nowrap;
+}
+/* 送る前の添付（入力欄の上に並ぶ） */
+#attRow{ flex-shrink:0; display:flex; flex-wrap:wrap; gap:8px; padding:10px 14px 0; background:#fffdf9; }
+#attRow[hidden]{ display:none; }
+.chip{ display:flex; align-items:center; gap:8px; max-width:100%; padding:4px 4px 4px 10px; border:1px solid var(--line); border-radius:14px; background:#ffffff; font-size:14px; }
+.chip img{ width:40px; height:40px; object-fit:cover; border-radius:8px; flex-shrink:0; }
+.chip span{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:14em; }
+.chip button{ flex-shrink:0; min-width:44px; min-height:40px; padding:0 8px; border:none; background:none; color:var(--sea); font:inherit; font-size:14px; }
+/* 会話の中の添付 */
+.atts{ display:flex; flex-direction:column; gap:6px; margin-bottom:6px; max-width:100%; }
+.row.me .atts{ align-items:flex-end; }
+.atts img{ display:block; max-width:100%; height:auto; border-radius:16px; border:1px solid var(--line); background:#ffffff; }
+.atts img.big{ width:100% !important; }
+.fchip{ padding:8px 12px; border:1px solid var(--line); border-radius:14px; background:#ffffff; font-size:14px; line-height:1.6; color:var(--text); word-break:break-word; }
 button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
 /* 入力欄の高さを測るための、見えない写し */
 #mirror{
@@ -274,7 +291,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     <div class="hl">
       <button id="openPersonas" class="pick" type="button"><span id="pName" class="pt">じゅんび中…</span><span class="pa">▾</span></button>
       <span class="gap"></span>
-      <span id="ver">版 1.6</span>
+      <span id="ver">版 1.7</span>
       <button id="openSettings" class="plain" type="button">設定</button>
     </div>
     <div class="hl">
@@ -300,8 +317,11 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     <button id="toggleThink" class="pill" type="button">思考：オフ</button>
     <button id="insertNow" class="pill" type="button">今の日時</button>
   </div>
+  <div id="attRow" hidden></div>
   <footer>
     <label class="label" for="msg">メッセージ</label>
+    <button id="attach" type="button">＋ 添付</button>
+    <input id="attFile" type="file" multiple accept="image/*,application/pdf,text/*,.txt,.md,.csv,.json,.log" hidden>
     <textarea id="msg" rows="1" placeholder="メッセージを書く"></textarea>
     <button id="send" type="button">送る</button>
     <div id="mirror" aria-hidden="true"></div>
@@ -470,7 +490,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
 <script>
 (function(){
   "use strict";
-  const VERSION = "1.6";
+  const VERSION = "1.7";
   const app = document.getElementById("app");
   const list = document.getElementById("list");
   const box = document.getElementById("msg");
@@ -640,8 +660,18 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       count:{ type:"integer", description:"読む件数（さいごから数えて）。言われなければ " + LOG_MAX + "。最大 " + LOG_MAX } }, req:["name"] });
     return out;
   }
+  // 添付（写真とPDF）を、会社ごとの形にする。添付がなければ、文字だけ
+  const hasParts = t => !!(t.parts && t.parts.length);
+  const claudeContent = t => !hasParts(t) ? t.text : t.parts.map(p => p.kind === "pdf"
+    ? { type:"document", source:{ type:"base64", media_type:"application/pdf", data:p.data } }
+    : { type:"image", source:{ type:"base64", media_type:p.mime, data:p.data } }).concat(t.text ? [{ type:"text", text:t.text }] : []);
+  const geminiParts = t => !hasParts(t) ? [{ text:t.text }]
+    : t.parts.map(p => ({ inlineData:{ mimeType:p.mime, data:p.data } })).concat(t.text ? [{ text:t.text }] : []);
+  const chatContent = t => !hasParts(t) ? t.text : t.parts.map(p => p.kind === "pdf"
+    ? { type:"file", file:{ filename:p.name || "file.pdf", file_data:"data:application/pdf;base64," + p.data } }
+    : { type:"image_url", image_url:{ url:"data:" + p.mime + ";base64," + p.data } }).concat(t.text ? [{ type:"text", text:t.text }] : []);
   async function askClaude(model, key, persona, turns, signal, opt){
-    const body = { model:model.id, max_tokens:4096, messages:turns.map(t => ({ role:t.role, content:t.text })) };
+    const body = { model:model.id, max_tokens:4096, messages:turns.map(t => ({ role:t.role, content:claudeContent(t) })) };
     let sys = persona || "";
     if(opt.think){
       body.thinking = legacyClaude(model.id) ? { type:"enabled", budget_tokens:2000 } : { type:"adaptive", display:"summarized" };
@@ -720,7 +750,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   }
   async function askGemini(model, key, persona, turns, signal, opt){
     const gemma = /gemma/i.test(model.id);
-    const body = { contents:turns.map(t => ({ role:t.role === "assistant" ? "model" : "user", parts:[{ text:t.text }] })) };
+    const body = { contents:turns.map(t => ({ role:t.role === "assistant" ? "model" : "user", parts:geminiParts(t) })) };
     body.safetySettings = ["HARM_CATEGORY_HARASSMENT","HARM_CATEGORY_HATE_SPEECH","HARM_CATEGORY_SEXUALLY_EXPLICIT","HARM_CATEGORY_DANGEROUS_CONTENT"]
       .map(c => ({ category:c, threshold:"BLOCK_NONE" }));   // 今のCoveと同じ設定
     body.generationConfig = { maxOutputTokens:4096 };
@@ -785,7 +815,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   // GPT（OpenAI）と Grok（xAI）は、同じ送り方。送り先と名前だけ違う
   async function askChat(model, key, persona, turns, signal, opt, url, who){
     const body = { model:model.id, max_completion_tokens:4096,
-      messages:(persona.trim() ? [{ role:"system", content:persona }] : []).concat(turns.map(t => ({ role:t.role, content:t.text }))) };
+      messages:(persona.trim() ? [{ role:"system", content:persona }] : []).concat(turns.map(t => ({ role:t.role, content:chatContent(t) }))) };
     if(opt.mem) body.tools = toolDefs(opt.mem).map(d => ({ type:"function", function:{ name:d.name, description:d.desc,
       parameters:{ type:"object", properties:d.props, required:d.req } } }));
     const go = () => post(url, { "content-type":"application/json", "authorization":"Bearer " + key }, body, signal, who);
@@ -828,16 +858,53 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     xai:(m, k, p, t, s, o) => askChat(m, k, p, t, s, o, "https://api.x.ai/v1/chat/completions", "Grok")
   };
   // 発言を、AIに送る形にそろえる（同じ人の発言が続いたら1つにまとめ、自分の発言から始める）
-  function buildTurns(msgs){
+  // 添付は、さいごに並んだ自分の発言（これから返事をもらう分）と、「もう一度見せる」にした発言だけ、中身を渡す。
+  // それ以外は「（ここで写真を1枚見せた）」というメモに変える。live が false なら、全部メモにする（日記とあらすじ用）
+  function attMemo(files){
+    const n = files.filter(f => f.kind === "image").length;
+    const items = (n ? ["写真" + n + "枚"] : []).concat(files.filter(f => f.kind !== "image").map(f => "ファイル「" + f.name + "」"));
+    return "（ここで" + items.join("と") + "を見せた）";
+  }
+  const attNote = files => "（添付：" + attMemo(files).slice(4, -5) + "）";
+  function buildTurns(msgs, live){
+    let tail = msgs.length;
+    while(tail > 0 && msgs[tail - 1].role !== "ai") tail--;
     const turns = [];
-    msgs.forEach(m => {
+    msgs.forEach((m, i) => {
       const role = m.role === "ai" ? "assistant" : "user";
+      let text = m.text || "", atts = [];
+      if(role === "user" && m.files && m.files.length){
+        if(live !== false && (i >= tail || m.again)) atts = m.files.map(f => Object.assign({ from:m.id }, f));
+        else text += (text ? "\n" : "") + attMemo(m.files);
+      }
       const last = turns[turns.length - 1];
-      if(last && last.role === role) last.text += "\n\n" + m.text;
-      else turns.push({ role:role, text:m.text });
+      if(last && last.role === role){
+        if(text) last.text += (last.text ? "\n\n" : "") + text;
+        last.atts = last.atts.concat(atts);
+      }else turns.push({ role:role, text:text, atts:atts });
     });
     while(turns.length && turns[0].role !== "user") turns.shift();
     return turns;
+  }
+  // 渡す添付の中身を、別の入れ物から読んでくる。文章のファイルは、文字として発言の前に付ける
+  async function fillParts(turns){
+    let n = 0;
+    const ids = [];
+    for(const t of turns){
+      t.parts = [];
+      const texts = [];
+      for(const a of (t.atts || [])){
+        let rec = null;
+        try{ rec = fdb ? await getFile(a.id) : null; }catch(e){}
+        if(!rec){ t.text += (t.text ? "\n" : "") + "（添付の「" + a.name + "」は、もう残っていない）"; continue; }
+        if(rec.kind === "text") texts.push("【添付ファイル：" + rec.name + "】\n" + rec.text + "\n【添付ファイル ここまで】");
+        else t.parts.push({ kind:rec.kind, mime:rec.mime, data:rec.data, name:rec.name });
+        n++;
+        if(!ids.includes(a.from)) ids.push(a.from);
+      }
+      if(texts.length) t.text = texts.join("\n\n") + (t.text ? "\n\n" + t.text : "");
+    }
+    return { n:n, ids:ids };
   }
 
   /* ───────── 空の色（朝・昼・夕方・夜。いつも明るい画面） ───────── */
@@ -878,6 +945,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   const DB_NAME = "newapp-data";
   const SCHEMA = 1;
   let db = null;
+  let busy = false;     // 送っている途中のしるし
 
   function openDB(){
     return new Promise((resolve, reject) => {
@@ -919,6 +987,54 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   }
   const newId = () => (window.crypto && crypto.randomUUID) ? crypto.randomUUID()
     : "id-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 10);
+
+  /* ───────── 添付（写真とファイル）の入れ物 ─────────
+     会話の入れ物（newapp-data）の形は変えない。写真とファイルの中身は、別の入れ物（newapp-files）にしまう。
+     発言には、files:[{ id, kind, name, size, w, h }] という小さい札だけを持たせる。kind は image／pdf／text。
+     中身は { id, messageId, threadId, kind, name, mime, size, w, h, data（写真とPDF。base64）, text（文章）, createdAt }。
+     AIに見せるのは、送った回だけ。発言の again が true なら、次の1回だけ、もう一度見せる。 */
+  const FILE_DB = "newapp-files";
+  let fdb = null;
+  function openFiles(){
+    return new Promise((resolve, reject) => {
+      const req = indexedDB.open(FILE_DB, 1);
+      req.onupgradeneeded = () => {
+        const d = req.result;
+        if(!d.objectStoreNames.contains("files")) d.createObjectStore("files", { keyPath:"id" });
+      };
+      req.onsuccess = () => resolve(req.result);
+      req.onerror = () => reject(req.error || new Error("添付の入れ物を開けませんでした"));
+      req.onblocked = () => reject(new Error("ほかの画面でアプリが開いたままです"));
+    });
+  }
+  function ftx(mode, work){
+    return new Promise((resolve, reject) => {
+      const t = fdb.transaction("files", mode);
+      let out;
+      t.oncomplete = () => resolve(out);
+      t.onerror = () => reject(t.error);
+      t.onabort = () => reject(t.error || new Error("保存が中断されました"));
+      out = work(t.objectStore("files"));
+    });
+  }
+  const putFiles = recs => ftx("readwrite", st => { recs.forEach(r => st.put(r)); });
+  const getFile = id => ask(fdb.transaction("files").objectStore("files").get(id));
+  const allFiles = () => ask(fdb.transaction("files").objectStore("files").getAll());
+  // どの発言からも使われていない添付を消す（発言や部屋を消したあと、開いたとき）
+  let sweepTimer = 0;
+  async function sweepFiles(){
+    if(!fdb || !db) return;
+    if(busy){ sweepSoon(); return; }
+    try{
+      const used = new Set();
+      (await getAll("messages")).forEach(m => (m.files || []).forEach(f => used.add(f.id)));
+      const have = await ask(fdb.transaction("files").objectStore("files").getAllKeys());
+      const gone = have.filter(k => !used.has(k));
+      if(gone.length && !busy) await ftx("readwrite", st => { gone.forEach(k => st.delete(k)); });
+    }catch(e){}
+  }
+  function sweepSoon(){ clearTimeout(sweepTimer); sweepTimer = setTimeout(sweepFiles, 1500); }
+  const sizeText = n => n >= 1048576 ? (n / 1048576).toFixed(1) + "MB" : Math.max(1, Math.round((n || 0) / 1024)) + "KB";
 
   let current = { roomId:null, threadId:null, roomName:"", threadName:"" };
 
@@ -1013,7 +1129,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
         if(!part.length) return "この部屋には、まだ会話がありません。";
         this.logs = this.logs.filter(x => x.name !== th.name).concat([{ name:th.name, n:part.length }]);
         return "部屋「" + th.name + "」の会話（全部で " + all.length + " 件のうち、さいごの " + part.length + " 件）\n\n"
-          + part.map(m => (m.role === "ai" ? room.name : "ユーザー") + "：\n" + (m.text || "").trim()).join("\n\n");
+          + part.map(m => (m.role === "ai" ? room.name : "ユーザー") + "：\n" + ((m.text || "") + (m.files && m.files.length ? "\n" + attMemo(m.files) : "")).trim()).join("\n\n");
       },
       async call(name, a){
         if(name === LOG_TOOL) return await this.readLog(a && a.name, a && a.count);
@@ -1098,7 +1214,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
         t.objectStore("threads").delete(id);
       });
       if(roomId) t.objectStore("rooms").delete(roomId);
-    });
+    }).then(v => { sweepSoon(); return v; });
   }
   let keys = { claude:"", gemini:"", openai:"", xai:"" };
   let prefs = { lastModel:DEFAULT_MODEL, hidden:[], fs:17, think:false, capYen:1600 };
@@ -1130,7 +1246,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     if(bk) backup = { last:bk.last || 0, level:bk.level || 0 };
   }
   function removeMessage(id){
-    return tx("messages", "readwrite", t => { t.objectStore("messages").delete(id); });
+    return tx("messages", "readwrite", t => { t.objectStore("messages").delete(id); }).then(v => { sweepSoon(); return v; });
   }
 
   /* ───────── 会話の画面 ───────── */
@@ -1183,6 +1299,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     if(!await dialog({ text:text + "\n消したものは、元に戻せません。", yes:"もう一度" })) return;
     try{
       await tx("messages", "readwrite", t => { later.forEach(x => t.objectStore("messages").delete(x.id)); });
+      sweepSoon();
       await openCurrent();
       reply();
     }catch(e){ tell("うまくいきませんでした。もう一度ためしてください。"); }
@@ -1199,16 +1316,19 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     if(!await dialog({ text:text, yes:"再送信する", no:"やめる" })) return;
     try{
       if(later.length) await tx("messages", "readwrite", t => { later.forEach(x => t.objectStore("messages").delete(x.id)); });
+      sweepSoon();
       await openCurrent();
       reply();
     }catch(e){ tell("うまくいきませんでした。もう一度ためしてください。"); }
   }
+  const drawn = new Map();     // 画面に出ている、添付つきの発言（「もう一度見せる」のしるしを直すため）
   function draw(m){
     const row = document.createElement("div");
     row.className = "row " + (m.role === "ai" ? "ai" : "me");
     const b = document.createElement("div");
     b.className = "msg";
     b.textContent = m.text;
+    b.hidden = !m.text;
     if(m.role === "ai" && m.thinking){
       const det = el("details", "think");
       det.appendChild(el("summary", "", "考えたこと"));
@@ -1218,7 +1338,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     const u = document.createElement("div");
     u.className = "under";
     u.appendChild(el("span", "", when(m.createdAt)));
-    const mk = (label, fn) => { const x = el("button", "", label); x.type = "button"; x.addEventListener("click", () => { Promise.resolve(fn()).catch(() => tell("うまくいきませんでした。もう一度ためしてください。")); }); u.appendChild(x); };
+    const mk = (label, fn) => { const x = el("button", "", label); x.type = "button"; x.addEventListener("click", () => { Promise.resolve(fn()).catch(() => tell("うまくいきませんでした。もう一度ためしてください。")); }); u.appendChild(x); return x; };
     mk("コピー", () => copyText(m.text));
     mk("記録する", () => recordTo(m));
     mk("書きなおし", async () => {
@@ -1226,10 +1346,23 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       if(!r || !r.text.trim()) return;
       m.text = r.text;
       await putOne("messages", m);
-      b.textContent = m.text;
+      b.textContent = m.text; b.hidden = !m.text;
       toast("書きなおしました");
     });
     if(m.role === "me") mk("再送信", () => resend(m));
+    const hasFiles = m.role === "me" && m.files && m.files.length;
+    if(hasFiles){
+      // 添付は、送った回だけAIに見せる。もう一度見せたいときは、ここを押す（次の返事の1回だけ）
+      const ab = mk("", async () => {
+        if(m.again) delete m.again; else m.again = true;
+        await putOne("messages", m);
+        sync();
+        toast(m.again ? "次に送るとき、この添付もAIに見せます" : "見せるのをやめました");
+      });
+      const sync = () => { ab.textContent = m.again ? "✓ 次の返事で見せる" : "もう一度見せる"; };
+      sync();
+      drawn.set(m.id, { m:m, sync:sync });
+    }
     if(m.role === "ai") mk("もう一度", () => again(m));
     mk("削除", async () => {
       if(!await dialog({ text:"この発言を削除しますか？\n削除すると、元に戻せません。", yes:"削除する" })) return;
@@ -1240,6 +1373,26 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       }catch(e){ tell("削除できませんでした。もう一度ためしてください。"); }
     });
     row.id = "m-" + m.id;
+    if(hasFiles){
+      const as = el("div", "atts");
+      m.files.forEach(f => {
+        if(f.kind !== "image"){ as.appendChild(el("div", "fchip", (f.kind === "pdf" ? "PDF：" : "文章：") + f.name + "（" + sizeText(f.size) + "）")); return; }
+        const im = document.createElement("img");
+        im.alt = "添付した写真";
+        if(f.w && f.h){
+          const k = Math.min(1, 260 / f.w, 260 / f.h);
+          im.style.width = Math.round(f.w * k) + "px";
+          im.style.aspectRatio = f.w + " / " + f.h;
+        }
+        im.addEventListener("click", () => im.classList.toggle("big"));
+        as.appendChild(im);
+        (fdb ? getFile(f.id) : Promise.resolve(null)).then(rec => {
+          if(rec && rec.data) im.src = "data:" + rec.mime + ";base64," + rec.data;
+          else im.replaceWith(el("div", "fchip", "（この写真は、もう残っていません）"));
+        }).catch(() => {});
+      });
+      row.appendChild(as);
+    }
     row.appendChild(b); row.appendChild(u);
     if(m.role === "ai"){
       const mo = modelOf(m.model);
@@ -1249,6 +1402,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       if(m.searches) info += " ・ 検索" + m.searches + "回";
       if(m.opened && m.opened.length) info += " ・ 開いた記憶: " + m.opened.join("、");
       if(m.logsRead && m.logsRead.length) info += " ・ 読んだ部屋: " + m.logsRead.map(x => x.name + "（" + x.n + "件）").join("、");
+      if(m.sawFiles) info += " ・ 添付 " + m.sawFiles + "件を見た";
       if(m.memFail) info += " ・ このモデルは、記憶を自分で開けませんでした";
       if(m.cut) info += " ・ 長くて途中で切れました";
       row.appendChild(el("div", "src", info));
@@ -1294,7 +1448,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     showWhere();
     clearProblem();
     await showModel(); await showPromptBtn(); await showSearchBtn(); showThinkBtn(); await applyColors(); showDiaryBtn(false);
-    list.textContent = ""; hint = null;
+    list.textContent = ""; hint = null; drawn.clear();
     const msgs = await loadMessages();
     count = msgs.length;
     showHint();
@@ -1338,6 +1492,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     const opt = { think:prefs.think && canUse, search:wantSearch && canUse };
     const turns = buildTurns((await loadMessages()).slice(-SEND_COUNT));
     if(!turns.length || turns[turns.length - 1].role !== "user") return;
+    let shown = { n:0, ids:[] };
     const ctl = new AbortController();
     const row = el("div", "row ai");
     const waitMsg = el("div", "msg wait");
@@ -1362,14 +1517,25 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       const others = room ? (await getAll("threads")).filter(t => t.roomId === roomId && t.id !== threadId) : [];
       const mem = room ? memFor(room, others) : null;
       if(mem && noOpen && mem.titles.length) mem.failed = true;
+      shown = await fillParts(turns);
       const r = await ASK[model.by](model, key, room ? systemFor(room, pr, !!mem && !noOpen, mem ? mem.rooms : []) : "", turns, ctl.signal, Object.assign({}, opt, { mem:(mem && !noOpen) ? mem : null }));
       const m = { id:newId(), threadId:threadId, roomId:roomId, role:"ai", text:r.text, createdAt:Date.now(),
         model:model.id, usage:r.usage, usd:r.usd, cut:r.cut, thinking:r.thinking || "", searches:r.searches || 0,
         queries:r.queries || [], sources:r.sources || [],
         promptName:(pr && room && pr.id !== room.mainPrompt) ? pr.name : "",
         opened:mem ? mem.opened.slice() : [], logsRead:mem ? mem.logs.slice() : [], memFail:!!(mem && mem.failed) };
+      if(shown.n) m.sawFiles = shown.n;
       await saveMessage(m);
       await addUsage(r.usd);
+      // 「もう一度見せる」は、1回見せたら元にもどす
+      for(const id of shown.ids){
+        try{
+          const x = await getOne("messages", id);
+          if(x && x.again){ delete x.again; await putOne("messages", x); }
+          const d = drawn.get(id);
+          if(d){ delete d.m.again; d.sync(); }
+        }catch(e){}
+      }
       row.remove();
       if(current.threadId === threadId){
         count++; showHint();
@@ -1382,7 +1548,11 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       row.remove();
       if(current.threadId === threadId){
         if(e && e.name === "AbortError") problem("返事を待つのをやめました。", true);
-        else problem((e && e.plain) || "うまくいきませんでした。もう一度ためしてください。", true, e && (e.detail || (!e.plain && e.message)));
+        else{
+          let plain = (e && e.plain) || "うまくいきませんでした。もう一度ためしてください。";
+          if(shown.n && /^4(00|13|15|22)/.test((e && e.detail) || "")) plain += "\n（このモデルは、写真やファイルを受け取れないのかもしれません。別のモデルを選んで「もう一度ためす」か、添付の発言を削除してください）";
+          problem(plain, true, e && (e.detail || (!e.plain && e.message)));
+        }
       }
     }
     clearInterval(waitTimer);
@@ -1742,14 +1912,16 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     let out = "【" + room.name + " ／ " + th.name + "】\n\n";
     all.forEach(m => {
       const mo = modelOf(m.model);
-      out += (m.role === "ai" ? "AI" + (mo ? "（" + mo.name + "）" : "") : "わたし") + "　" + when(m.createdAt) + "\n" + m.text + "\n\n";
+      out += (m.role === "ai" ? "AI" + (mo ? "（" + mo.name + "）" : "") : "わたし") + "　" + when(m.createdAt) + "\n" + (m.files && m.files.length ? attNote(m.files) + "\n" : "") + m.text + "\n\n";
     });
     return out;
   }
   document.getElementById("backupBtn").addEventListener("click", async () => {
     try{
       const [rooms, threads, messages] = await Promise.all([getAll("rooms"), getAll("threads"), getAll("messages")]);
-      const pack = { app:"newapp", format:1, version:VERSION, savedAt:Date.now(), rooms:rooms, threads:threads, messages:messages,
+      let files = [];
+      try{ if(fdb){ const used = new Set(); messages.forEach(m => (m.files || []).forEach(f => used.add(f.id))); files = (await allFiles()).filter(f => used.has(f.id)); } }catch(e){}
+      const pack = { app:"newapp", format:1, version:VERSION, savedAt:Date.now(), rooms:rooms, threads:threads, messages:messages, files:files,
         current:{ roomId:current.roomId, threadId:current.threadId },
         prefs:{ lastModel:prefs.lastModel, hidden:prefs.hidden, fs:prefs.fs, think:prefs.think, capYen:prefs.capYen }, usage:usageNow() };
       const done = await saveFile("newapp-backup-" + stamp() + ".json", "application/json", JSON.stringify(pack));
@@ -1771,7 +1943,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     if(!pack || pack.app !== "newapp" || !Array.isArray(pack.rooms) || !Array.isArray(pack.threads) || !Array.isArray(pack.messages) || !pack.rooms.length || !pack.threads.length){
       tell("このファイルは、このアプリの「まるごと保存」ではないようです。"); return;
     }
-    const ok = await dialog({ text:"保存した日： " + when(pack.savedAt) + "\nペルソナ " + pack.rooms.length + "・部屋 " + pack.threads.length + "・発言 " + pack.messages.length + "件\n\nいまある会話は、すべてこのファイルの内容に置き換わります。元に戻せません。", yes:"置き換える" });
+    const ok = await dialog({ text:"保存した日： " + when(pack.savedAt) + "\nペルソナ " + pack.rooms.length + "・部屋 " + pack.threads.length + "・発言 " + pack.messages.length + "件" + (Array.isArray(pack.files) && pack.files.length ? "・添付 " + pack.files.length + "件" : "") + "\n\nいまある会話は、すべてこのファイルの内容に置き換わります。元に戻せません。", yes:"置き換える" });
     if(!ok) return;
     try{
       const cur = pack.threads.find(t => pack.current && t.id === pack.current.threadId) || pack.threads[0];
@@ -1783,6 +1955,9 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
         t.objectStore("meta").put({ key:"app", schema:SCHEMA, createdAt:Date.now(), currentRoomId:cur.roomId, currentThreadId:cur.id });
         if(pack.prefs) t.objectStore("meta").put(Object.assign({ key:"prefs" }, pack.prefs));
       });
+      try{
+        if(fdb) await ftx("readwrite", st => { st.clear(); (Array.isArray(pack.files) ? pack.files : []).forEach(f => { if(f && f.id) st.put(f); }); });
+      }catch(e){}
       toast("復元しました。開きなおします");
       setTimeout(() => location.reload(), 900);
     }catch(e){ tell("復元できませんでした。もう一度ためしてください。"); }
@@ -2446,17 +2621,129 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   window.addEventListener("resize", grow);
   grow();
 
+  /* ───────── 添付を選ぶ（送る前） ─────────
+     写真は、長いほうの辺を IMG_SIDE までに小さくして、JPEGにする。PDFはそのまま。文章のファイルは、文字として読む。 */
+  const ATT_MAX = 5, IMG_SIDE = 1280, PDF_MAX = 10 * 1048576, PDF_ASK = 2 * 1048576, TEXT_MAX = 30000, TEXT_ASK = 8000;
+  const attRow = document.getElementById("attRow");
+  const attFile = document.getElementById("attFile");
+  let staged = [], pdfTold = false;
+  function drawStaged(){
+    attRow.textContent = "";
+    attRow.hidden = !staged.length;
+    staged.forEach(s => {
+      const c = el("div", "chip");
+      if(s.kind === "image"){
+        const im = document.createElement("img");
+        im.alt = ""; im.src = "data:" + s.mime + ";base64," + s.data;
+        c.appendChild(im);
+        c.appendChild(el("span", "", "写真"));
+      }else c.appendChild(el("span", "", (s.kind === "pdf" ? "PDF：" : "文章：") + s.name));
+      const x = el("button", "", "✕ 外す");
+      x.type = "button";
+      x.addEventListener("click", () => { staged = staged.filter(v => v !== s); drawStaged(); });
+      c.appendChild(x);
+      attRow.appendChild(c);
+    });
+    fit();
+  }
+  const readAs = (f, how) => new Promise((resolve, reject) => {
+    const r = new FileReader();
+    r.onload = () => resolve(r.result); r.onerror = () => reject(r.error || new Error("読めませんでした"));
+    if(how === "url") r.readAsDataURL(f); else r.readAsArrayBuffer(f);
+  });
+  async function shrink(f){
+    const url = URL.createObjectURL(f);
+    try{
+      const img = await new Promise((resolve, reject) => {
+        const i = new Image();
+        i.onload = () => resolve(i); i.onerror = () => reject(new Error("読めませんでした"));
+        i.src = url;
+      });
+      const w0 = img.naturalWidth, h0 = img.naturalHeight;
+      if(!w0 || !h0) throw new Error("読めませんでした");
+      const k = Math.min(1, IMG_SIDE / Math.max(w0, h0));
+      const w = Math.max(1, Math.round(w0 * k)), h = Math.max(1, Math.round(h0 * k));
+      const c = document.createElement("canvas");
+      c.width = w; c.height = h;
+      const g = c.getContext("2d");
+      g.fillStyle = "#ffffff"; g.fillRect(0, 0, w, h);
+      g.drawImage(img, 0, 0, w, h);
+      const data = c.toDataURL("image/jpeg", 0.85).split(",")[1] || "";
+      if(!data) throw new Error("読めませんでした");
+      return { data:data, w:w, h:h };
+    }finally{ URL.revokeObjectURL(url); }
+  }
+  async function addFile(f){
+    const name = f.name || "名前なし";
+    const type = f.type || "";
+    if(/^image\//.test(type) || /\.(jpe?g|png|gif|webp|heic|heif|bmp)$/i.test(name)){
+      let r;
+      try{ r = await shrink(f); }catch(e){ await tell("この写真は読めませんでした。\n（" + name + "）"); return; }
+      staged.push({ id:newId(), kind:"image", name:name, mime:"image/jpeg", data:r.data, w:r.w, h:r.h, size:Math.round(r.data.length * 0.75) });
+      return;
+    }
+    if(type === "application/pdf" || /\.pdf$/i.test(name)){
+      if(f.size > PDF_MAX){ await tell("このPDFは大きすぎます（" + sizeText(f.size) + "）。\n添付できるのは、" + sizeText(PDF_MAX) + " までです。"); return; }
+      if(f.size > PDF_ASK && !await dialog({ text:"大きいPDFです（" + sizeText(f.size) + "）。\nページが多いほど、料金が高くなります。\n添付しますか？", yes:"添付する" })) return;
+      const data = String(await readAs(f, "url")).split(",")[1] || "";
+      if(data.slice(0, 6) !== "JVBERi"){ await tell("このファイルは、PDFとして読めませんでした。\n（" + name + "）"); return; }
+      staged.push({ id:newId(), kind:"pdf", name:name, mime:"application/pdf", data:data, size:f.size });
+      if(!pdfTold && f.size <= PDF_ASK){ pdfTold = true; toast("PDFは、ページが多いほど料金が高くなります"); }
+      return;
+    }
+    if(/^text\//.test(type) || type === "application/json" || /\.(txt|md|markdown|csv|tsv|json|log|html?|xml|ya?ml)$/i.test(name)){
+      const buf = await readAs(f, "buf");
+      let text = new TextDecoder("utf-8").decode(buf);
+      if(text.indexOf("\ufffd") >= 0){ try{ const t2 = new TextDecoder("shift_jis").decode(buf); if(t2.indexOf("\ufffd") < 0) text = t2; }catch(e){} }
+      text = text.replace(/^\ufeff/, "").replace(/\r\n?/g, "\n").replace(/\s+$/, "");
+      if(!text.trim()){ await tell("このファイルは、中身が空でした。\n（" + name + "）"); return; }
+      if(text.length > TEXT_MAX){ await tell("このファイルは長すぎます（約" + text.length.toLocaleString() + "文字）。\n添付できるのは、" + TEXT_MAX.toLocaleString() + "文字までです。"); return; }
+      if(text.length > TEXT_ASK){
+        const mo = modelOf(await currentModelId());
+        const cost = (mo && mo.pin) ? "\n（いまのモデルで、1回 " + yen(text.length * mo.pin / 1e6) + " くらいが目安）" : "";
+        if(!await dialog({ text:"長い文章です（約" + text.length.toLocaleString() + "文字）。\n長いほど、料金が高くなります。" + cost + "\n添付しますか？", yes:"添付する" })) return;
+      }
+      staged.push({ id:newId(), kind:"text", name:name, mime:"text/plain", text:text, size:f.size });
+      return;
+    }
+    await tell("この種類のファイルは、まだ添付できません。\n（" + name + "）\n添付できるのは、写真・PDF・文章のファイルです。");
+  }
+  document.getElementById("attach").addEventListener("click", () => {
+    if(!db) return;
+    if(!fdb){ tell("添付をしまう場所を開けませんでした。\nアプリを一度閉じて、開きなおしてみてください。"); return; }
+    if(staged.length >= ATT_MAX){ toast("添付は、1回に" + ATT_MAX + "つまでです"); return; }
+    attFile.click();
+  });
+  let adding = false;
+  attFile.addEventListener("change", async () => {
+    const fs = Array.from(attFile.files || []);
+    attFile.value = "";
+    if(!fs.length || adding) return;
+    adding = true;
+    try{
+      for(const f of fs){
+        if(staged.length >= ATT_MAX){ toast("添付は、1回に" + ATT_MAX + "つまでです。残りは入れませんでした"); break; }
+        try{ await addFile(f); }catch(e){ await tell("このファイルは読めませんでした。\n（" + (f.name || "名前なし") + "）"); }
+        drawStaged();
+      }
+    }finally{ adding = false; drawStaged(); }
+  });
+
   /* ───────── 送る ───────── */
-  let busy = false;
   async function submit(){
-    const text = box.value.replace(/\s+$/, "");
-    if(!text.trim() || busy || waiting || !db) return;
+    let text = box.value.replace(/\s+$/, "");
+    if(!text.trim()) text = "";
+    if((!text && !staged.length) || busy || waiting || !db) return;
     busy = true;
     const m = { id:newId(), threadId:current.threadId, roomId:current.roomId, role:"me", text:text, createdAt:Date.now() };
+    const recs = staged.map(s => Object.assign({}, s, { messageId:m.id, threadId:m.threadId, createdAt:m.createdAt }));
+    if(recs.length) m.files = recs.map(r => ({ id:r.id, kind:r.kind, name:r.name, size:r.size, w:r.w || 0, h:r.h || 0 }));
     try{
+      if(recs.length) await putFiles(recs);     // 添付の中身は、別の入れ物へ
       await saveMessage(m);          // 先に保存してから、画面に出す
       count++; showHint();
       draw(m);
+      staged = []; drawStaged();
       box.value = "";
       grow();
       toBottom();
@@ -2484,6 +2771,8 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     try{
       db = await openDB();
       db.onversionchange = () => { db.close(); };
+      try{ fdb = await openFiles(); fdb.onversionchange = () => { fdb.close(); }; }catch(e){ fdb = null; }
+      sweepSoon();
       await prepare();
       await loadSettings();
       applyFont();
