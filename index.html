@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#fdf3e3">
 <title>新しいアプリ（仮）</title>
 <style>
-/* 新しいアプリ（仮） 版 1.3 ── 会話の画面、保存、ペルソナと部屋、プロンプトの切り替え、記憶（項目ごと、発言から記録）、AIと話す（Claude・Gemini・GPT・Grok）、検索、思考、保存 */
+/* 新しいアプリ（仮） 版 1.4 ── 会話の画面、保存、ペルソナと部屋、プロンプトの切り替え、記憶（項目ごと、発言から記録、必要なときにAIが開く）、AIと話す（Claude・Gemini・GPT・Grok）、検索、思考、保存 */
 :root{
   --sand:#faf6ee; --text:#37474f; --soft:#5d6c73; --line:#e4dccc; --sea:#3f7585;
   --skyA:#fdf3e3; --skyB:#e8f3f5;
@@ -272,7 +272,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     <div class="hl">
       <button id="openPersonas" class="pick" type="button"><span id="pName" class="pt">じゅんび中…</span><span class="pa">▾</span></button>
       <span class="gap"></span>
-      <span id="ver">版 1.3</span>
+      <span id="ver">版 1.4</span>
       <button id="openSettings" class="plain" type="button">設定</button>
     </div>
     <div class="hl">
@@ -460,7 +460,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
 <script>
 (function(){
   "use strict";
-  const VERSION = "1.3";
+  const VERSION = "1.4";
   const app = document.getElementById("app");
   const list = document.getElementById("list");
   const box = document.getElementById("msg");
@@ -616,6 +616,9 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   const alwaysThink = id => /^claude-(fable|mythos)-/.test(id);
   const BETWEEN = new Set(["claude-sonnet-5-5"]);        // 思考オフに "disabled" が使えず "between_tools" が要るモデル
   const pickSources = (cited, found) => [...(cited.size ? cited : found).entries()].slice(0, 8).map(e => ({ url:e[0], title:String(e[1]).slice(0, 80) }));
+  // 「必要なとき」の記憶を、AIが自分で開くための道具
+  const MEM_TOOL = "open_memory";
+  const MEM_DESC = "ユーザーが書きのこした記憶の項目を1つ開いて、中身を読む。会話に関係がありそうなときに使う。";
   async function askClaude(model, key, persona, turns, signal, opt){
     const body = { model:model.id, max_tokens:4096, messages:turns.map(t => ({ role:t.role, content:t.text })) };
     let sys = persona || "";
@@ -630,6 +633,8 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     }
     if(sys.trim()) body.system = sys;
     if(opt.search) body.tools = [{ type:"web_search_20250305", name:"web_search", max_uses:SEARCH_MAX }];
+    if(opt.mem) body.tools = (body.tools || []).concat([{ name:MEM_TOOL, description:MEM_DESC,
+      input_schema:{ type:"object", properties:{ title:{ type:"string", enum:opt.mem.titles } }, required:["title"] } }]);
     const headers = { "content-type":"application/json", "x-api-key":key, "anthropic-version":"2023-06-01",
       "anthropic-dangerous-direct-browser-access":"true" };
     const go = () => post("https://api.anthropic.com/v1/messages", headers, body, signal, "Claude");
@@ -647,8 +652,9 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     }
     let text = "", thinking = "", used = false, searches = 0, inT = 0, outT = 0, cw = 0, cr = 0, stop = "";
     const queries = [], cited = new Map(), found = new Map();
-    for(let round = 0; round < 3; round++){
+    for(let round = 0; round < 6; round++){
       if(round > 0) data = await go();
+      const calls = [];
       const u = data.usage || {};
       inT += u.input_tokens || 0; outT += u.output_tokens || 0;
       cw += u.cache_creation_input_tokens || 0; cr += u.cache_read_input_tokens || 0;
@@ -661,6 +667,8 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
           (b.citations || []).forEach(c => { if(c && c.url) cited.set(c.url, c.title || c.url); });
         }else if(b.type === "thinking"){
           if(b.thinking) thinking += (thinking ? "\n\n" : "") + b.thinking;
+        }else if(b.type === "tool_use"){
+          used = true; calls.push(b);
         }else if(b.type === "server_tool_use"){
           used = true;
           if(b.input && b.input.query) queries.push(String(b.input.query).slice(0, 100));
@@ -668,7 +676,14 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
           b.content.forEach(r => { if(r && r.url && !found.has(r.url)) found.set(r.url, r.title || r.url); });
         }
       });
-      if(stop === "pause_turn" && round < 2){     // 検索が長引いて途中で止まったときは、続きをお願いする
+      if(stop === "tool_use" && calls.length && opt.mem && round < 5){     // 記憶を開きたいと言われたら、中身を渡して続きをお願いする
+        body.messages = body.messages.concat([
+          { role:"assistant", content:(data.content || []).filter(b => !(b.type === "text" && !b.text)) },
+          { role:"user", content:calls.map(c => ({ type:"tool_result", tool_use_id:c.id, content:opt.mem.read(c.input && c.input.title) })) }
+        ]);
+        continue;
+      }
+      if(stop === "pause_turn" && round < 5){     // 検索が長引いて途中で止まったときは、続きをお願いする
         body.messages = body.messages.concat([{ role:"assistant", content:(data.content || []).filter(b => !(b.type === "text" && !b.text)) }]);
         continue;
       }
@@ -688,41 +703,96 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     body.generationConfig = { maxOutputTokens:4096 };
     if(opt.think && !gemma) body.generationConfig.thinkingConfig = { includeThoughts:true };
     if(persona.trim()) body.systemInstruction = { parts:[{ text:persona }] };
-    if(opt.search && !gemma) body.tools = [{ google_search:{} }];
-    const data = await post("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model.id) + ":generateContent", {
+    const tools = [];
+    if(opt.search && !gemma) tools.push({ google_search:{} });
+    const useMem = !!opt.mem && !gemma;
+    if(opt.mem && gemma) opt.mem.failed = true;     // Gemma は、自分で開く動きを確かめられていないので、渡さない
+    if(useMem) tools.push({ functionDeclarations:[{ name:MEM_TOOL, description:MEM_DESC,
+      parameters:{ type:"OBJECT", properties:{ title:{ type:"STRING", enum:opt.mem.titles } }, required:["title"] } }] });
+    if(tools.length) body.tools = tools;
+    const go = () => post("https://generativelanguage.googleapis.com/v1beta/models/" + encodeURIComponent(model.id) + ":generateContent", {
       "content-type":"application/json", "x-goog-api-key":key
     }, body, signal, "Gemini");
-    const c = (data.candidates || [])[0];
-    const parts = (c && c.content && c.content.parts) || [];
-    const text = parts.filter(p => !p.thought && typeof p.text === "string").map(p => p.text).join("");
-    const thinking = parts.filter(p => p.thought && typeof p.text === "string").map(p => p.text).join("\n\n");
+    let data = null, c = null, text = "", thinking = "", inT = 0, outT = 0;
+    const allQ = [], found = new Map();
+    for(let round = 0; round < 5; round++){
+      try{ data = await go(); }
+      catch(e){
+        if(useMem && round === 0 && /^400/.test((e && e.detail) || "")){     // 道具を受け付けないモデルは、道具なしでやり直す
+          opt.mem.failed = true;
+          body.tools = tools.filter(t => !t.functionDeclarations);
+          if(!body.tools.length) delete body.tools;
+          data = await go();
+        }else throw e;
+      }
+      c = (data.candidates || [])[0];
+      const parts = (c && c.content && c.content.parts) || [];
+      const t1 = parts.filter(p => !p.thought && typeof p.text === "string").map(p => p.text).join("");
+      if(t1) text += (text && !/\n$/.test(text) ? "\n\n" : "") + t1;
+      const k1 = parts.filter(p => p.thought && typeof p.text === "string").map(p => p.text).join("\n\n");
+      if(k1) thinking += (thinking ? "\n\n" : "") + k1;
+      const u1 = data.usageMetadata || {};
+      inT += u1.promptTokenCount || 0; outT += (u1.candidatesTokenCount || 0) + (u1.thoughtsTokenCount || 0);
+      const g1 = (c && c.groundingMetadata) || {};
+      (g1.webSearchQueries || []).forEach(q => allQ.push(String(q).slice(0, 100)));
+      (g1.groundingChunks || []).forEach(g => { if(g.web && g.web.uri) found.set(g.web.uri, g.web.title || g.web.uri); });
+      const calls = parts.filter(p => p.functionCall);
+      if(calls.length && useMem && !opt.mem.failed && round < 4){
+        body.contents = body.contents.concat([
+          { role:"model", parts:parts },
+          { role:"user", parts:calls.map(p => ({ functionResponse:Object.assign({ name:p.functionCall.name,
+              response:{ content:opt.mem.read(p.functionCall.args && p.functionCall.args.title) } }, p.functionCall.id ? { id:p.functionCall.id } : {}) })) }
+        ]);
+        continue;
+      }
+      break;
+    }
     if(!text.trim()){
       const why = (data.promptFeedback && data.promptFeedback.blockReason) || (c && c.finishReason) || "";
       throw trouble("Geminiが返事を出しませんでした。\n内容がGeminiの決まりに引っかかったのかもしれません。", why);
     }
-    const gm = (c && c.groundingMetadata) || {};
-    const queries = (gm.webSearchQueries || []).map(q => String(q).slice(0, 100)).slice(0, 5);
-    const found = new Map();
-    (gm.groundingChunks || []).forEach(g => { if(g.web && g.web.uri) found.set(g.web.uri, g.web.title || g.web.uri); });
+    const queries = allQ.slice(0, 5);
     const searches = queries.length;
-    const u = data.usageMetadata || {};
-    const out = (u.candidatesTokenCount || 0) + (u.thoughtsTokenCount || 0);
-    const usd = ((u.promptTokenCount || 0) * model.pin + out * model.pout) / 1e6 + searches * SEARCH_COST.gemini;
-    return { text:text, thinking:thinking, usd:usd, cut:c.finishReason === "MAX_TOKENS", searches:searches, queries:queries,
-      sources:pickSources(new Map(), found), usage:{ input:u.promptTokenCount || 0, output:out } };
+    const usd = (inT * model.pin + outT * model.pout) / 1e6 + searches * SEARCH_COST.gemini;
+    return { text:text, thinking:thinking, usd:usd, cut:!!(c && c.finishReason === "MAX_TOKENS"), searches:searches, queries:queries,
+      sources:pickSources(new Map(), found), usage:{ input:inT, output:outT } };
   }
   // GPT（OpenAI）と Grok（xAI）は、同じ送り方。送り先と名前だけ違う
   async function askChat(model, key, persona, turns, signal, opt, url, who){
-    const messages = (persona.trim() ? [{ role:"system", content:persona }] : []).concat(turns.map(t => ({ role:t.role, content:t.text })));
-    const data = await post(url, { "content-type":"application/json", "authorization":"Bearer " + key },
-      { model:model.id, messages:messages, max_completion_tokens:4096 }, signal, who);
-    const c = (data.choices || [])[0];
-    const text = c && c.message && typeof c.message.content === "string" ? c.message.content : "";
+    const body = { model:model.id, max_completion_tokens:4096,
+      messages:(persona.trim() ? [{ role:"system", content:persona }] : []).concat(turns.map(t => ({ role:t.role, content:t.text }))) };
+    if(opt.mem) body.tools = [{ type:"function", function:{ name:MEM_TOOL, description:MEM_DESC,
+      parameters:{ type:"object", properties:{ title:{ type:"string", enum:opt.mem.titles } }, required:["title"] } } }];
+    const go = () => post(url, { "content-type":"application/json", "authorization":"Bearer " + key }, body, signal, who);
+    let data = null, c = null, text = "", inT = 0, outT = 0;
+    for(let round = 0; round < 5; round++){
+      try{ data = await go(); }
+      catch(e){
+        if(body.tools && round === 0 && /^400/.test((e && e.detail) || "")){     // 道具を受け付けないモデルは、道具なしでやり直す
+          opt.mem.failed = true; delete body.tools;
+          data = await go();
+        }else throw e;
+      }
+      c = (data.choices || [])[0];
+      const msg = (c && c.message) || {};
+      if(typeof msg.content === "string" && msg.content) text += (text && !/\n$/.test(text) ? "\n\n" : "") + msg.content;
+      const u1 = data.usage || {};
+      inT += u1.prompt_tokens || 0; outT += u1.completion_tokens || 0;
+      const calls = Array.isArray(msg.tool_calls) ? msg.tool_calls : [];
+      if(calls.length && body.tools && round < 4){
+        body.messages = body.messages.concat([msg], calls.map(tc => {
+          let a = {};
+          try{ a = JSON.parse((tc.function && tc.function.arguments) || "{}"); }catch(e){}
+          return { role:"tool", tool_call_id:tc.id, content:opt.mem.read(a && a.title) };
+        }));
+        continue;
+      }
+      break;
+    }
     if(!text.trim()) throw trouble(who + "が返事を出しませんでした。\nもう一度ためしてください。", (c && c.finish_reason) || "");
-    const u = data.usage || {};
-    const usd = ((u.prompt_tokens || 0) * model.pin + (u.completion_tokens || 0) * model.pout) / 1e6;
+    const usd = (inT * model.pin + outT * model.pout) / 1e6;
     return { text:text, thinking:"", usd:usd, cut:!!(c && c.finish_reason === "length"), searches:0, queries:[], sources:[],
-      usage:{ input:u.prompt_tokens || 0, output:u.completion_tokens || 0 } };
+      usage:{ input:inT, output:outT } };
   }
   const ASK = {
     claude:askClaude,
@@ -842,15 +912,38 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   const mainOf = room => room.prompts.find(p => p.id === room.mainPrompt) || room.prompts[0];
   /* 記憶は、ペルソナ（rooms）の中の memories に、項目ごとに持つ。{ id, title, text, show, createdAt, updatedAt }
      show が true の項目だけ、プロンプトのうしろに付けてAIに伝える。 */
-  const shownMemories = room => (room.memories || []).filter(m => m.show && (m.text || "").trim());
-  function systemFor(room, pr){
+  // 見せ方：always＝いつも見せる、need＝必要なとき（名前だけ伝えて、AIが自分で開く）、off＝見せない
+  const memMode = m => m.mode || (m.show ? "always" : "off");
+  const MODE_NAME = { always:"いつも見せる", need:"必要なとき", off:"見せない" };
+  const hasText = m => !!(m.text || "").trim();
+  const shownMemories = room => (room.memories || []).filter(m => memMode(m) === "always" && hasText(m));
+  const needMemories = room => (room.memories || []).filter(m => memMode(m) === "need" && hasText(m));
+  function systemFor(room, pr, canOpen){
     let out = (pr && pr.text) || "";
     const ms = shownMemories(room);
     if(ms.length){
       out += (out.trim() ? "\n\n" : "") + "【記憶】\n（ユーザーが書きのこした、覚えておいてほしいことです）";
       ms.forEach(m => { out += "\n\n■ " + m.title + "\n" + m.text.trim(); });
     }
+    const ns = canOpen ? needMemories(room) : [];
+    if(ns.length){
+      out += (out.trim() ? "\n\n" : "") + "【必要なときに開ける記憶】\n（次の項目は、名前だけを伝えています。会話に関係がありそうなときは、" + MEM_TOOL + " で中身を読んでから、返事をしてください。関係がなければ、開かなくてかまいません）";
+      ns.forEach(m => { out += "\n・" + m.title; });
+    }
     return out;
+  }
+  // AIが開くときの窓口。開いた項目の名前を opened に残す
+  function memFor(room){
+    const items = needMemories(room);
+    if(!items.length) return null;
+    return { titles:items.map(m => m.title), opened:[], failed:false,
+      read(t){
+        const k = String(t == null ? "" : t).trim();
+        const it = items.find(m => m.title === k) || items.find(m => m.title.trim() === k);
+        if(!it) return "その名前の項目はありません。";
+        if(!this.opened.includes(it.title)) this.opened.push(it.title);
+        return it.text.trim();
+      } };
   }
   const promptFor = (room, th) => (th && th.promptId && room.prompts.find(p => p.id === th.promptId)) || mainOf(room);
   async function getRoom(id){
@@ -1079,6 +1172,8 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       if(typeof m.usd === "number") info += " ・ このターン " + yen(m.usd);
       if(m.promptName) info += " ・ プロンプト: " + m.promptName;
       if(m.searches) info += " ・ 検索" + m.searches + "回";
+      if(m.opened && m.opened.length) info += " ・ 開いた記憶: " + m.opened.join("、");
+      if(m.memFail) info += " ・ このモデルは、記憶を自分で開けませんでした";
       if(m.cut) info += " ・ 長くて途中で切れました";
       row.appendChild(el("div", "src", info));
       if(m.queries && m.queries.length) row.appendChild(el("div", "src", "調べた言葉： " + m.queries.join(" ／ ")));
@@ -1187,11 +1282,15 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     toBottom();
     waiting = ctl; send.disabled = true;
     try{
-      const r = await ASK[model.by](model, key, room ? systemFor(room, pr) : "", turns, ctl.signal, opt);
+      const noOpen = /gemma/i.test(model.id);
+      const mem = room ? memFor(room) : null;
+      if(mem && noOpen) mem.failed = true;
+      const r = await ASK[model.by](model, key, room ? systemFor(room, pr, !!mem && !noOpen) : "", turns, ctl.signal, Object.assign({}, opt, { mem:(mem && !noOpen) ? mem : null }));
       const m = { id:newId(), threadId:threadId, roomId:roomId, role:"ai", text:r.text, createdAt:Date.now(),
         model:model.id, usage:r.usage, usd:r.usd, cut:r.cut, thinking:r.thinking || "", searches:r.searches || 0,
         queries:r.queries || [], sources:r.sources || [],
-        promptName:(pr && room && pr.id !== room.mainPrompt) ? pr.name : "" };
+        promptName:(pr && room && pr.id !== room.mainPrompt) ? pr.name : "",
+        opened:mem ? mem.opened.slice() : [], memFail:!!(mem && mem.failed) };
       await saveMessage(m);
       await addUsage(r.usd);
       row.remove();
@@ -1913,13 +2012,14 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     memoryBody.textContent = "";
     const f = el("div", "field");
     const total = shownMemories(room).reduce((n, m) => n + m.text.trim().length, 0);
-    f.appendChild(el("p", "", "このペルソナだけの記憶です。「AIに見せる」の項目を、毎回プロンプトと一緒にAIに伝えます。「見せない」の項目は、取っておくだけです。"));
-    f.appendChild(el("p", "", "いまAIに見せている量：およそ " + total + " 文字"));
+    f.appendChild(el("p", "", "このペルソナだけの記憶です。項目ごとに、見せ方を選べます。"));
+    f.appendChild(el("p", "", "・いつも見せる：毎回、中身をAIに伝えます。\n・必要なとき：ふだんは名前だけ伝えて、AIが必要だと思ったときに自分で開きます。\n・見せない：取っておくだけです。")).style.whiteSpace = "pre-line";
+    f.appendChild(el("p", "", "いつも見せている量：およそ " + total + " 文字　／　必要なとき：" + needMemories(room).length + " 項目"));
     memoryBody.appendChild(f);
     room.memories.forEach(m => {
       const c = el("div", "pcard");
       const h = el("h4", "", m.title);
-      h.appendChild(el("span", m.show ? "" : "off", m.show ? "AIに見せる" : "見せない"));
+      h.appendChild(el("span", memMode(m) === "off" ? "off" : "", MODE_NAME[memMode(m)]));
       c.appendChild(h);
       const body = (m.text || "").replace(/\s+/g, " ").trim();
       c.appendChild(el("p", "", body ? body.slice(0, 80) + (body.length > 80 ? "…" : "") : "（まだ何も書いていません）"));
@@ -1937,8 +2037,14 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
         if(!v) return;
         m.title = v; await save(); await drawMemory();
       }));
-      bar.appendChild(btn("small", m.show ? "見せない にする" : "見せる にする", async () => {
-        m.show = !m.show; await save(); await drawMemory();
+      bar.appendChild(btn("small", "見せ方を変える", () => {
+        const box2 = openPick("「" + m.title + "」の見せ方", "");
+        [["always", "毎回、中身をAIに伝える"], ["need", "ふだんは名前だけ。AIが必要なときに自分で開く"], ["off", "AIには伝えない。取っておくだけ"]].forEach(o => {
+          box2.appendChild(choice(MODE_NAME[o[0]], o[1], memMode(m) === o[0], async () => {
+            m.mode = o[0]; m.show = o[0] === "always"; await save();
+            closePick(); await drawMemory();
+          }));
+        });
       }));
       bar.appendChild(btn("small danger", "削除", async () => {
         const ok = await dialog({ text:"記憶「" + m.title + "」を削除しますか？\n書いた中身も消えます。元に戻せません。", yes:"削除する" });
@@ -1952,7 +2058,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       const v = await dialog({ text:"新しい項目の名前\n（例：体のこと、音楽）", input:true, value:"", yes:"作る" });
       if(!v) return;
       const now = Date.now();
-      const m = { id:newId(), title:v, text:"", show:true, createdAt:now, updatedAt:now };
+      const m = { id:newId(), title:v, text:"", show:true, mode:"always", createdAt:now, updatedAt:now };
       room.memories.push(m); await save();
       await drawMemory();
       const r = await dialog({ text:"記憶「" + v + "」\n覚えておいてほしいことを書いてください。", area:true, value:"", yes:"保存する" });
@@ -1970,7 +2076,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       if(!Array.isArray(room.memories)) room.memories = [];
       let it = id ? room.memories.find(x => x.id === id) : null;
       const now = Date.now();
-      if(!it){ it = { id:newId(), title:title, text:"", show:true, createdAt:now, updatedAt:now }; room.memories.push(it); }
+      if(!it){ it = { id:newId(), title:title, text:"", show:true, mode:"always", createdAt:now, updatedAt:now }; room.memories.push(it); }
       const line = "（" + dayName(m.createdAt || now) + " " + (m.role === "ai" ? room.name : "わたし") + "）\n" + (m.text || "").trim();
       it.text = ((it.text || "").trim() ? it.text.replace(/\s+$/, "") + "\n\n" : "") + line;
       it.updatedAt = now;
@@ -1980,7 +2086,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     };
     const box2 = openPick("どの項目に記録しますか？", "この発言を、選んだ項目のいちばん下に足します。あとで「記憶」から編集できます。");
     (first.memories || []).forEach(it => {
-      box2.appendChild(choice(it.title, it.show ? "AIに見せる" : "見せない", false, () => add(it.id)));
+      box2.appendChild(choice(it.title, MODE_NAME[memMode(it)], false, () => add(it.id)));
     });
     box2.appendChild(btn("add", "＋ 新しい項目", async () => {
       const v = await dialog({ text:"新しい項目の名前\n（例：体のこと、音楽）", input:true, value:"", yes:"作って記録する" });
