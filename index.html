@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#fdf3e3">
 <title>新しいアプリ（仮）</title>
 <style>
-/* 新しいアプリ（仮） 版 1.7 ── 写真とファイルの添付、会話の画面、保存、ペルソナと部屋、プロンプトの切り替え、記憶（項目ごと、発言から記録、必要なときにAIが開く）、日記（ペルソナが書く。押したときだけ）、部屋のログを読んでもらう、あらすじの下書き、AIと話す（Claude・Gemini・GPT・Grok）、検索、思考、保存 */
+/* 新しいアプリ（仮） 版 1.8 ── ログの取り込み、写真とファイルの添付、会話の画面、保存、ペルソナと部屋、プロンプトの切り替え、記憶（項目ごと、発言から記録、必要なときにAIが開く）、日記（ペルソナが書く。押したときだけ）、部屋のログを読んでもらう、あらすじの下書き、AIと話す（Claude・Gemini・GPT・Grok）、検索、思考、保存 */
 :root{
   --sand:#faf6ee; --text:#37474f; --soft:#5d6c73; --line:#e4dccc; --sea:#3f7585;
   --skyA:#fdf3e3; --skyB:#e8f3f5;
@@ -217,6 +217,8 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   background:#faf5ec; color:var(--text); font:inherit; font-size:16px; font-weight:700;
 }
 .model.now{ box-shadow:0 0 0 2px #7fb0bf; }
+.model small{ display:block; font-size:13px; line-height:1.6; color:var(--soft); }
+#imp .card2{ max-width:520px; }
 .group{ margin:4px 4px -6px; font-size:14px; font-weight:700; color:var(--soft); }
 .model{
   width:100%; min-height:56px; text-align:left; padding:10px 14px; border:1px solid var(--line); border-radius:16px;
@@ -291,7 +293,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     <div class="hl">
       <button id="openPersonas" class="pick" type="button"><span id="pName" class="pt">じゅんび中…</span><span class="pa">▾</span></button>
       <span class="gap"></span>
-      <span id="ver">版 1.7</span>
+      <span id="ver">版 1.8</span>
       <button id="openSettings" class="plain" type="button">設定</button>
     </div>
     <div class="hl">
@@ -430,6 +432,12 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
         <p style="margin-top:10px">会話と設定を、1つのファイルにして取っておきます。APIキーは入りません。復元すると、いまの会話はすべて置き換わります。</p>
       </div>
       <div class="field">
+        <h3>ログを取り込む</h3>
+        <button id="importBtn" class="small" type="button">ログを取り込む</button>
+        <input id="importFile" type="file" multiple accept=".json,application/json" hidden>
+        <p style="margin-top:10px">ほかのアプリの会話を、部屋として足します。いまある会話は、消えません。料金はかかりません。<br>いま読めるのは、GPTの形のJSONファイルです。</p>
+      </div>
+      <div class="field">
         <h3>キーのあつかい</h3>
         <p>キーは、このiPadの中だけに保存します。会話を送るときに、そのAIの会社にだけ送ります。<br>料金は、1ドル162円で計算した目安です。</p>
       </div>
@@ -466,6 +474,24 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       <div class="cf"><button id="closeColors" class="close2" type="button">閉じる</button></div>
     </div>
   </section>
+  <section id="imp" class="sheet" hidden aria-label="ログを取り込む">
+    <div class="card2">
+      <div class="ch">
+        <h2>ログを取り込む</h2>
+        <button id="closeImpX" class="x" type="button" aria-label="閉じる">✕</button>
+      </div>
+      <div class="cb">
+        <p class="hint">入れたい会話を押して、チェックを付けてください。会話1つが、部屋1つになります。</p>
+        <div id="impList" class="mlist"></div>
+        <p class="group" style="margin:20px 4px 8px">入れ先のペルソナ</p>
+        <div id="impRooms" class="mlist"></div>
+      </div>
+      <div class="cf">
+        <button id="impGo" class="go" type="button">取り込む</button>
+        <button id="closeImp" class="close2" type="button" style="margin-top:10px">やめる</button>
+      </div>
+    </div>
+  </section>
   <div id="splash" aria-label="表紙">
     <div id="orb"></div>
     <div class="sp-words">
@@ -490,7 +516,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
 <script>
 (function(){
   "use strict";
-  const VERSION = "1.7";
+  const VERSION = "1.8";
   const app = document.getElementById("app");
   const list = document.getElementById("list");
   const box = document.getElementById("msg");
@@ -1396,7 +1422,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     row.appendChild(b); row.appendChild(u);
     if(m.role === "ai"){
       const mo = modelOf(m.model);
-      let info = "使用モデル: " + (mo ? mo.name : (m.model || "不明"));
+      let info = m.imported ? "取り込んだログ" : "使用モデル: " + (mo ? mo.name : (m.model || "不明"));
       if(typeof m.usd === "number") info += " ・ このターン " + yen(m.usd);
       if(m.promptName) info += " ・ プロンプト: " + m.promptName;
       if(m.searches) info += " ・ 検索" + m.searches + "回";
@@ -1962,6 +1988,169 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       setTimeout(() => location.reload(), 900);
     }catch(e){ tell("復元できませんでした。もう一度ためしてください。"); }
   });
+  /* ───────── ログを取り込む ─────────
+     ほかのアプリの会話を、部屋として足す（いまある会話には、さわらない）。
+     いま読めるのは「GPTの形」：[{ title, create_time, current_node, mapping:{ id:{ message, parent, children } } }]。
+     発言の日付は、ログのものを守る（順番が前後しないように、少なくとも1ミリ秒ずつ後ろへ）。
+     取り込んだ部屋と発言には imported:true を付ける。部屋には importCount（発言の数）も持たせて、二重の取り込みに気づけるようにする。
+     読める形を増やすときは、readLog と同じ形 { title, msgs:[{ role, text, at }], nodate } を返す読み手を足す。 */
+  const toMs = v => { v = Number(v) || 0; return v > 1e11 ? Math.round(v) : Math.round(v * 1000); };
+  function readLog(j, fileName){
+    const arr = Array.isArray(j) ? j : (j && Array.isArray(j.conversations)) ? j.conversations : [j];
+    const out = [];
+    arr.forEach(c => {
+      if(!c || typeof c !== "object" || !c.mapping || typeof c.mapping !== "object") return;
+      const mp = c.mapping, chain = [], seen = new Set();
+      if(c.current_node && mp[c.current_node]){      // いま見えている枝を、さいごから根へたどる
+        let id = c.current_node;
+        while(id && mp[id] && !seen.has(id)){ seen.add(id); chain.push(mp[id]); id = mp[id].parent; }
+        chain.reverse();
+      }else{                                         // しるしがなければ、根から、さいごの子をたどる
+        let n = Object.keys(mp).map(k => mp[k]).find(x => x && !x.parent);
+        while(n && !seen.has(n)){ seen.add(n); chain.push(n); const ch = n.children || []; n = ch.length ? mp[ch[ch.length - 1]] : null; }
+      }
+      const msgs = [];
+      let prev = 0, dated = false;
+      chain.forEach(n => {
+        const m = n && n.message;
+        if(!m) return;
+        const role = m.author && m.author.role;
+        if(role !== "user" && role !== "assistant") return;
+        if(m.metadata && m.metadata.is_visually_hidden_from_conversation) return;
+        const ct = m.content || {};
+        if(ct.content_type && !/^(text|multimodal_text)$/.test(ct.content_type)) return;
+        let text = Array.isArray(ct.parts) ? ct.parts.filter(x => typeof x === "string").join("\n") : (typeof ct.text === "string" ? ct.text : "");
+        text = text.replace(/\s+$/, "");
+        if(!text.trim()) return;
+        let t = toMs(m.create_time);
+        if(t > 946684800000) dated = true;           // 2000年より後なら、本物の日付とみなす
+        if(t <= prev) t = prev + 1;
+        prev = t;
+        msgs.push({ role:role === "assistant" ? "ai" : "me", text:text, at:t });
+      });
+      if(!msgs.length) return;
+      const title = String(c.title || "").trim() || String(fileName || "").replace(/\.json$/i, "") || "名前のないログ";
+      out.push({ title:title.slice(0, 60), msgs:msgs, nodate:!dated });
+    });
+    return out;
+  }
+  const ymd = ms => { const d = new Date(ms); return d.getFullYear() + "年" + (d.getMonth() + 1) + "月" + d.getDate() + "日"; };
+  const impSheet = document.getElementById("imp");
+  const impList = document.getElementById("impList");
+  const impRooms = document.getElementById("impRooms");
+  const impGo = document.getElementById("impGo");
+  const importFile = document.getElementById("importFile");
+  let imp = null;     // { convs:[{ title, msgs, nodate, on }], rooms, roomId, newName, done:{ roomId:Set } }
+  const impKey = (name, n) => name + "\n" + n;
+  const impDup = c => !!(imp.roomId && imp.done[imp.roomId] && imp.done[imp.roomId].has(impKey(c.title, c.msgs.length)));
+  function paintImp(){
+    impList.textContent = "";
+    imp.convs.forEach(c => {
+      const b = el("button", "model" + (c.on ? " now" : ""), (c.on ? "✓ " : "□ ") + c.title);
+      b.type = "button";
+      const first = c.msgs[0].at, last = c.msgs[c.msgs.length - 1].at;
+      b.appendChild(el("small", "", "発言 " + c.msgs.length + "件 ・ " + (c.nodate ? "日付なし（ファイルの日付にします）" : ymd(first) + (ymd(first) === ymd(last) ? "" : " 〜 " + ymd(last)))
+        + (impDup(c) ? " ・ このペルソナに取り込み済み" : "")));
+      b.addEventListener("click", () => { c.on = !c.on; paintImp(); });
+      impList.appendChild(b);
+    });
+    impRooms.textContent = "";
+    imp.rooms.forEach(r => {
+      const b = el("button", "model" + (imp.roomId === r.id ? " now" : ""), (imp.roomId === r.id ? "✓ " : "") + r.name);
+      b.type = "button";
+      b.addEventListener("click", () => { imp.roomId = r.id; imp.newName = ""; paintImp(); });
+      impRooms.appendChild(b);
+    });
+    const nb = el("button", "model" + (imp.newName ? " now" : ""), imp.newName ? "✓ 新しいペルソナ：" + imp.newName : "＋ 新しいペルソナを作って入れる");
+    nb.type = "button";
+    nb.addEventListener("click", async () => {
+      const v = await dialog({ text:"新しいペルソナの名前", input:true, value:imp.newName || "", yes:"決める" });
+      if(!v || !imp) return;
+      imp.newName = v; imp.roomId = null; paintImp();
+    });
+    impRooms.appendChild(nb);
+    const n = imp.convs.filter(c => c.on).length;
+    impGo.textContent = n ? n + "件の会話を取り込む" : "取り込む会話を選んでください";
+    impGo.disabled = !n;
+    impGo.style.opacity = n ? "" : ".45";
+  }
+  const closeImp = () => { impSheet.hidden = true; imp = null; };
+  document.getElementById("closeImp").addEventListener("click", closeImp);
+  document.getElementById("closeImpX").addEventListener("click", closeImp);
+  document.getElementById("importBtn").addEventListener("click", () => { if(db) importFile.click(); });
+  importFile.addEventListener("change", async () => {
+    const fs = Array.from(importFile.files || []);
+    importFile.value = "";
+    if(!fs.length || !db) return;
+    const convs = [], bad = [];
+    for(const f of fs){
+      try{
+        const got = readLog(JSON.parse((await f.text()).replace(/^\ufeff/, "")), f.name);
+        if(!got.length){ bad.push(f.name); continue; }
+        got.forEach(c => {
+          if(c.nodate){      // 日付のないログは、ファイルの日付を、さいごの発言の時刻にする
+            const end = f.lastModified || Date.now();
+            c.msgs.forEach((m, i) => { m.at = end - (c.msgs.length - 1 - i) * 1000; });
+          }
+          convs.push(c);
+        });
+      }catch(e){ bad.push(f.name); }
+    }
+    if(bad.length) await tell("読めなかったファイルがあります。\n" + bad.join("\n") + "\n\nいま読めるのは、GPTの形のJSONファイルです。");
+    if(!convs.length) return;
+    try{
+      convs.sort((a, b) => a.msgs[0].at - b.msgs[0].at);
+      const rooms = (await getAll("rooms")).sort((a, b) => (a.order || 0) - (b.order || 0));
+      const done = {};
+      (await getAll("threads")).forEach(t => { if(t.imported){ (done[t.roomId] = done[t.roomId] || new Set()).add(impKey(t.name, t.importCount)); } });
+      imp = { convs:convs, rooms:rooms, roomId:current.roomId, newName:"", done:done };
+      convs.forEach(c => { c.on = !impDup(c); });
+      paintImp();
+      impSheet.hidden = false;
+    }catch(e){ tell("一覧を作れませんでした。もう一度ためしてください。"); }
+  });
+  let importing = false;
+  impGo.addEventListener("click", async () => {
+    if(!imp || importing) return;
+    const pick = imp.convs.filter(c => c.on);
+    if(!pick.length) return;
+    const to = imp.newName ? null : imp.rooms.find(r => r.id === imp.roomId);
+    if(!to && !imp.newName) return;
+    const total = pick.reduce((n, c) => n + c.msgs.length, 0);
+    const again = to ? pick.filter(impDup).length : 0;
+    const ok = await dialog({ text:pick.length + "件の会話（発言 " + total.toLocaleString() + "件）を、\n" + (to ? "ペルソナ「" + to.name + "」" : "新しいペルソナ「" + imp.newName + "」")
+      + "に取り込みます。\n会話1つが、部屋1つになります。いまある会話は、変わりません。"
+      + (again ? "\n\n（" + again + "件は、前にも取り込んだものです。同じ部屋が、もう1つできます）" : ""), yes:"取り込む" });
+    if(!ok || !imp) return;
+    importing = true;
+    let made = 0;
+    try{
+      let room = to;
+      if(!room){
+        room = { id:newId(), name:imp.newName, createdAt:Date.now(), order:imp.rooms.length, persona:"", colors:{ me:"水色", ai:"白" } };
+        ensurePrompts(room);
+        await putOne("rooms", room);
+      }
+      const now = Date.now();
+      for(const c of pick){
+        const th = { id:newId(), roomId:room.id, name:c.title, createdAt:c.msgs[0].at, updatedAt:c.msgs[c.msgs.length - 1].at,
+          model:prefs.lastModel, imported:true, importCount:c.msgs.length, importedAt:now };
+        await tx(["threads", "messages"], "readwrite", t => {
+          t.objectStore("threads").put(th);
+          const ms = t.objectStore("messages");
+          c.msgs.forEach(m => ms.put({ id:newId(), threadId:th.id, roomId:room.id, role:m.role, text:m.text, createdAt:m.at, imported:true }));
+        });
+        made++;
+      }
+      closeImp();
+      await tell(made + "件の会話を、「" + room.name + "」に取り込みました。\nそのペルソナの、部屋の一覧から開けます。");
+    }catch(e){
+      await tell((made ? made + "件までは取り込めましたが、" : "") + "とちゅうで止まりました。もう一度ためしてください。");
+      closeImp();
+    }
+    importing = false;
+  });
+
   // 「まるごと保存」のお知らせ（3日・7日・14日）
   async function backupRemind(){
     if(reminded || !db) return;
