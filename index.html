@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#fdf3e3">
 <title>新しいアプリ（仮）</title>
 <style>
-/* 新しいアプリ（仮） 版 1.4 ── 会話の画面、保存、ペルソナと部屋、プロンプトの切り替え、記憶（項目ごと、発言から記録、必要なときにAIが開く）、AIと話す（Claude・Gemini・GPT・Grok）、検索、思考、保存 */
+/* 新しいアプリ（仮） 版 1.5 ── 会話の画面、保存、ペルソナと部屋、プロンプトの切り替え、記憶（項目ごと、発言から記録、必要なときにAIが開く）、日記（ペルソナが書く。押したときだけ）、AIと話す（Claude・Gemini・GPT・Grok）、検索、思考、保存 */
 :root{
   --sand:#faf6ee; --text:#37474f; --soft:#5d6c73; --line:#e4dccc; --sea:#3f7585;
   --skyA:#fdf3e3; --skyB:#e8f3f5;
@@ -63,6 +63,8 @@ header{
 .pcard h4 span{ display:inline-block; margin-left:8px; padding:2px 10px; border-radius:10px; background:#e3f1f4; font-size:12px; font-weight:400; }
 .pcard p{ margin:0 0 8px; font-size:13px; }
 .pcard .bar{ margin-top:0; }
+.pcard p.dtext{ font-size:15px; line-height:1.8; color:var(--text); white-space:pre-wrap; word-break:break-word; }
+.plain.due{ background:#e3f1f4; border-color:#9cc3cf; }
 .tname{ flex:1; min-width:8em; font-size:16px; word-break:break-word; }
 #list{
   flex:1 1 auto; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch;
@@ -272,7 +274,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     <div class="hl">
       <button id="openPersonas" class="pick" type="button"><span id="pName" class="pt">じゅんび中…</span><span class="pa">▾</span></button>
       <span class="gap"></span>
-      <span id="ver">版 1.4</span>
+      <span id="ver">版 1.5</span>
       <button id="openSettings" class="plain" type="button">設定</button>
     </div>
     <div class="hl">
@@ -284,6 +286,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       <button id="openFinder" class="plain" type="button">さがす</button>
       <button id="openPersona" class="plain" type="button">プロンプト</button>
       <button id="openMemory" class="plain" type="button">記憶</button>
+      <button id="openDiary" class="plain" type="button">日記</button>
       <button id="btnColor" class="plain" type="button">カラー</button>
       <span class="gap"></span>
       <button id="btnSave" class="plain" type="button">ファイルに保存</button>
@@ -329,6 +332,13 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       <button id="closeMemory" class="plain" type="button">閉じる</button>
     </div>
     <div id="memoryBody" class="pbody"></div>
+  </section>
+  <section id="diary" class="panel" hidden aria-label="日記">
+    <div class="phead">
+      <h2 id="diaryTitle">日記</h2>
+      <button id="closeDiary" class="plain" type="button">閉じる</button>
+    </div>
+    <div id="diaryBody" class="pbody"></div>
   </section>
   <section id="models" class="sheet" hidden aria-label="この部屋のモデル">
     <div class="card2">
@@ -460,7 +470,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
 <script>
 (function(){
   "use strict";
-  const VERSION = "1.4";
+  const VERSION = "1.5";
   const app = document.getElementById("app");
   const list = document.getElementById("list");
   const box = document.getElementById("msg");
@@ -918,6 +928,21 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   const hasText = m => !!(m.text || "").trim();
   const shownMemories = room => (room.memories || []).filter(m => memMode(m) === "always" && hasText(m));
   const needMemories = room => (room.memories || []).filter(m => memMode(m) === "need" && hasText(m));
+  /* 日記は、ペルソナ（rooms）の中の diaries に持つ。{ id, text, createdAt, threadId, threadName, model, lastMsgAt }
+     新しい DIARY_SHOW 回分は、毎回AIに伝える。それより古いものは「古い日記」という1つの項目にして、必要なときにAIが開く。
+     書きかけは diaryDraft（保存を押すまでは、AIに伝えない）。 */
+  const DIARY_SHOW = 3, DIARY_OLD_MAX = 40, DIARY_NUDGE = 30;
+  const OLD_DIARY = "古い日記";
+  const diariesOf = room => (room.diaries || []).slice().sort((a, b) => a.createdAt - b.createdAt);
+  const diaryLine = d => "■ " + dayName(d.createdAt) + (d.threadName ? "（部屋：" + d.threadName + "）" : "") + "\n" + (d.text || "").trim();
+  function oldDiaryItem(room){
+    const all = diariesOf(room);
+    const old = all.slice(0, Math.max(0, all.length - DIARY_SHOW)).slice(-DIARY_OLD_MAX);
+    if(!old.length) return null;
+    const clash = (room.memories || []).some(m => (m.title || "").trim() === OLD_DIARY);
+    return { title:clash ? OLD_DIARY + "（日記のページ）" : OLD_DIARY, text:old.map(diaryLine).join("\n\n") };
+  }
+  const needItems = room => { const o = oldDiaryItem(room); return needMemories(room).concat(o ? [o] : []); };
   function systemFor(room, pr, canOpen){
     let out = (pr && pr.text) || "";
     const ms = shownMemories(room);
@@ -925,7 +950,12 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       out += (out.trim() ? "\n\n" : "") + "【記憶】\n（ユーザーが書きのこした、覚えておいてほしいことです）";
       ms.forEach(m => { out += "\n\n■ " + m.title + "\n" + m.text.trim(); });
     }
-    const ns = canOpen ? needMemories(room) : [];
+    const ds = diariesOf(room).slice(-DIARY_SHOW);
+    if(ds.length){
+      out += (out.trim() ? "\n\n" : "") + "【日記】\n（あなた自身が、これまでに書いた日記です。新しい" + ds.length + "回分）";
+      ds.forEach(d => { out += "\n\n" + diaryLine(d); });
+    }
+    const ns = canOpen ? needItems(room) : [];
     if(ns.length){
       out += (out.trim() ? "\n\n" : "") + "【必要なときに開ける記憶】\n（次の項目は、名前だけを伝えています。会話に関係がありそうなときは、" + MEM_TOOL + " で中身を読んでから、返事をしてください。関係がなければ、開かなくてかまいません）";
       ns.forEach(m => { out += "\n・" + m.title; });
@@ -934,7 +964,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   }
   // AIが開くときの窓口。開いた項目の名前を opened に残す
   function memFor(room){
-    const items = needMemories(room);
+    const items = needItems(room);
     if(!items.length) return null;
     return { titles:items.map(m => m.title), opened:[], failed:false,
       read(t){
@@ -1217,7 +1247,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   async function openCurrent(){
     showWhere();
     clearProblem();
-    await showModel(); await showPromptBtn(); await showSearchBtn(); showThinkBtn(); await applyColors();
+    await showModel(); await showPromptBtn(); await showSearchBtn(); showThinkBtn(); await applyColors(); showDiaryBtn(false);
     list.textContent = ""; hint = null;
     const msgs = await loadMessages();
     count = msgs.length;
@@ -1299,6 +1329,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
         const newRow = draw(m);
         // 返事のはじめが見える位置まで動かす（返事が短ければ、いちばん下まで）
         list.scrollTop = Math.max(0, newRow.offsetTop - list.offsetTop - 12);
+        showDiaryBtn(true);
       }
     }catch(e){
       row.remove();
@@ -2101,6 +2132,174 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     catch(e){ tell("記憶を開けませんでした。もう一度ためしてください。"); }
   });
   document.getElementById("closeMemory").addEventListener("click", () => { memoryPanel.hidden = true; });
+
+  /* ───────── 日記（ペルソナが、自分の言葉で書く。ボタンを押したときだけ） ───────── */
+  const diaryPanel = document.getElementById("diary");
+  const diaryBody = document.getElementById("diaryBody");
+  const diaryBtn = document.getElementById("openDiary");
+  const dayTime = ms => { const d = new Date(ms); return dayName(ms) + " " + d.getHours() + ":" + two(d.getMinutes()); };
+  // この部屋で、さいごに日記に書いた発言の時刻（まだなければ 0）
+  const diaryMark = (room, threadId) => (room.diaries || []).reduce((v, d) => d.threadId === threadId ? Math.max(v, d.lastMsgAt || 0) : v, 0);
+  const nudged = new Set();
+  // 会話がたまったら、上の「日記」ボタンにしるしを付ける。返事のあとなら、1回だけ小さく知らせる
+  async function showDiaryBtn(nudge){
+    try{
+      const threadId = current.threadId;
+      const room = await getRoom(current.roomId);
+      if(!room) return;
+      const mark = diaryMark(room, threadId);
+      const n = (await loadMessages()).filter(m => m.createdAt > mark).length;
+      if(threadId !== current.threadId) return;
+      const due = n >= DIARY_NUDGE;
+      diaryBtn.textContent = due ? "日記 ●" : "日記";
+      diaryBtn.className = "plain" + (due ? " due" : "");
+      const k = threadId + ":" + mark;
+      if(due && nudge && !nudged.has(k)){ nudged.add(k); toast("会話がたまってきました。そろそろ日記を書く？（上の「日記」から）"); }
+    }catch(e){}
+  }
+  let diaryJob = null;      // 書いてもらっている間だけ入る { roomId, el, ctl }
+  async function writeDiary(){
+    if(diaryJob || !db) return;
+    const roomId = current.roomId, threadId = current.threadId;
+    const room = await getRoom(roomId), th = await getOne("threads", threadId);
+    if(!room || !th) return;
+    const model = modelOf(await currentModelId());
+    if(!model){ await tell("このモデルは使えなくなりました。\n入力欄の上の「モデル」から、別のモデルを選んでね。"); return; }
+    const key = keys[model.by];
+    if(!key){ await tell(COMPANY[model.by] + "のAPIキーがまだ入っていません。\n「設定」から入れてください。"); return; }
+    if(capReached()){ await tell("今月の料金の上限（¥" + Number(prefs.capYen).toLocaleString() + "）に達しました。\n「設定」で上限を変えると、続けられます。"); return; }
+    const msgs = await loadMessages();
+    const mark = diaryMark(room, threadId);
+    const fresh = msgs.filter(m => m.createdAt > mark);
+    if(!fresh.length){ await tell(mark ? "前の日記のあと、この部屋ではまだ話していません。" : "この部屋には、まだ会話がありません。"); return; }
+    let q = "部屋「" + th.name + "」の会話から、日記を書いてもらいますか？\n\n・使うモデル：" + model.name + "\n・返事1回分くらいの料金がかかります。\n・書いたものは、下書きとして出ます。「保存」を押すまでは残りません。";
+    if(fresh.length < 10) q += "\n\n（" + (mark ? "前の日記のあとの会話" : "この部屋の会話") + "は、まだ " + fresh.length + " 件です。少ないと、書くことがあまりないかもしれません）";
+    if(fresh.length > SEND_COUNT) q += "\n\n（会話が " + fresh.length + " 件たまっています。AIに渡せるのは新しい " + SEND_COUNT + " 件までなので、それより前のことは日記に入りません）";
+    if(room.diaryDraft) q += "\n\n（いまの下書きは、新しいものに置きかわります）";
+    if(!await dialog({ text:q, yes:"書いてもらう" })) return;
+    const use = msgs.slice(-SEND_COUNT);
+    const req = "【ここからは、会話の外からのお願いです】\nここまでの会話をふり返って、あなた（" + room.name + "）自身の日記を書いてください。\n"
+      + "・あなた自身の言葉で、一人称で書く。出来事の報告ではなく、そのとき自分がどう感じたか、何を思ったかを書く。\n"
+      + "・3〜5文くらいで、短く。\n"
+      + "・会話に出てこなかった出来事は書かない。気持ちを大げさにしない。\n"
+      + (mark ? "・前の日記に書いたことはくり返さず、そのあとの会話について書く。\n" : "")
+      + "・日記の本文だけを書く。あいさつ、見出し、日付、かっこ書きの説明、相手への呼びかけは付けない。";
+    const turns = buildTurns(use.concat([{ role:"me", text:req }]));
+    const ctl = new AbortController();
+    const wrap = el("div", "note");
+    const line = el("span", "", "");
+    let secs = 0;
+    const tick = () => { line.textContent = "日記を書いています…（" + secs + "秒）"; };
+    tick();
+    wrap.appendChild(line);
+    const stop = el("button", "", "止める");
+    stop.type = "button";
+    stop.addEventListener("click", async () => {
+      if(await dialog({ text:"日記を書くのをやめますか？\n（ここまでにかかった料金は、戻りません）", yes:"やめる", no:"つづける" })) ctl.abort();
+    });
+    wrap.appendChild(stop);
+    const timer = setInterval(() => { secs++; tick(); }, 1000);
+    diaryJob = { roomId:roomId, el:wrap, ctl:ctl };
+    const redraw = async () => { if(!diaryPanel.hidden && current.roomId === roomId) await drawDiary(); };
+    await redraw();
+    try{
+      const r = await ASK[model.by](model, key, systemFor(room, promptFor(room, th), false), turns, ctl.signal, { think:false, search:false, mem:null });
+      await addUsage(r.usd);
+      const text = (r.text || "").trim();
+      if(!text) throw trouble("日記が空のまま返ってきました。もう一度ためしてください。");
+      const now = await getRoom(roomId);
+      if(now){
+        now.diaryDraft = { text:text, createdAt:Date.now(), threadId:threadId, threadName:th.name, model:model.id, usd:r.usd || 0, lastMsgAt:use[use.length - 1].createdAt };
+        await putOne("rooms", now);
+      }
+      clearInterval(timer); diaryJob = null;
+      await redraw();
+      toast("下書きができました");
+    }catch(e){
+      clearInterval(timer); diaryJob = null;
+      await redraw();
+      if(e && e.name === "AbortError") toast("日記を書くのをやめました");
+      else await tell(((e && e.plain) || "うまくいきませんでした。もう一度ためしてください。") + ((e && e.detail) ? "\n\nくわしい内容： " + e.detail : ""));
+    }
+    showState();
+  }
+  async function drawDiary(){
+    const room = await getRoom(current.roomId);
+    if(!room) return;
+    if(!Array.isArray(room.diaries)) room.diaries = [];
+    const save = () => putOne("rooms", room);
+    document.getElementById("diaryTitle").textContent = "⛵️ " + room.name + " の日記";
+    diaryBody.textContent = "";
+    const f = el("div", "field");
+    f.appendChild(el("p", "", "⛵️ " + room.name + " が、自分の言葉で書く日記です。「日記を書く」を押したときだけ書きます。"));
+    f.appendChild(el("p", "", "・新しい " + DIARY_SHOW + " 回分は、毎回AIに伝えます。\n・それより古い日記は、AIが必要だと思ったときに自分で開きます。")).style.whiteSpace = "pre-line";
+    const mark = diaryMark(room, current.threadId);
+    const n = (await loadMessages()).filter(m => m.createdAt > mark).length;
+    f.appendChild(el("p", "", (mark ? "前の日記のあと、" : "") + "いまの部屋（" + current.threadName + "）の会話：" + n + " 件"));
+    if(diaryJob && diaryJob.roomId === room.id) f.appendChild(diaryJob.el);
+    else f.appendChild(btn("go", "日記を書く", writeDiary));
+    diaryBody.appendChild(f);
+    const d0 = room.diaryDraft;
+    if(d0){
+      const c = el("div", "pcard main");
+      const h = el("h4", "", "下書き");
+      h.appendChild(el("span", "off", "まだ保存していません"));
+      c.appendChild(h);
+      c.appendChild(el("p", "", dayTime(d0.createdAt) + (d0.threadName ? " ・ 部屋：" + d0.threadName : "")));
+      c.appendChild(el("p", "dtext", d0.text));
+      const bar = el("div", "bar");
+      bar.appendChild(btn("small", "保存", async () => {
+        room.diaries.push({ id:newId(), text:d0.text, createdAt:d0.createdAt, threadId:d0.threadId, threadName:d0.threadName, model:d0.model, lastMsgAt:d0.lastMsgAt });
+        delete room.diaryDraft; await save();
+        await drawDiary(); showDiaryBtn(false); toast("日記を保存しました");
+      }));
+      bar.appendChild(btn("small", "直す", async () => {
+        const r = await dialog({ text:"日記の下書き", area:true, value:d0.text, yes:"直す" });
+        if(!r || !r.text.trim()) return;
+        d0.text = r.text.trim(); await save(); await drawDiary();
+      }));
+      bar.appendChild(btn("small", "もう一度書いてもらう", writeDiary));
+      bar.appendChild(btn("small danger", "やめる", async () => {
+        if(!await dialog({ text:"この下書きを消しますか？\n元に戻せません。", yes:"消す", no:"のこす" })) return;
+        delete room.diaryDraft; await save(); await drawDiary();
+      }));
+      c.appendChild(bar);
+      diaryBody.appendChild(c);
+    }
+    const all = diariesOf(room);
+    const shown = new Set(all.slice(-DIARY_SHOW).map(d => d.id));
+    const g = el("div", "field");
+    g.appendChild(el("h3", "", "これまでの日記"));
+    if(!all.length) g.appendChild(el("p", "", "まだ日記はありません。"));
+    all.slice().reverse().forEach(d => {
+      const c = el("div", "pcard");
+      const h = el("h4", "", dayTime(d.createdAt));
+      h.appendChild(el("span", shown.has(d.id) ? "" : "off", shown.has(d.id) ? "毎回AIに伝える" : "必要なときにAIが開く"));
+      c.appendChild(h);
+      if(d.threadName) c.appendChild(el("p", "", "部屋：" + d.threadName));
+      c.appendChild(el("p", "dtext", d.text));
+      const bar = el("div", "bar");
+      bar.appendChild(btn("small", "編集", async () => {
+        const r = await dialog({ text:dayTime(d.createdAt) + " の日記", area:true, value:d.text, yes:"保存する" });
+        if(!r || !r.text.trim()) return;
+        d.text = r.text.trim(); await save(); await drawDiary(); toast("日記を保存しました");
+      }));
+      bar.appendChild(btn("small danger", "削除", async () => {
+        if(!await dialog({ text:dayTime(d.createdAt) + " の日記を削除しますか？\n元に戻せません。", yes:"削除する" })) return;
+        room.diaries = room.diaries.filter(x => x.id !== d.id); await save(); await drawDiary(); showDiaryBtn(false);
+      }));
+      c.appendChild(bar);
+      g.appendChild(c);
+    });
+    diaryBody.appendChild(g);
+  }
+  diaryBtn.addEventListener("click", async () => {
+    if(!db) return;
+    box.blur();
+    try{ await drawDiary(); diaryPanel.hidden = false; }
+    catch(e){ tell("日記を開けませんでした。もう一度ためしてください。"); }
+  });
+  document.getElementById("closeDiary").addEventListener("click", () => { diaryPanel.hidden = true; });
 
   /* ───────── 画面の土台（揺れの試し（3）と同じ作り） ───────── */
   let lastH = -1, lastT = "";
