@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#fdf3e3">
 <title>新しいアプリ（仮）</title>
 <style>
-/* 新しいアプリ（仮） 版 1.9 ── Claudeの割引（キャッシュ）、ログの取り込み、写真とファイルの添付、会話の画面、保存、ペルソナと部屋、プロンプトの切り替え、記憶（項目ごと、発言から記録、必要なときにAIが開く）、日記（ペルソナが書く。押したときだけ）、部屋のログを読んでもらう、あらすじの下書き、AIと話す（Claude・Gemini・GPT・Grok）、検索、思考、保存 */
+/* 新しいアプリ（仮） 版 2.0 ── 集まれる場所（呼ぶ、次に返事する人、みんな、おまかせ、書庫、みんなの日記）、Claudeの割引（キャッシュ）、ログの取り込み、写真とファイルの添付、会話の画面、保存、ペルソナと部屋、プロンプトの切り替え、記憶（項目ごと、発言から記録、必要なときにAIが開く）、日記（ペルソナが書く。押したときだけ）、部屋のログを読んでもらう、あらすじの下書き、AIと話す（Claude・Gemini・GPT・Grok）、検索、思考、保存 */
 :root{
   --sand:#faf6ee; --text:#37474f; --soft:#5d6c73; --line:#e4dccc; --sea:#3f7585;
   --skyA:#fdf3e3; --skyB:#e8f3f5;
@@ -65,6 +65,10 @@ header{
 .pcard .bar{ margin-top:0; }
 .pcard p.dtext{ font-size:15px; line-height:1.8; color:var(--text); white-space:pre-wrap; word-break:break-word; }
 .plain.due, .plain.on{ background:#e3f1f4; border-color:#9cc3cf; }
+.plain[hidden], .pill[hidden], #whoRow[hidden]{ display:none; }
+#whoRow{ flex-shrink:0; display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:10px 14px 10px; background:#fffdf9; border-top:1px solid var(--line); }
+#whoRow .wl{ width:100%; font-size:13px; color:var(--soft); }
+.who{ margin:0 8px 3px; font-size:13px; font-weight:700; color:var(--soft); }
 .tname{ flex:1; min-width:8em; font-size:16px; word-break:break-word; }
 #list{
   flex:1 1 auto; min-height:0; overflow-y:auto; -webkit-overflow-scrolling:touch;
@@ -293,7 +297,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     <div class="hl">
       <button id="openPersonas" class="pick" type="button"><span id="pName" class="pt">じゅんび中…</span><span class="pa">▾</span></button>
       <span class="gap"></span>
-      <span id="ver">版 1.9</span>
+      <span id="ver">版 2.0</span>
       <button id="openSettings" class="plain" type="button">設定</button>
     </div>
     <div class="hl">
@@ -303,6 +307,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     </div>
     <div class="bar tools">
       <button id="openFinder" class="plain" type="button">さがす</button>
+      <button id="openCall" class="plain" type="button" hidden>呼ぶ</button>
       <button id="openPersona" class="plain" type="button">プロンプト</button>
       <button id="openMemory" class="plain" type="button">記憶</button>
       <button id="openDiary" class="plain" type="button">日記</button>
@@ -313,6 +318,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     </div>
   </header>
   <main id="list" aria-live="polite"></main>
+  <div id="whoRow" hidden></div>
   <div id="modelRow">
     <button id="openModels" class="pill" type="button">モデル ▾</button>
     <button id="toggleSearch" class="pill" type="button">ウェブ検索：オフ</button>
@@ -324,6 +330,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     <label class="label" for="msg">メッセージ</label>
     <button id="attach" type="button">＋ 添付</button>
     <input id="attFile" type="file" multiple accept="image/*,application/pdf,text/*,.txt,.md,.csv,.json,.log" hidden>
+    <input id="libFile" type="file" accept="text/*,.txt,.md,.markdown,.csv,.json,.log" hidden>
     <textarea id="msg" rows="1" placeholder="メッセージを書く"></textarea>
     <button id="send" type="button">送る</button>
     <div id="mirror" aria-hidden="true"></div>
@@ -516,7 +523,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
 <script>
 (function(){
   "use strict";
-  const VERSION = "1.9";
+  const VERSION = "2.0";
   const app = document.getElementById("app");
   const list = document.getElementById("list");
   const box = document.getElementById("msg");
@@ -1108,6 +1115,12 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   const sizeText = n => n >= 1048576 ? (n / 1048576).toFixed(1) + "MB" : Math.max(1, Math.round((n || 0) / 1024)) + "KB";
 
   let current = { roomId:null, threadId:null, roomName:"", threadName:"" };
+  // 集まれる場所（rooms の kind:"group"）。いま開いているのが集まりの部屋なら、grp にその rooms の1件が入る
+  const GROUP = "group";
+  const isGroup = r => !!r && r.kind === GROUP;
+  const tag = r => isGroup(r) ? r.name : "⛵️ " + r.name;
+  let grp = null;
+  const memWord = () => grp ? "書庫" : "記憶";
 
   const dayName = ms => { const d = new Date(ms); return (d.getMonth() + 1) + "月" + d.getDate() + "日"; };
   /* 画面の言葉と、中の名前の対応：
@@ -1173,8 +1186,8 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     return out;
   }
   // AIが開くときの窓口。開いた項目の名前を opened に残す
-  function memFor(room, others){
-    const items = needItems(room);
+  function memFor(room, others, extra){
+    const items = needItems(room).concat(extra || []);
     const list = (others || []).slice().sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
     const names = [];
     list.forEach(t => { if(t.name && !names.includes(t.name)) names.push(t.name); });
@@ -1200,7 +1213,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
         if(!part.length) return "この部屋には、まだ会話がありません。";
         this.logs = this.logs.filter(x => x.name !== th.name).concat([{ name:th.name, n:part.length }]);
         return "部屋「" + th.name + "」の会話（全部で " + all.length + " 件のうち、さいごの " + part.length + " 件）\n\n"
-          + part.map(m => (m.role === "ai" ? room.name : "ユーザー") + "：\n" + ((m.text || "") + (m.files && m.files.length ? "\n" + attMemo(m.files) : "")).trim()).join("\n\n");
+          + part.map(m => (m.role === "ai" ? (m.speakerName || room.name) : "ユーザー") + "：\n" + ((m.text || "") + (m.files && m.files.length ? "\n" + attMemo(m.files) : "")).trim()).join("\n\n");
       },
       async call(name, a){
         if(name === LOG_TOOL) return await this.readLog(a && a.name, a && a.count);
@@ -1363,7 +1376,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     if(waiting) return;
     const msgs = await loadMessages();
     const i = msgs.findIndex(x => x.id === m.id);
-    if(i < 1 || msgs[i - 1].role !== "me") return;
+    if(i < 1 || (!grp && msgs[i - 1].role !== "me")) return;
     const later = msgs.slice(i);
     const text = later.length === 1 ? "この返事を消して、同じ発言にもう一度返事してもらいます。"
       : "この返事と、これ以降のやりとり " + (later.length - 1) + "件を消して、同じ発言にもう一度返事してもらいます。";
@@ -1372,7 +1385,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       await tx("messages", "readwrite", t => { later.forEach(x => t.objectStore("messages").delete(x.id)); });
       sweepSoon();
       await openCurrent();
-      reply();
+      reply(grp && m.speaker ? [m.speaker] : null);
     }catch(e){ tell("うまくいきませんでした。もう一度ためしてください。"); }
   }
   // 自分の発言を、もう一度AIに送る（これより後ろのやりとりは消える）
@@ -1393,6 +1406,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     }catch(e){ tell("うまくいきませんでした。もう一度ためしてください。"); }
   }
   const drawn = new Map();     // 画面に出ている、添付つきの発言（「もう一度見せる」のしるしを直すため）
+  const speakerPal = new Map();     // 集まりの部屋で、ペルソナごとの文字欄の色
   function draw(m){
     const row = document.createElement("div");
     row.className = "row " + (m.role === "ai" ? "ai" : "me");
@@ -1400,6 +1414,11 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     b.className = "msg";
     b.textContent = m.text;
     b.hidden = !m.text;
+    if(m.role === "ai" && m.speakerName && grp){     // 集まりの部屋では、だれの発言かを上に出す
+      row.appendChild(el("div", "who", m.speakerName));
+      const p = speakerPal.get(m.speaker);
+      if(p){ b.style.background = p.bg; b.style.borderColor = p.line; b.style.color = p.text; }
+    }
     if(m.role === "ai" && m.thinking){
       const det = el("details", "think");
       det.appendChild(el("summary", "", "考えたこと"));
@@ -1506,7 +1525,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     modelBtn.textContent = (mo ? mo.name : "モデルを選びなおしてね") + " ▾";
   }
   function showWhere(){
-    pName.textContent = "⛵️ " + current.roomName;
+    pName.textContent = (grp ? "" : "⛵️ ") + current.roomName;
     rName.textContent = "部屋：" + current.threadName;
   }
   // 「いつもの」以外のプロンプトを使っている部屋では、上の「プロンプト」ボタンに色を付ける
@@ -1516,8 +1535,14 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     promptTop.className = "plain" + (room && th && promptFor(room, th).id !== room.mainPrompt ? " on" : "");
   }
   async function openCurrent(){
+    const room0 = await getRoom(current.roomId);
+    grp = isGroup(room0) ? room0 : null;
+    setGroupUI();
+    speakerPal.clear();
+    if(grp) (await getAll("rooms")).forEach(r => { if(!isGroup(r)) speakerPal.set(r.id, palOf((r.colors || {}).ai || "白")); });
     showWhere();
     clearProblem();
+    await showWho();
     await showModel(); await showPromptBtn(); await showSearchBtn(); showThinkBtn(); await applyColors(); showDiaryBtn(false);
     list.textContent = ""; hint = null; drawn.clear();
     const msgs = await loadMessages();
@@ -1545,7 +1570,8 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     problemNote = d;
     toBottom();
   }
-  async function reply(){
+  async function reply(ids){
+    if(grp) return groupGo(ids);
     if(waiting || !db) return;
     clearProblem();
     const threadId = current.threadId, roomId = current.roomId;
@@ -1585,7 +1611,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     waiting = ctl; send.disabled = true;
     try{
       const noOpen = /gemma/i.test(model.id);
-      const others = room ? (await getAll("threads")).filter(t => t.roomId === roomId && t.id !== threadId) : [];
+      const others = room ? (await getAll("threads")).filter(t => (t.roomId === roomId && t.id !== threadId) || (t.members && t.members.some(x => x.roomId === roomId))) : [];
       const mem = room ? memFor(room, others) : null;
       if(mem && noOpen && mem.titles.length) mem.failed = true;
       shown = await fillParts(turns);
@@ -1646,7 +1672,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       th.search = !th.search; await putOne("threads", th);
       await showSearchBtn();
       const mo = modelOf(await currentModelId());
-      if(th.search && mo && !(mo.by === "claude" || mo.by === "gemini")) toast("オンにしました。ただ、このモデルはウェブ検索に未対応です");
+      if(th.search && !grp && mo && !(mo.by === "claude" || mo.by === "gemini")) toast("オンにしました。ただ、このモデルはウェブ検索に未対応です");
       else if(th.search) toast("ウェブ検索をオンにしました（必要なときだけ調べます）");
       else toast("ウェブ検索をオフにしました");
     }catch(e){ tell("切り替えられませんでした。もう一度ためしてください。"); }
@@ -1817,7 +1843,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       const th = tmap.get(m.threadId), rm = rmap.get(th.roomId);
       const b = el("button", "hit", snippet(m.text, q));
       b.type = "button";
-      b.appendChild(el("small", "", (rm ? rm.name : "") + " ／ " + th.name + " ・ " + (m.role === "ai" ? "AI" : "わたし") + " ・ " + when(m.createdAt)));
+      b.appendChild(el("small", "", (rm ? rm.name : "") + " ／ " + th.name + " ・ " + (m.role === "ai" ? (m.speakerName || "AI") : "わたし") + " ・ " + when(m.createdAt)));
       b.addEventListener("click", async () => {
         try{
           if(!rm) return;
@@ -1838,8 +1864,9 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   /* ───────── モデルを選ぶ ───────── */
   const modelsPanel = document.getElementById("models");
   const modelList = document.getElementById("modelList");
+  let modelPick = null;     // 入っているときは、部屋のモデルではなく、ここに渡された相手のモデルを選ぶ（集まりの「呼ぶ」）
   async function drawModels(){
-    const nowId = await currentModelId();
+    const nowId = modelPick ? modelPick.nowId : await currentModelId();
     modelList.textContent = "";
     if(!modelOf(nowId)) modelList.appendChild(note("このモデルは使えなくなりました。別のモデルを選んでね。"));
     ["claude", "gemini", "openai", "xai"].forEach(by => {
@@ -1855,6 +1882,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
         b.appendChild(left); b.appendChild(price);
         b.addEventListener("click", async () => {
           try{
+            if(modelPick){ const p = modelPick; modelPick = null; modelsPanel.hidden = true; await p.onPick(m); return; }
             const th = await getOne("threads", current.threadId);
             th.model = m.id; await putOne("threads", th);
             prefs.lastModel = m.id; await savePrefs();
@@ -1871,13 +1899,14 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     if(!db) return;
     box.blur();
     try{
+      modelPick = null;
       await drawModels(); modelsPanel.hidden = false;
       const cur = modelList.querySelector(".now");
       if(cur) cur.scrollIntoView({ block:"center" });
     }
     catch(e){ tell("モデルの一覧を開けませんでした。もう一度ためしてください。"); }
   });
-  const closeModels = () => { modelsPanel.hidden = true; };
+  const closeModels = () => { modelsPanel.hidden = true; modelPick = null; };
   document.getElementById("closeModels").addEventListener("click", closeModels);
   document.getElementById("closeModelsX").addEventListener("click", closeModels);
   modelsPanel.addEventListener("click", e => { if(e.target === modelsPanel) closeModels(); });
@@ -1983,7 +2012,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     let out = "【" + room.name + " ／ " + th.name + "】\n\n";
     all.forEach(m => {
       const mo = modelOf(m.model);
-      out += (m.role === "ai" ? "AI" + (mo ? "（" + mo.name + "）" : "") : "わたし") + "　" + when(m.createdAt) + "\n" + (m.files && m.files.length ? attNote(m.files) + "\n" : "") + m.text + "\n\n";
+      out += (m.role === "ai" ? (m.speakerName || "AI") + (mo ? "（" + mo.name + "）" : "") : "わたし") + "　" + when(m.createdAt) + "\n" + (m.files && m.files.length ? attNote(m.files) + "\n" : "") + m.text + "\n\n";
     });
     return out;
   }
@@ -2145,10 +2174,10 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     if(!convs.length) return;
     try{
       convs.sort((a, b) => a.msgs[0].at - b.msgs[0].at);
-      const rooms = (await getAll("rooms")).sort((a, b) => (a.order || 0) - (b.order || 0));
+      const rooms = (await getAll("rooms")).filter(r => !isGroup(r)).sort((a, b) => (a.order || 0) - (b.order || 0));
       const done = {};
       (await getAll("threads")).forEach(t => { if(t.imported){ (done[t.roomId] = done[t.roomId] || new Set()).add(impKey(t.name, t.importCount)); } });
-      imp = { convs:convs, rooms:rooms, roomId:current.roomId, newName:"", done:done };
+      imp = { convs:convs, rooms:rooms, roomId:grp ? ((rooms[0] && rooms[0].id) || "") : current.roomId, newName:"", done:done };
       convs.forEach(c => { c.on = !impDup(c); });
       paintImp();
       impSheet.hidden = false;
@@ -2261,6 +2290,11 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   async function makeThread(room, name){
     const now = Date.now();
     const th = { id:newId(), roomId:room.id, name:name, createdAt:now, updatedAt:now, model:prefs.lastModel };
+    if(isGroup(room)){     // 集まりの部屋は、前の部屋に来ていた人を、そのまま呼んでおく
+      const prev = (await threadsOf(room.id))[0];
+      th.members = (prev && prev.members) ? prev.members.map(x => ({ roomId:x.roomId, model:x.model })) : [];
+      th.next = (prev && prev.next) || "";
+    }
     await putOne("threads", th);
     return th;
   }
@@ -2272,7 +2306,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
 
   // ⛵️ ペルソナを選ぶ（manage が true のときは、名前を変える・削除する画面）
   async function openPersonaList(manage){
-    const rooms = await sortedRooms(), threads = await getAll("threads");
+    const rooms = (await sortedRooms()).filter(r => !isGroup(r)), threads = await getAll("threads");
     const box2 = openPick(manage ? "ペルソナの名前を変える・削除する" : "ペルソナを選ぶ", manage ? "削除すると、中の部屋と会話も消えます。" : "");
     rooms.forEach(room => {
       const now = room.id === current.roomId;
@@ -2303,6 +2337,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
         if(!ok) return;
         await removeThreads(mine.map(t => t.id), room.id);
         if(now) await goPersona(rooms.find(r => r.id !== room.id));
+        else if(grp) await showWho();
         await openPersonaList(true);
       }));
       box2.appendChild(row);
@@ -2317,6 +2352,10 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       await goPersona(room);
       toast("「" + v + "」を作りました。プロンプトは、上の「プロンプト」から書けます");
     }));
+    if(!manage){
+      box2.appendChild(el("p", "group", "みんなで話す"));
+      box2.appendChild(choice("集まれる場所", (grp ? "いま開いている ・ " : "") + "ペルソナを呼んで、いっしょに話す", !!grp, () => grp ? closePick() : goGroup()));
+    }
     box2.appendChild(btn("small", manage ? "もどる" : "ペルソナの名前を変える・削除する", () => openPersonaList(!manage)));
   }
   document.getElementById("openPersonas").addEventListener("click", () => {
@@ -2330,7 +2369,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     const room = await getRoom(current.roomId);
     if(!room) return;
     const mine = await threadsOf(room.id);
-    const box2 = openPick(manage ? "部屋の名前を変える・削除する" : "⛵️ " + room.name + " の部屋", manage ? "削除すると、中の会話も消えます。" : "");
+    const box2 = openPick(manage ? "部屋の名前を変える・削除する" : tag(room) + " の部屋", manage ? "削除すると、中の会話も消えます。" : "");
     mine.forEach(th => {
       const now = th.id === current.threadId;
       if(!manage){
@@ -2374,10 +2413,11 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     try{
       const room = await getRoom(current.roomId);
       if(!room) return;
-      const v = await dialog({ text:"⛵️ " + room.name + " に、新しい部屋を作ります。\n部屋の名前", input:true, value:dayName(Date.now()), yes:"作る" });
+      const v = await dialog({ text:tag(room) + " に、新しい部屋を作ります。\n部屋の名前", input:true, value:dayName(Date.now()), yes:"作る" });
       if(!v) return;
       const th = await makeThread(room, v);
       await goThread(th, room);
+      if(isGroup(room) && !th.members.length) await openCall();
     }catch(e){ tell("部屋を作れませんでした。もう一度ためしてください。"); }
   });
 
@@ -2471,11 +2511,11 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     if(!room) return;
     if(!Array.isArray(room.memories)) room.memories = [];
     const save = () => putOne("rooms", room);
-    document.getElementById("memoryTitle").textContent = "⛵️ " + room.name + " の記憶";
+    document.getElementById("memoryTitle").textContent = grp ? "書庫" : "⛵️ " + room.name + " の記憶";
     memoryBody.textContent = "";
     const f = el("div", "field");
     const total = shownMemories(room).reduce((n, m) => n + m.text.trim().length, 0);
-    f.appendChild(el("p", "", "このペルソナだけの記憶です。項目ごとに、見せ方を選べます。"));
+    f.appendChild(el("p", "", grp ? "この場所に集まる、みんなが読める書庫です。項目ごとに、見せ方を選べます。（ペルソナそれぞれの記憶は、ほかの人には見えません）" : "このペルソナだけの記憶です。項目ごとに、見せ方を選べます。"));
     f.appendChild(el("p", "", "・いつも見せる：毎回、中身をAIに伝えます。\n・必要なとき：ふだんは名前だけ伝えて、AIが必要だと思ったときに自分で開きます。\n・見せない：取っておくだけです。")).style.whiteSpace = "pre-line";
     f.appendChild(el("p", "", "いつも見せている量：およそ " + total + " 文字　／　必要なとき：" + needMemories(room).length + " 項目"));
     memoryBody.appendChild(f);
@@ -2488,10 +2528,10 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       c.appendChild(el("p", "", body ? body.slice(0, 80) + (body.length > 80 ? "…" : "") : "（まだ何も書いていません）"));
       const bar = el("div", "bar");
       const edit = async () => {
-        const r = await dialog({ text:"記憶「" + m.title + "」", area:true, value:m.text || "", yes:"保存する" });
+        const r = await dialog({ text:memWord() + "「" + m.title + "」", area:true, value:m.text || "", yes:"保存する" });
         if(!r) return false;
         m.text = r.text; m.updatedAt = Date.now(); await save();
-        await drawMemory(); toast("記憶を保存しました");
+        await drawMemory(); toast(memWord() + "を保存しました");
         return true;
       };
       bar.appendChild(btn("small", "編集", edit));
@@ -2510,7 +2550,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
         });
       }));
       bar.appendChild(btn("small danger", "削除", async () => {
-        const ok = await dialog({ text:"記憶「" + m.title + "」を削除しますか？\n書いた中身も消えます。元に戻せません。", yes:"削除する" });
+        const ok = await dialog({ text:memWord() + "「" + m.title + "」を削除しますか？\n書いた中身も消えます。元に戻せません。", yes:"削除する" });
         if(!ok) return;
         room.memories = room.memories.filter(x => x.id !== m.id); await save(); await drawMemory();
       }));
@@ -2524,18 +2564,19 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       const m = { id:newId(), title:v, text:"", show:true, mode:"always", createdAt:now, updatedAt:now };
       room.memories.push(m); await save();
       await drawMemory();
-      const r = await dialog({ text:"記憶「" + v + "」\n覚えておいてほしいことを書いてください。", area:true, value:"", yes:"保存する" });
+      const r = await dialog({ text:memWord() + "「" + v + "」\n覚えておいてほしいことを書いてください。", area:true, value:"", yes:"保存する" });
       if(!r) return;
       m.text = r.text; m.updatedAt = Date.now(); await save();
-      await drawMemory(); toast("記憶を保存しました");
+      await drawMemory(); toast(memWord() + "を保存しました");
     }));
     if(sideJob && sideJob.kind === "sum" && sideJob.roomId === room.id) f.appendChild(sideJob.el);
-    else f.appendChild(btn("add", "いまの部屋のあらすじを、AIに下書きしてもらう", writeSum));
+    else f.appendChild(btn("add", grp ? "ここまでの話を、まとめてもらう" : "いまの部屋のあらすじを、AIに下書きしてもらう", grp ? pickSummarizer : writeSum));
+    if(grp) f.appendChild(btn("add", "文章のファイルを、項目として取り込む", () => libFile.click()));
     const s0 = room.sumDraft;
     if(s0){
       const c = el("div", "pcard main");
-      const h = el("h4", "", "あらすじの下書き");
-      h.appendChild(el("span", "off", "まだ記憶に入っていません"));
+      const h = el("h4", "", grp ? "まとめの下書き" + (s0.by ? "（⛵️ " + s0.by + "）" : "") : "あらすじの下書き");
+      h.appendChild(el("span", "off", "まだ" + memWord() + "に入っていません"));
       c.appendChild(h);
       c.appendChild(el("p", "", dayTime(s0.createdAt) + (s0.threadName ? " ・ 部屋：" + s0.threadName : "")));
       c.appendChild(el("p", "dtext", s0.text));
@@ -2543,30 +2584,31 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       const put = async (id, title) => {
         const now = Date.now();
         let it = id ? room.memories.find(x => x.id === id) : null;
-        if(!it){ it = { id:newId(), title:title, text:"", show:false, mode:"need", createdAt:now, updatedAt:now }; room.memories.push(it); }
-        const head = "（" + dayName(s0.createdAt) + (s0.threadName ? " 部屋：" + s0.threadName : "") + " のあらすじ）\n";
+        if(!it){ it = { id:newId(), title:title, text:"", show:!!grp, mode:grp ? "always" : "need", createdAt:now, updatedAt:now }; room.memories.push(it); }
+        const head = "（" + dayName(s0.createdAt) + (s0.threadName ? " 部屋：" + s0.threadName : "") + (grp ? " のまとめ" + (s0.by ? "・" + s0.by : "") : " のあらすじ") + "）\n";
         it.text = ((it.text || "").trim() ? it.text.replace(/\s+$/, "") + "\n\n" : "") + head + s0.text;
         it.updatedAt = now;
         delete room.sumDraft; await save();
         closePick(); await drawMemory();
-        toast("記憶「" + it.title + "」に入れました（見せ方：" + MODE_NAME[memMode(it)] + "）");
+        toast(memWord() + "「" + it.title + "」に入れました（見せ方：" + MODE_NAME[memMode(it)] + "）");
       };
       bar.appendChild(btn("small", "保存", () => {
         const box2 = openPick("どの項目に入れますか？", "下書きを、選んだ項目のいちばん下に足します。あとで「編集」から直せます。");
         room.memories.forEach(it => { box2.appendChild(choice(it.title, MODE_NAME[memMode(it)], false, () => put(it.id))); });
         box2.appendChild(btn("add", "＋ 新しい項目", async () => {
-          const v = await dialog({ text:"新しい項目の名前\n（見せ方は「必要なとき」で作ります。あとで変えられます）", input:true,
-            value:room.memories.some(x => x.title === "これまでのこと") ? "" : "これまでのこと", yes:"作って入れる" });
+          const first = grp ? "話したこと" : "これまでのこと";
+          const v = await dialog({ text:"新しい項目の名前\n（見せ方は「" + (grp ? "いつも見せる" : "必要なとき") + "」で作ります。あとで変えられます）", input:true,
+            value:room.memories.some(x => x.title === first) ? "" : first, yes:"作って入れる" });
           if(!v) return;
           await put(null, v);
         }));
       }));
       bar.appendChild(btn("small", "直す", async () => {
-        const r = await dialog({ text:"あらすじの下書き", area:true, value:s0.text, yes:"直す" });
+        const r = await dialog({ text:grp ? "まとめの下書き" : "あらすじの下書き", area:true, value:s0.text, yes:"直す" });
         if(!r || !r.text.trim()) return;
         s0.text = r.text.trim(); await save(); await drawMemory();
       }));
-      bar.appendChild(btn("small", "もう一度書いてもらう", writeSum));
+      bar.appendChild(btn("small", "もう一度書いてもらう", grp ? pickSummarizer : writeSum));
       bar.appendChild(btn("small danger", "やめる", async () => {
         if(!await dialog({ text:"この下書きを消しますか？\n元に戻せません。", yes:"消す", no:"のこす" })) return;
         delete room.sumDraft; await save(); await drawMemory();
@@ -2585,14 +2627,15 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       let it = id ? room.memories.find(x => x.id === id) : null;
       const now = Date.now();
       if(!it){ it = { id:newId(), title:title, text:"", show:true, mode:"always", createdAt:now, updatedAt:now }; room.memories.push(it); }
-      const line = "（" + dayName(m.createdAt || now) + " " + (m.role === "ai" ? room.name : "わたし") + "）\n" + (m.text || "").trim();
+      const line = "（" + dayName(m.createdAt || now) + " " + (m.role === "ai" ? (m.speakerName || room.name) : ((grp && (grp.me || "").trim()) || "わたし")) + "）\n" + (m.text || "").trim();
       it.text = ((it.text || "").trim() ? it.text.replace(/\s+$/, "") + "\n\n" : "") + line;
       it.updatedAt = now;
       await putOne("rooms", room);
+      if(grp) grp = room;
       closePick();
-      toast("記憶「" + it.title + "」に記録しました");
+      toast(memWord() + "「" + it.title + "」に記録しました");
     };
-    const box2 = openPick("どの項目に記録しますか？", "この発言を、選んだ項目のいちばん下に足します。あとで「記憶」から編集できます。");
+    const box2 = openPick("どの項目に記録しますか？", "この発言を、選んだ項目のいちばん下に足します。あとで「" + memWord() + "」から編集できます。");
     (first.memories || []).forEach(it => {
       box2.appendChild(choice(it.title, MODE_NAME[memMode(it)], false, () => add(it.id)));
     });
@@ -2620,6 +2663,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   const nudged = new Set();
   // 会話がたまったら、上の「日記」ボタンにしるしを付ける。返事のあとなら、1回だけ小さく知らせる
   async function showDiaryBtn(nudge){
+    if(grp){ diaryBtn.textContent = "日記"; diaryBtn.className = "plain"; return; }
     try{
       const threadId = current.threadId;
       const room = await getRoom(current.roomId);
@@ -2692,6 +2736,14 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     }
     showState();
   }
+  // 日記のお願いの文（ふつうの部屋と、集まりの部屋で、同じものを使う）
+  const diaryReq = (name, mark) => "【ここからは、会話の外からのお願いです】\nここまでの会話をふり返って、あなた（" + name + "）自身の日記を書いてください。\n"
+    + "・あなた自身の言葉で、一人称で書く。出来事の報告ではなく、そのとき自分がどう感じたか、何を思ったかを書く。\n"
+    + "・かたい書き言葉にしない。この会話でのあなたの、ふだんの話し方と口調のままで書く。\n"
+    + "・3〜5文くらいで、短く。\n"
+    + "・会話に出てこなかった出来事は書かない。気持ちを大げさにしない。\n"
+    + (mark ? "・前の日記に書いたことはくり返さず、そのあとの会話について書く。\n" : "")
+    + "・日記の本文だけを書く。あいさつ、見出し、日付、かっこ書きの説明、相手への呼びかけは付けない。";
   const writeDiary = () => sideWrite({ kind:"diary", field:"diaryDraft", label:"日記を書いています",
     redraw:async () => { if(!diaryPanel.hidden) await drawDiary(); },
     plan:async (room, th, msgs, model) => {
@@ -2702,14 +2754,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       if(fresh.length < 10) q += "\n\n（" + (mark ? "前の日記のあとの会話" : "この部屋の会話") + "は、まだ " + fresh.length + " 件です。少ないと、書くことがあまりないかもしれません）";
       if(fresh.length > SEND_COUNT) q += "\n\n（会話が " + fresh.length + " 件たまっています。AIに渡せるのは新しい " + SEND_COUNT + " 件までなので、それより前のことは日記に入りません）";
       if(room.diaryDraft) q += "\n\n（いまの下書きは、新しいものに置きかわります）";
-      const req = "【ここからは、会話の外からのお願いです】\nここまでの会話をふり返って、あなた（" + room.name + "）自身の日記を書いてください。\n"
-        + "・あなた自身の言葉で、一人称で書く。出来事の報告ではなく、そのとき自分がどう感じたか、何を思ったかを書く。\n"
-        + "・かたい書き言葉にしない。この会話でのあなたの、ふだんの話し方と口調のままで書く。\n"
-        + "・3〜5文くらいで、短く。\n"
-        + "・会話に出てこなかった出来事は書かない。気持ちを大げさにしない。\n"
-        + (mark ? "・前の日記に書いたことはくり返さず、そのあとの会話について書く。\n" : "")
-        + "・日記の本文だけを書く。あいさつ、見出し、日付、かっこ書きの説明、相手への呼びかけは付けない。";
-      return { q:q, req:req };
+      return { q:q, req:diaryReq(room.name, mark) };
     } });
   const writeSum = () => sideWrite({ kind:"sum", field:"sumDraft", label:"あらすじを書いています",
     redraw:async () => { if(!memoryPanel.hidden) await drawMemory(); },
@@ -2808,10 +2853,562 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   diaryBtn.addEventListener("click", async () => {
     if(!db) return;
     box.blur();
-    try{ await drawDiary(); diaryPanel.hidden = false; }
+    try{ await (grp ? drawGroupDiary() : drawDiary()); diaryPanel.hidden = false; }
     catch(e){ tell("日記を開けませんでした。もう一度ためしてください。"); }
   });
   document.getElementById("closeDiary").addEventListener("click", () => { diaryPanel.hidden = true; });
+
+  /* ───────── 集まれる場所（ペルソナを呼んで、いっしょに話す部屋） ─────────
+     入れ物は増やさない。rooms に kind:"group" の1件（画面では「集まれる場所」）。その下の threads が、集まりの部屋。
+     部屋には members:[{ roomId, model }]（来ているペルソナと、ここでのモデル）、next（次に返事する人。ペルソナの id か "all"）、
+     gDrafts（みんなの日記の下書き）。ペルソナの発言には speaker（ペルソナの id）と speakerName（そのときの名前）。
+     書庫は、group の rooms の memories（記憶と同じ形）。me は、わたしの呼び名。
+     古い版で開くと、集まりの部屋は、1人のAIとの会話に見える（壊れない）。 */
+  const callBtn = document.getElementById("openCall");
+  const whoRow = document.getElementById("whoRow");
+  const memBtn = document.getElementById("openMemory");
+  const libFile = document.getElementById("libFile");
+  const ALL = "all", LIB = "書庫：";
+  const meOf = g => ((g && g.me) || "").trim() || "ユーザー";
+  const freshGroup = async () => { if(grp){ const g = await getRoom(grp.id); if(g) grp = g; } return grp; };
+  async function loadThread(id){
+    const all = await ask(db.transaction("messages").objectStore("messages").index("threadId").getAll(id));
+    all.sort((a, b) => a.createdAt - b.createdAt);
+    return all;
+  }
+  // 来ている人（消されたペルソナは、ぬく）
+  async function membersOf(th){
+    const out = [];
+    for(const x of ((th && th.members) || [])){
+      const r = await getRoom(x.roomId);
+      if(r && !isGroup(r)) out.push({ room:r, model:x.model });
+    }
+    return out;
+  }
+  function setGroupUI(){
+    const g = !!grp;
+    promptTop.hidden = g; document.getElementById("btnColor").hidden = g; modelBtn.hidden = g;
+    callBtn.hidden = !g; whoRow.hidden = !g;
+    memBtn.textContent = g ? "書庫" : "記憶";
+  }
+  // 入力欄の上の「次に返事する人」
+  async function showWho(){
+    whoRow.textContent = "";
+    if(!grp) return;
+    const th = await getOne("threads", current.threadId);
+    const ms = await membersOf(th);
+    if(!ms.length){ whoRow.appendChild(el("span", "wl", "まだ、だれも呼んでいません。上の「呼ぶ」から、ペルソナを呼んでね。")); return; }
+    let next = th.next;
+    if(next !== ALL && !ms.some(x => x.room.id === next)) next = ms[0].room.id;
+    if(next === ALL && ms.length < 2) next = ms[0].room.id;
+    whoRow.appendChild(el("span", "wl", "次に返事する人"));
+    const set = async v => {
+      const t = await getOne("threads", current.threadId);
+      t.next = v; await putOne("threads", t);
+      await showWho();
+    };
+    ms.forEach(x => whoRow.appendChild(btn("pill" + (next === x.room.id ? " on" : ""), (next === x.room.id ? "✓ " : "") + x.room.name, () => set(x.room.id))));
+    if(ms.length > 1) whoRow.appendChild(btn("pill" + (next === ALL ? " on" : ""), (next === ALL ? "✓ " : "") + "みんな", () => set(ALL)));
+    whoRow.appendChild(el("span", "gap"));
+    whoRow.appendChild(btn("pill", "おまかせ", openAuto));
+  }
+  // 「⛵️ ▾」の一覧から、集まれる場所へ（はじめてのときは、ここで作る）
+  async function goGroup(){
+    let g = (await getAll("rooms")).find(isGroup);
+    if(!g){
+      g = { id:newId(), kind:GROUP, name:"集まれる場所", createdAt:Date.now(), order:9999, persona:"", colors:{ me:"水色", ai:"白" }, memories:[] };
+      ensurePrompts(g);
+      await putOne("rooms", g);
+    }
+    await goPersona(g);
+    const th = await getOne("threads", current.threadId);
+    if(!(th && th.members && th.members.length)) await openCall();
+  }
+  // 「呼ぶ」：この部屋に来るペルソナと、ここでのモデル
+  async function openCall(){
+    const g = await freshGroup();
+    const th = await getOne("threads", current.threadId);
+    if(!g || !th) return;
+    const rooms = (await sortedRooms()).filter(r => !isGroup(r));
+    const members = (th.members || []).filter(x => rooms.some(r => r.id === x.roomId));
+    const box2 = openPick("呼ぶ", "部屋「" + th.name + "」に来るペルソナを選びます。モデルは、ここでの分を、ペルソナごとに選べます。");
+    const save = async list2 => {
+      const t = await getOne("threads", th.id);
+      t.members = list2;
+      if(t.next && t.next !== ALL && !list2.some(x => x.roomId === t.next)) t.next = "";
+      await putOne("threads", t);
+      if(current.threadId === th.id) await showWho();
+    };
+    rooms.forEach(room => {
+      const me = members.find(x => x.roomId === room.id);
+      const row = el("div", "thread");
+      row.appendChild(el("span", "tname", "⛵️ " + room.name + (me ? "（来ている）" : "")));
+      if(me){
+        const mo = modelOf(me.model);
+        row.appendChild(btn("small", "モデル：" + (mo ? mo.name : "選びなおしてね"), async () => {
+          closePick();
+          modelPick = { nowId:me.model, onPick:async m => {
+            await save(members.map(x => x.roomId === room.id ? { roomId:x.roomId, model:m.id } : x));
+            toast(room.name + " は、" + m.name + " にしました");
+            await openCall();
+          } };
+          await drawModels(); modelsPanel.hidden = false;
+          const cur = modelList.querySelector(".now");
+          if(cur) cur.scrollIntoView({ block:"center" });
+        }));
+        row.appendChild(btn("small", "外す", async () => { await save(members.filter(x => x.roomId !== room.id)); await openCall(); }));
+      }else{
+        row.appendChild(btn("small", "呼ぶ", async () => {
+          const last = (await threadsOf(room.id))[0];
+          await save(members.concat([{ roomId:room.id, model:(last && last.model) || prefs.lastModel || DEFAULT_MODEL }]));
+          await openCall();
+        }));
+      }
+      box2.appendChild(row);
+    });
+    if(!rooms.length) box2.appendChild(el("p", "hint", "まだペルソナがいません。先に「⛵️ ▾」から、ペルソナを作ってね。"));
+    box2.appendChild(btn("small", "わたしの呼び名：" + meOf(g), async () => {
+      const v = await dialog({ text:"わたしの呼び名\n（ペルソナたちには、あなたの発言が「この名前：」を付けて届きます）", input:true, value:(g.me || ""), yes:"決める" });
+      if(!v) return;
+      const g2 = await getRoom(g.id);
+      g2.me = v; await putOne("rooms", g2); grp = g2;
+      await openCall();
+    }));
+  }
+  callBtn.addEventListener("click", () => {
+    if(!db) return;
+    box.blur();
+    openCall().catch(() => tell("開けませんでした。もう一度ためしてください。"));
+  });
+
+  /* AIへの渡し方。返事するペルソナ P から見て、P自身の発言は assistant、それ以外（わたしと、ほかのペルソナ）は user にして、頭に「名前：」を付ける。
+     live は、添付の中身を見せる発言の id（送った直後の1巡だけ）。plain のしるしが付いた発言は、名前を付けない（会話の外からのお願い）。 */
+  function groupTurns(msgs, pid, live, g){
+    const me = meOf(g);
+    const turns = [];
+    msgs.forEach(m => {
+      const mine = m.role === "ai" && m.speaker === pid;
+      const role = mine ? "assistant" : "user";
+      let text = m.text || "", atts = [];
+      if(m.role !== "ai" && m.files && m.files.length){
+        if(live && (live.has(m.id) || m.again)) atts = m.files.map(f => Object.assign({ from:m.id }, f));
+        else text += (text ? "\n" : "") + attMemo(m.files);
+      }
+      if(!mine && !m.plain) text = (m.role === "ai" ? (m.speakerName || "だれか") : me) + "：\n" + text;
+      const last = turns[turns.length - 1];
+      if(last && last.role === role){
+        if(text) last.text += (last.text ? "\n\n" : "") + text;
+        last.atts = last.atts.concat(atts);
+      }else turns.push({ role:role, text:text, atts:atts });
+    });
+    while(turns.length && turns[0].role !== "user") turns.shift();
+    return turns;
+  }
+  // 前置き：Pのプロンプト＋Pの記憶＋Pの日記（ふつうの部屋と同じ）＋場の説明＋書庫
+  function groupSystem(P, th, g, names, canOpen, logs){
+    let out = systemFor(P, mainOf(P), canOpen, logs);
+    out += (out.trim() ? "\n\n" : "") + "【この場所について】\nここは、みんなが集まって話す部屋「" + th.name + "」です。" + meOf(g) + "と、" + names.join("、") + "が、いっしょにいます。\n"
+      + "・あなたは " + P.name + " です。\n"
+      + "・ほかの人の発言は、頭に「名前：」が付いて届きます。\n"
+      + "・あなた自身の発言だけを書いてください。ほかの人の台詞は書かないでください。\n"
+      + "・自分の発言の頭に、名前は付けないでください。";
+    const al = shownMemories(g);
+    if(al.length){
+      out += "\n\n【書庫】\n（この場所に集まる、みんなが読めるものです）";
+      al.forEach(m => { out += "\n\n■ " + m.title + "\n" + m.text.trim(); });
+    }
+    const nd = canOpen ? needMemories(g) : [];
+    if(nd.length){
+      out += "\n\n【書庫（必要なときに開けるもの）】\n（名前だけを伝えています。会話に関係がありそうなときは、" + MEM_TOOL + " で中身を読んでから、返事をしてください）";
+      nd.forEach(m => { out += "\n・" + LIB + m.title; });
+    }
+    return out;
+  }
+  const escRe = s => String(s).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  // 返事の頭に、自分の名前を付けてしまったときは、取る
+  const dropName = (text, name) => String(text || "").replace(new RegExp("^\\s*" + escRe(name) + "\\s*[：:]\\s*"), "");
+
+  let run = null;            // 集まりで、返事をもらっている間だけ入る { auto, stop, byUser, done }
+  let pendingGroup = null;   // うまくいかなかったときの、残りの順番（「もう一度ためす」で続ける）
+  // ペルソナ1人に、返事をもらう。うまくいったら true
+  async function speak(pid, th, live, label){
+    const threadId = th.id, groupId = th.roomId;
+    const g = await freshGroup();
+    const P = await getRoom(pid);
+    const seat = (th.members || []).find(x => x.roomId === pid);
+    if(!g || !P || !seat){ problem("このペルソナは、もうこの部屋にいません。\n上の「呼ぶ」から、呼びなおしてね。", false); return false; }
+    const model = modelOf(seat.model);
+    if(!model){ problem("⛵️ " + P.name + " のモデルが使えなくなりました。\n上の「呼ぶ」から、別のモデルを選んでね。", false); return false; }
+    const key = keys[model.by];
+    if(!key){ problem(COMPANY[model.by] + "のAPIキーがまだ入っていません。\n上の「設定」から入れてください。", true); return false; }
+    if(capReached()){ problem("今月の料金の上限（¥" + Number(prefs.capYen).toLocaleString() + "）に達しました。\n「設定」で上限を変えると、続けられます。", true); return false; }
+    const canUse = (model.by === "claude" || model.by === "gemini") && !/gemma/i.test(model.id);
+    const opt = { think:prefs.think && canUse, search:!!th.search && canUse };
+    const turns = groupTurns(sendWindow(await loadThread(threadId), model.by), pid, live, g);
+    if(!turns.length) turns.push({ role:"user", text:"（みんなが集まりました。話しはじめてください）", atts:[] });
+    else if(turns[turns.length - 1].role !== "user") turns.push({ role:"user", text:"（つづけて）", atts:[] });
+    let shown = { n:0, ids:[] };
+    const ctl = new AbortController();
+    const row = el("div", "row ai");
+    row.appendChild(el("div", "who", P.name));
+    const waitMsg = el("div", "msg wait");
+    const waitBase = (opt.search ? "調べながら、返事を待っています" : "返事を待っています") + (label ? "（" + label + "）" : "");
+    let secs = 0;
+    const tick = () => { waitMsg.textContent = waitBase + "…（" + secs + "秒）"; };
+    tick();
+    row.appendChild(waitMsg);
+    const waitTimer = setInterval(() => { secs++; tick(); }, 1000);
+    const u = el("div", "under");
+    const stop = el("button", "", "止める");
+    stop.type = "button";
+    stop.addEventListener("click", async () => {
+      if(await dialog({ text:(run && run.auto ? "おまかせを止めますか？" : "返事を待つのをやめますか？") + "\n（ここまでにかかった料金は、戻りません）", yes:"やめる", no:"つづける" })){
+        if(run){ run.stop = true; run.byUser = true; }
+        ctl.abort();
+      }
+    });
+    u.appendChild(stop); row.appendChild(u);
+    if(current.threadId === threadId){ list.appendChild(row); toBottom(); }
+    waiting = ctl;
+    let ok = false;
+    try{
+      const noOpen = /gemma/i.test(model.id);
+      const others = (await getAll("threads")).filter(t => t.id !== threadId && (t.roomId === pid || (t.members && t.members.some(x => x.roomId === pid))));
+      const mem = memFor(P, others, needMemories(g).map(m => ({ title:LIB + m.title, text:m.text })));
+      if(mem && noOpen && mem.titles.length) mem.failed = true;
+      shown = await fillParts(turns);
+      const names = (await membersOf(th)).map(x => x.room.name);
+      const r = await ASK[model.by](model, key, groupSystem(P, th, g, names, !!mem && !noOpen, mem ? mem.rooms : []), turns, ctl.signal,
+        Object.assign({}, opt, { mem:(mem && !noOpen) ? mem : null, cache:true }));
+      const m = { id:newId(), threadId:threadId, roomId:groupId, role:"ai", text:dropName(r.text, P.name), createdAt:Date.now(),
+        speaker:pid, speakerName:P.name,
+        model:model.id, usage:r.usage, usd:r.usd, cut:r.cut, thinking:r.thinking || "", searches:r.searches || 0,
+        queries:r.queries || [], sources:r.sources || [], promptName:"",
+        opened:mem ? mem.opened.slice() : [], logsRead:mem ? mem.logs.slice() : [], memFail:!!(mem && mem.failed) };
+      if(shown.n) m.sawFiles = shown.n;
+      await saveMessage(m);
+      await addUsage(r.usd);
+      for(const id of shown.ids){
+        try{
+          const x = await getOne("messages", id);
+          if(x && x.again){ delete x.again; await putOne("messages", x); }
+          const d = drawn.get(id);
+          if(d){ delete d.m.again; d.sync(); }
+        }catch(e){}
+      }
+      row.remove();
+      if(current.threadId === threadId){
+        count++; showHint();
+        const newRow = draw(m);
+        list.scrollTop = Math.max(0, newRow.offsetTop - list.offsetTop - 12);
+      }
+      ok = true;
+    }catch(e){
+      row.remove();
+      if(current.threadId === threadId){
+        if(e && e.name === "AbortError"){
+          if(run && run.auto){ if(run.byUser) toast("おまかせを止めました"); }
+          else problem("返事を待つのをやめました。", true);
+        }else{
+          let plain = "⛵️ " + P.name + " の返事：" + ((e && e.plain) || "うまくいきませんでした。もう一度ためしてください。");
+          if(shown.n && /^4(00|13|15|22)/.test((e && e.detail) || "")) plain += "\n（このモデルは、写真やファイルを受け取れないのかもしれません。「呼ぶ」から別のモデルを選んで「もう一度ためす」か、添付の発言を削除してください）";
+          problem(plain, true, e && (e.detail || (!e.plain && e.message)));
+        }
+      }
+    }
+    clearInterval(waitTimer);
+    waiting = null;
+    showState();
+    return ok;
+  }
+  // 順番に、返事をもらう。ids は、返事する人の並び
+  async function groupRun(ids, o){
+    if(run || waiting || !db || !ids.length) return;
+    clearProblem(); pendingGroup = null;
+    const threadId = current.threadId;
+    const th0 = await getOne("threads", threadId);
+    const msgs = await loadThread(threadId);
+    // 添付の中身を見せるのは、送った直後の1巡だけ
+    let tail = msgs.length;
+    while(tail > 0 && msgs[tail - 1].role === "me") tail--;
+    const live = new Set(msgs.slice(tail).filter(m => m.files && m.files.length).map(m => m.id));
+    msgs.forEach(m => { if(m.again) live.add(m.id); });
+    const auto = !!(o && o.auto);
+    const firstRound = auto ? Math.min(ids.length, ((th0 && th0.members) || []).length) : ids.length;
+    let finish;
+    run = { auto:auto, stop:false, byUser:false, done:new Promise(r => { finish = r; }) };
+    send.disabled = !auto;
+    try{
+      for(let k = 0; k < ids.length; k++){
+        if(run.stop || current.threadId !== threadId) break;
+        const th = await getOne("threads", threadId);
+        if(!th) break;
+        const label = auto ? "おまかせ " + (k + 1) + "／" + ids.length : (ids.length > 1 ? (k + 1) + "／" + ids.length : "");
+        const ok = await speak(ids[k], th, k < firstRound ? live : null, label);
+        if(!ok){ if(!run.stop) pendingGroup = { threadId:threadId, ids:ids.slice(k), auto:auto }; break; }
+      }
+    }finally{
+      run = null; send.disabled = false; showState();
+      finish();
+    }
+  }
+  // 集まりの部屋で、返事をもらう（ids がなければ、「次に返事する人」）
+  async function groupGo(ids){
+    if(run || waiting || !db) return;
+    const th = await getOne("threads", current.threadId);
+    const ms = await membersOf(th);
+    if(!ms.length){ clearProblem(); problem("まだ、だれも呼んでいません。\n上の「呼ぶ」から、ペルソナを呼んでね。", false); return; }
+    const here = id => ms.some(x => x.room.id === id);
+    let auto = false;
+    if(!ids && pendingGroup && pendingGroup.threadId === current.threadId){ ids = pendingGroup.ids; auto = pendingGroup.auto; }
+    if(!ids) ids = (th.next === ALL && ms.length > 1) ? ms.map(x => x.room.id) : [here(th.next) ? th.next : ms[0].room.id];
+    ids = ids.filter(here);
+    if(!ids.length) ids = [ms[0].room.id];
+    return groupRun(ids, { auto:auto });
+  }
+  // これまでの返事から、1回分の料金の目安を出す（まだなければ、モデルの目安）
+  function estUsd(x, msgs){
+    const mine = msgs.filter(m => m.role === "ai" && m.speaker === x.room.id && typeof m.usd === "number").slice(-3);
+    const mo = modelOf(x.model);
+    return mine.length ? mine.reduce((a, m) => a + m.usd, 0) / mine.length : (mo ? (mo.pin + mo.pout) / 1000 : 0);
+  }
+  // 「おまかせ」：ペルソナたちが、決めた回数だけ、順番に話す
+  async function openAuto(){
+    if(!db) return;
+    if(run || waiting){ toast("いま、返事を待っているところです"); return; }
+    box.blur();
+    const th = await getOne("threads", current.threadId);
+    const ms = await membersOf(th);
+    if(!ms.length){ toast("まだ、だれも呼んでいません"); return; }
+    const msgs = await loadThread(th.id);
+    // 順番は、さいごに話した人の、次の人から
+    const lastAi = msgs.slice().reverse().find(m => m.role === "ai" && m.speaker);
+    const start = lastAi ? ms.findIndex(x => x.room.id === lastAi.speaker) + 1 : 0;
+    const order = n => Array.from({ length:n }, (_, i) => ms[(start + i) % ms.length]);
+    const names = order(Math.min(ms.length, 4)).map(x => x.room.name).join(" → ") + (ms.length > 1 ? " …" : "");
+    const box2 = openPick("おまかせ", "ペルソナたちが、順番に話します。回数を選んでください。決めた回数で、自動で止まります。");
+    [1, 3, 5, 10].forEach(n => {
+      const seq = order(n), cost = seq.reduce((a, x) => a + estUsd(x, msgs), 0);
+      box2.appendChild(choice(n + "回", "料金の目安 " + yen(cost), false, async () => {
+        closePick();
+        if(!await dialog({ text:"おまかせで、" + n + "回 話してもらいますか？\n\n・順番：" + names + "\n・料金の目安：" + yen(cost) + "\n・止めたいときは「止める」を押すか、何か送ってください。", yes:"はじめる" })) return;
+        groupRun(seq.map(x => x.room.id), { auto:true });
+      }));
+    });
+  }
+
+  /* 会話の外で、ペルソナ1人に下書きを書いてもらう（みんなの日記と、書庫のまとめで使う）
+     o = { pid, kind, label, req（お願いの文）, done（書けたときにしまう）, redraw } */
+  async function groupSide(o){
+    if(!db) return false;
+    if(sideJob){ toast("いま、別の下書きを書いているところです"); return false; }
+    const threadId = current.threadId;
+    const g = await freshGroup(), th = await getOne("threads", threadId), P = await getRoom(o.pid);
+    const seat = ((th && th.members) || []).find(x => x.roomId === o.pid);
+    if(!g || !th || !P || !seat) return false;
+    const model = modelOf(seat.model);
+    if(!model){ await tell("⛵️ " + P.name + " のモデルが使えなくなりました。\n上の「呼ぶ」から、別のモデルを選んでね。"); return false; }
+    const key = keys[model.by];
+    if(!key){ await tell(COMPANY[model.by] + "のAPIキーがまだ入っていません。\n「設定」から入れてください。"); return false; }
+    if(capReached()){ await tell("今月の料金の上限（¥" + Number(prefs.capYen).toLocaleString() + "）に達しました。\n「設定」で上限を変えると、続けられます。"); return false; }
+    const use = (await loadThread(threadId)).slice(-SEND_COUNT);
+    const turns = groupTurns(use.concat([{ role:"me", text:o.req, plain:true }]), o.pid, null, g);
+    const ctl = new AbortController();
+    const wrap = el("div", "note");
+    const line = el("span", "", "");
+    let secs = 0;
+    const tick = () => { line.textContent = o.label + "…（" + secs + "秒）"; };
+    tick();
+    wrap.appendChild(line);
+    const stop = el("button", "", "止める");
+    stop.type = "button";
+    stop.addEventListener("click", async () => {
+      if(await dialog({ text:"書いてもらうのをやめますか？\n（ここまでにかかった料金は、戻りません）", yes:"やめる", no:"つづける" })) ctl.abort();
+    });
+    wrap.appendChild(stop);
+    const timer = setInterval(() => { secs++; tick(); }, 1000);
+    sideJob = { roomId:g.id, kind:o.kind, el:wrap };
+    const redraw = async () => { if(current.roomId === g.id) await o.redraw(); };
+    await redraw();
+    let ok = false;
+    try{
+      const names = (await membersOf(th)).map(x => x.room.name);
+      const r = await ASK[model.by](model, key, groupSystem(P, th, g, names, false, []), turns, ctl.signal, { think:false, search:false, mem:null });
+      await addUsage(r.usd);
+      const text = dropName(r.text, P.name).trim();
+      if(!text) throw trouble("空のまま返ってきました。もう一度ためしてください。");
+      await o.done(text, { P:P, th:th, model:model, usd:r.usd || 0, lastMsgAt:use.length ? use[use.length - 1].createdAt : Date.now() });
+      ok = true;
+    }catch(e){
+      clearInterval(timer); sideJob = null;
+      await redraw();
+      if(e && e.name === "AbortError") toast("書いてもらうのをやめました");
+      else await tell("⛵️ " + P.name + "：" + ((e && e.plain) || "うまくいきませんでした。もう一度ためしてください。") + ((e && e.detail) ? "\n\nくわしい内容： " + e.detail : ""));
+    }
+    clearInterval(timer); sideJob = null;
+    await redraw();
+    showState();
+    return ok;
+  }
+
+  /* ───────── みんなの日記（集まりの部屋の「日記」。書いてもらう人を選ぶ。押したときだけ） ─────────
+     下書きは、部屋（threads）の gDrafts に置く。保存を押したものだけ、その人の diaries に入る。 */
+  let diarySel = { threadId:"", off:new Set() };     // 「書いてもらわない」にした人
+  async function writeGroupDiaries(ids){
+    const th = await getOne("threads", current.threadId);
+    const ms = (await membersOf(th)).filter(x => ids.includes(x.room.id));
+    const msgs = await loadThread(th.id);
+    const can = ms.filter(x => msgs.some(m => m.createdAt > diaryMark(x.room, th.id)));
+    if(!ms.length){ await tell("書いてもらう人を、選んでください。"); return; }
+    if(!can.length){ await tell(msgs.length ? "前の日記のあと、この部屋ではまだ話していません。" : "この部屋には、まだ会話がありません。"); return; }
+    const cost = can.reduce((a, x) => a + estUsd(x, msgs), 0);
+    let q = can.map(x => x.room.name).join("、") + " に、日記を書いてもらいますか？\n\n・1人につき、返事1回分くらいの料金がかかります（合わせて " + yen(cost) + " くらいが目安）。\n・書いたものは、下書きとして出ます。「保存」を押すまでは、だれの日記にも残りません。";
+    if(can.length < ms.length) q += "\n\n（" + ms.filter(x => !can.includes(x)).map(x => x.room.name).join("、") + " は、前の日記のあと、まだ話していないので、書きません）";
+    if(!await dialog({ text:q, yes:"書いてもらう" })) return;
+    for(const x of can){
+      const mark = diaryMark(x.room, th.id);
+      const ok = await groupSide({ pid:x.room.id, kind:"gdiary", label:"⛵️ " + x.room.name + " が、日記を書いています",
+        req:diaryReq(x.room.name, mark),
+        redraw:async () => { if(!diaryPanel.hidden) await drawGroupDiary(); },
+        done:async (text, i) => {
+          const t = await getOne("threads", th.id);
+          if(!t) return;
+          t.gDrafts = (t.gDrafts || []).filter(d => d.roomId !== i.P.id).concat([{ roomId:i.P.id, name:i.P.name, text:text, createdAt:Date.now(), model:i.model.id, usd:i.usd, lastMsgAt:i.lastMsgAt }]);
+          await putOne("threads", t);
+        } });
+      if(!ok) return;
+    }
+    toast("下書きができました");
+  }
+  async function drawGroupDiary(){
+    const th = await getOne("threads", current.threadId);
+    if(!grp || !th) return;
+    if(diarySel.threadId !== th.id) diarySel = { threadId:th.id, off:new Set() };
+    const ms = await membersOf(th);
+    const msgs = await loadThread(th.id);
+    document.getElementById("diaryTitle").textContent = "日記（部屋：" + th.name + "）";
+    diaryBody.textContent = "";
+    const f = el("div", "field");
+    f.appendChild(el("p", "", "来ている人に、それぞれ自分の言葉で、日記を書いてもらえます。下のボタンを押したときだけ書きます。"));
+    f.appendChild(el("p", "", "・書いてもらう人は、押して選べます（もう一度押すと、外れます）。\n・保存した日記は、その人の「日記」に入って、その人の部屋でも読まれます。\n・保存しなければ、だれの記憶にも残りません。")).style.whiteSpace = "pre-line";
+    if(!ms.length) f.appendChild(el("p", "", "まだ、だれも呼んでいません。"));
+    const busyNow = sideJob && sideJob.kind === "gdiary" && sideJob.roomId === grp.id;
+    ms.forEach(x => {
+      const on = !diarySel.off.has(x.room.id);
+      const n = msgs.filter(m => m.createdAt > diaryMark(x.room, th.id)).length;
+      const b = choice((on ? "✓ " : "□ ") + x.room.name, (on ? "書いてもらう" : "書いてもらわない") + " ・ " + (diaryMark(x.room, th.id) ? "前の日記のあとの会話 " : "この部屋の会話 ") + n + " 件", on, async () => {
+        if(on) diarySel.off.add(x.room.id); else diarySel.off.delete(x.room.id);
+        await drawGroupDiary();
+      });
+      b.style.marginTop = "8px";
+      f.appendChild(b);
+    });
+    if(busyNow) f.appendChild(sideJob.el);
+    else if(ms.length){
+      const go = btn("go", "選んだ人に、日記を書いてもらう", () => writeGroupDiaries(ms.filter(x => !diarySel.off.has(x.room.id)).map(x => x.room.id)));
+      go.style.marginTop = "12px";
+      f.appendChild(go);
+    }
+    diaryBody.appendChild(f);
+    const saveDrafts = async fn => {
+      const t = await getOne("threads", th.id);
+      t.gDrafts = fn(t.gDrafts || []);
+      await putOne("threads", t);
+    };
+    (th.gDrafts || []).forEach(d => {
+      const c = el("div", "pcard main");
+      const h = el("h4", "", "⛵️ " + d.name + " の下書き");
+      h.appendChild(el("span", "off", "まだ保存していません"));
+      c.appendChild(h);
+      c.appendChild(el("p", "", dayTime(d.createdAt) + " ・ 部屋：" + th.name));
+      c.appendChild(el("p", "dtext", d.text));
+      const bar = el("div", "bar");
+      bar.appendChild(btn("small", "保存", async () => {
+        const P = await getRoom(d.roomId);
+        if(!P || isGroup(P)){ await tell("このペルソナは、もういません。"); return; }
+        if(!Array.isArray(P.diaries)) P.diaries = [];
+        P.diaries.push({ id:newId(), text:d.text, createdAt:d.createdAt, threadId:th.id, threadName:th.name, model:d.model, lastMsgAt:d.lastMsgAt });
+        await putOne("rooms", P);
+        await saveDrafts(a => a.filter(x => x.roomId !== d.roomId));
+        await drawGroupDiary(); toast("⛵️ " + P.name + " の日記に、保存しました");
+      }));
+      bar.appendChild(btn("small", "直す", async () => {
+        const r = await dialog({ text:"⛵️ " + d.name + " の日記の下書き", area:true, value:d.text, yes:"直す" });
+        if(!r || !r.text.trim()) return;
+        await saveDrafts(a => a.map(x => x.roomId === d.roomId ? Object.assign({}, x, { text:r.text.trim() }) : x));
+        await drawGroupDiary();
+      }));
+      bar.appendChild(btn("small", "もう一度書いてもらう", () => writeGroupDiaries([d.roomId])));
+      bar.appendChild(btn("small danger", "やめる", async () => {
+        if(!await dialog({ text:"⛵️ " + d.name + " の下書きを消しますか？\n元に戻せません。", yes:"消す", no:"のこす" })) return;
+        await saveDrafts(a => a.filter(x => x.roomId !== d.roomId));
+        await drawGroupDiary();
+      }));
+      c.appendChild(bar);
+      diaryBody.appendChild(c);
+    });
+  }
+
+  /* ───────── 書庫（集まれる場所の、みんなが読めるもの。作りは「記憶」と同じ） ───────── */
+  // ここまでの話を、だれかにまとめてもらう（下書き → 書庫の項目へ）
+  async function pickSummarizer(){
+    const th = await getOne("threads", current.threadId);
+    const ms = await membersOf(th);
+    const msgs = await loadThread(th.id);
+    if(!ms.length){ await tell("まだ、だれも呼んでいません。\n上の「呼ぶ」から、ペルソナを呼んでね。"); return; }
+    if(!msgs.length){ await tell("この部屋には、まだ会話がありません。"); return; }
+    const box2 = openPick("だれに、まとめてもらいますか？", "部屋「" + th.name + "」の、ここまでの話を、まとめてもらいます。下書きとして出ます。");
+    ms.forEach(x => {
+      const mo = modelOf(x.model);
+      box2.appendChild(choice("⛵️ " + x.room.name, (mo ? mo.name : "") + " ・ 料金の目安 " + yen(estUsd(x, msgs)), false, async () => {
+        closePick();
+        const g = await freshGroup();
+        let q = "⛵️ " + x.room.name + " に、ここまでの話をまとめてもらいますか？\n\n・返事1回分くらいの料金がかかります。\n・下書きとして出ます。入れる項目を選んで保存するまでは、書庫に入りません。";
+        if(msgs.length > SEND_COUNT) q += "\n\n（会話が " + msgs.length + " 件あります。AIに渡せるのは新しい " + SEND_COUNT + " 件までなので、それより前のことは入りません）";
+        if(g.sumDraft) q += "\n\n（いまの下書きは、新しいものに置きかわります）";
+        if(!await dialog({ text:q, yes:"書いてもらう" })) return;
+        await groupSide({ pid:x.room.id, kind:"sum", label:"⛵️ " + x.room.name + " が、まとめを書いています",
+          req:"【ここからは、会話の外からのお願いです】\nここまでの、みんなの会話を、短くまとめてください。この場所の書庫に置いて、あとでみんなが読み返すためのものです。\n"
+            + "・何を話したかを、ざっくりと書く。決まったことがあれば、それも書く。\n"
+            + "・5〜8文くらい。\n"
+            + "・会話に出てこなかったことは書かない。\n"
+            + "・だれが言ったかが大事なところは、名前を書く。\n"
+            + "・まとめの本文だけを書く。あいさつ、見出し、日付、かっこ書きの説明は付けない。",
+          redraw:async () => { if(!memoryPanel.hidden) await drawMemory(); },
+          done:async (text, i) => {
+            const g2 = await getRoom(g.id);
+            if(!g2) return;
+            g2.sumDraft = { text:text, createdAt:Date.now(), threadId:i.th.id, threadName:i.th.name, model:i.model.id, usd:i.usd, by:i.P.name };
+            await putOne("rooms", g2); grp = g2;
+            toast("下書きができました");
+          } });
+      }));
+    });
+  }
+  // 文章のファイルを、書庫の項目として取り込む
+  libFile.addEventListener("change", async () => {
+    const f = (libFile.files || [])[0];
+    libFile.value = "";
+    if(!f || !grp) return;
+    try{
+      const buf = await readAs(f, "buf");
+      let text = new TextDecoder("utf-8").decode(buf);
+      if(text.indexOf("�") >= 0){ try{ const t2 = new TextDecoder("shift_jis").decode(buf); if(t2.indexOf("�") < 0) text = t2; }catch(e){} }
+      text = text.replace(/^﻿/, "").replace(/\r\n?/g, "\n").replace(/\s+$/, "");
+      const name = f.name || "名前なし";
+      if(!text.trim()){ await tell("このファイルは、中身が空でした。\n（" + name + "）"); return; }
+      if(text.length > TEXT_MAX){ await tell("このファイルは長すぎます（約" + text.length.toLocaleString() + "文字）。\n取り込めるのは、" + TEXT_MAX.toLocaleString() + "文字までです。"); return; }
+      const title = await dialog({ text:"書庫に入れる、項目の名前\n（約" + text.length.toLocaleString() + "文字）", input:true, value:name.replace(/\.[A-Za-z0-9]+$/, "").slice(0, 60), yes:"取り込む" });
+      if(!title) return;
+      const g = await getRoom(grp.id);
+      if(!Array.isArray(g.memories)) g.memories = [];
+      const now = Date.now(), mode = text.length > 2000 ? "need" : "always";
+      g.memories.push({ id:newId(), title:title, text:text, show:mode === "always", mode:mode, createdAt:now, updatedAt:now });
+      await putOne("rooms", g); grp = g;
+      if(!memoryPanel.hidden) await drawMemory();
+      toast("書庫に「" + title + "」を入れました（見せ方：" + MODE_NAME[mode] + "）");
+    }catch(e){ await tell("このファイルは読めませんでした。\n（" + (f.name || "名前なし") + "）"); }
+  });
 
   /* ───────── 画面の土台（揺れの試し（3）と同じ作り） ───────── */
   let lastH = -1, lastT = "";
@@ -2967,7 +3564,16 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   async function submit(){
     let text = box.value.replace(/\s+$/, "");
     if(!text.trim()) text = "";
-    if((!text && !staged.length) || busy || waiting || !db) return;
+    if((!text && !staged.length) || busy || !db) return;
+    if(run){
+      if(!run.auto) return;
+      busy = true;
+      const r = run;
+      r.stop = true;
+      try{ if(waiting) waiting.abort(); }catch(e){}
+      await r.done;
+    }else if(waiting) return;
+    pendingGroup = null;
     busy = true;
     const m = { id:newId(), threadId:current.threadId, roomId:current.roomId, role:"me", text:text, createdAt:Date.now() };
     const recs = staged.map(s => Object.assign({}, s, { messageId:m.id, threadId:m.threadId, createdAt:m.createdAt }));
