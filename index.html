@@ -8,12 +8,12 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="apple-mobile-web-app-title" content="新しいアプリ">
 <meta name="theme-color" content="#fdf3e3">
-<title>新しいアプリ（仮）</title>
+<title>Cove</title>
 <style>
-/* 新しいアプリ（仮） 版 2.0 ── 集まれる場所（呼ぶ、次に返事する人、みんな、おまかせ、書庫、みんなの日記）、Claudeの割引（キャッシュ）、ログの取り込み、写真とファイルの添付、会話の画面、保存、ペルソナと部屋、プロンプトの切り替え、記憶（項目ごと、発言から記録、必要なときにAIが開く）、日記（ペルソナが書く。押したときだけ）、部屋のログを読んでもらう、あらすじの下書き、AIと話す（Claude・Gemini・GPT・Grok）、検索、思考、保存 */
+/* Cove（新） 版 2.1 ── 表紙とヘッダー（旧Coveと同じ見た目）、料金の内訳、設定の並び、カラーの組み合わせ、集まれる場所（呼ぶ、次に返事する人、みんな、おまかせ、書庫、みんなの日記）、Claudeの割引（キャッシュ）、ログの取り込み、写真とファイルの添付、会話の画面、保存、ペルソナと部屋、プロンプトの切り替え、記憶（項目ごと、発言から記録、必要なときにAIが開く）、日記（ペルソナが書く。押したときだけ）、部屋のログを読んでもらう、あらすじの下書き、AIと話す（Claude・Gemini・GPT・Grok）、検索、思考、保存 */
 :root{
   --sand:#faf6ee; --text:#37474f; --soft:#5d6c73; --line:#e4dccc; --sea:#3f7585;
-  --skyA:#fdf3e3; --skyB:#e8f3f5;
+  --skyA:#dff0f4; --skyB:#f6efe2;
   /* 文字欄の色（あとで部屋ごとに選べるようにする。今は AI=白、自分=水色） */
   --ai-bg:#ffffff; --ai-line:#e4dccc; --ai-text:#37474f;
   --me-bg:#eaf5f8; --me-line:#cfe4ea; --me-text:#37474f;
@@ -281,24 +281,84 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
 .hit small{ display:block; font-size:12px; color:var(--soft); }
 .sw{ width:100%; min-height:50px; text-align:left; padding:8px 14px; border-radius:14px; border:2px solid; font:inherit; font-size:16px; }
 .sw.now{ box-shadow:0 0 0 3px #7fb0bf; font-weight:700; }
-#splash{ position:absolute; inset:0; z-index:20; display:flex; align-items:center; justify-content:center; text-align:center;
-  background:linear-gradient(180deg,var(--skyA) 0%,var(--skyB) 60%,#cfe4ea 60%,#dcecef 76%,#f3e9d2 76%,#f6f0e4 100%); transition:opacity .4s; }
+#splash{ position:absolute; inset:0; z-index:20; overflow:hidden; cursor:pointer; transition:opacity .9s;
+  background:linear-gradient(to bottom,#d6edf3 0%,#f2ecdd 40%,#6ea6b6 40%,#8fc2ce 55%,#b9dde4 66%,#e8f4f5 73%,#f8f1e2 73.5%,#faf6ee 100%); }
+body.t-morning #splash{ background:linear-gradient(to bottom,#fdf0da 0%,#fbe6cb 24%,#f4e6d3 40%,#7fb0bd 40%,#a4ccd4 55%,#cfe6e8 66%,#eef7f4 73%,#f8f1e2 73.5%,#faf6ee 100%); }
+body.t-evening #splash{ background:linear-gradient(to bottom,#fbdfae 0%,#f8c493 20%,#f2a181 33%,#e58676 40%,#c97e79 40%,#dc9c88 52%,#eec0a0 64%,#f8ddc0 70%,#f6ecd8 73.5%,#f3e9d5 100%); }
+body.t-night #splash{ background:linear-gradient(to bottom,#1a2740 0%,#22334f 38%,#2c405c 40%,#223850 40%,#2a4560 55%,#3a566e 70%,#4a5a60 73.5%,#3f4a49 100%); }
 #splash.hide{ opacity:0; pointer-events:none; }
-#orb{ position:absolute; width:84px; height:84px; margin:-42px 0 0 -42px; border-radius:50%; }
-.sp-words{ position:relative; margin-top:-8vh; padding:0 20px; }
-.sp-words h2{ margin:0; font-size:34px; letter-spacing:.08em; }
-.sp-words p{ margin:8px 0 0; font-size:16px; color:var(--soft); }
-.sp-words .tap{ margin-top:28px; font-size:17px; color:var(--sea); font-weight:700; }
+#splash.hide *{ animation:none; }
+.sp-horizon{ position:absolute; left:0; right:0; top:40%; height:2px; z-index:4; background:rgba(255,255,255,.9); box-shadow:0 0 18px 4px rgba(255,255,255,.6); animation:shimmer 4s ease-in-out infinite; }
+body.t-evening .sp-horizon{ background:#ffe0b0; box-shadow:0 0 22px 6px rgba(255,205,140,.7); }
+body.t-morning .sp-horizon{ background:#fff0d6; box-shadow:0 0 20px 5px rgba(255,225,175,.6); }
+body.t-night .sp-horizon{ background:rgba(200,220,235,.5); box-shadow:0 0 14px 3px rgba(200,220,235,.35); }
+@keyframes shimmer{ 50%{ opacity:.35; } }
+.sp-words{ position:absolute; left:0; right:0; top:17%; text-align:center; z-index:5; }
+.sp-title{ font-size:42px; font-weight:700; letter-spacing:.18em; color:#33505b; text-shadow:0 1px 0 rgba(255,255,255,.5); }
+.sp-sub{ margin-top:8px; font-size:14px; color:#54707a; letter-spacing:.1em; }
+body.t-evening .sp-title{ color:#fff6e8; text-shadow:0 2px 12px rgba(120,60,45,.6); }
+body.t-evening .sp-sub{ color:#ffeeda; text-shadow:0 1px 8px rgba(120,60,45,.55); }
+body.t-morning .sp-sub{ color:#7a6a55; }
+body.t-night .sp-title{ color:#f3efe4; text-shadow:0 2px 14px rgba(0,0,10,.7); }
+body.t-night .sp-sub{ color:#cfd9e4; text-shadow:0 1px 8px rgba(0,0,10,.6); }
+.sp-sun, .sp-moon, .sp-moonpath, .sp-stars{ display:none; }
+body.t-morning .sp-sun, body.t-evening .sp-sun{ display:block; position:absolute; top:calc(40% - 26px); left:50%; transform:translateX(-50%); width:52px; height:26px; border-radius:52px 52px 0 0; z-index:3; }
+body.t-evening .sp-sun{ background:#fff0cd; box-shadow:0 0 44px 14px rgba(255,215,150,.65); }
+body.t-morning .sp-sun{ background:#fff6de; box-shadow:0 0 40px 12px rgba(255,235,190,.55); }
+body.t-night .sp-moon{ display:block; position:absolute; top:9%; right:14%; width:44px; height:44px; border-radius:50%; background:#f4ecd8; box-shadow:0 0 30px 8px rgba(244,236,216,.4); z-index:3; }
+body.t-night .sp-moonpath{ display:block; position:absolute; top:40.5%; bottom:27%; right:calc(14% + 10px); width:24px; z-index:3; background:linear-gradient(to bottom,rgba(244,236,216,.5),rgba(244,236,216,.06)); filter:blur(4px); }
+body.t-night .sp-stars{ display:block; position:absolute; top:0; left:0; right:0; height:40%; z-index:2;
+  background-image:radial-gradient(1.5px 1.5px at 12% 20%,#fff,transparent),radial-gradient(1px 1px at 28% 8%,#fff,transparent),radial-gradient(1.6px 1.6px at 40% 30%,#ffeecf,transparent),radial-gradient(1px 1px at 55% 12%,#fff,transparent),radial-gradient(1.4px 1.4px at 66% 26%,#fff,transparent),radial-gradient(1px 1px at 82% 6%,#dfe9ff,transparent),radial-gradient(1.8px 1.8px at 90% 32%,#fff,transparent),radial-gradient(1px 1px at 6% 36%,#fff,transparent),radial-gradient(1.2px 1.2px at 48% 3%,#fff,transparent),radial-gradient(1.3px 1.3px at 72% 16%,#ffeecf,transparent),radial-gradient(1px 1px at 20% 32%,#dfe9ff,transparent),radial-gradient(1.1px 1.1px at 35% 18%,#fff,transparent);
+  animation:twinkle 3.4s ease-in-out infinite; }
+@keyframes twinkle{ 50%{ opacity:.4; } }
+@media (prefers-reduced-motion: reduce){ .sp-horizon, .sp-stars{ animation:none; } }
+/* ヘッダー（旧Coveと同じ感じ：左に名前、右に絵のボタン。ボタンは枠なしの半透明の白） */
+.ttl{ display:flex; align-items:baseline; gap:8px; min-width:0; font-size:22px; font-weight:700; letter-spacing:.04em; white-space:nowrap; }
+.ttl small{ font-size:12px; font-weight:400; letter-spacing:0; color:var(--soft); }
+.ic{ flex-shrink:0; min-width:44px; min-height:44px; padding:0; border:none; border-radius:14px; background:rgba(255,255,255,.6); font:inherit; font-size:20px; display:flex; align-items:center; justify-content:center; }
+.ic:active{ background:rgba(255,255,255,.95); }
+#cost{ margin:4px 2px 0; text-align:right; font-size:12px; color:var(--soft); }
+#cost b{ color:var(--text); }
+#cost.over b{ color:#a14a3c; }
+#cost + .hl{ margin-top:6px; }
+header .plain, header .pick{ border:none; background:rgba(255,255,255,.6); }
+header .plain.on, header .plain.due{ background:#d9ecf1; box-shadow:inset 0 0 0 1.5px #9cc3cf; }
+header .tools{ border-top-color:rgba(228,220,204,.7); }
+/* 設定：会社ごとに開く、キーは閉じておく */
+.co{ width:100%; min-height:48px; display:flex; align-items:center; gap:8px; text-align:left; padding:0 14px; border:1px solid var(--line); border-radius:14px; background:#f6f0e4; color:var(--text); font:inherit; font-size:16px; font-weight:700; }
+.co small{ margin-left:auto; font-size:13px; font-weight:400; color:var(--soft); }
+#hideList .co{ margin-top:8px; }
+.keys summary{ min-height:44px; display:flex; align-items:center; font-size:17px; font-weight:700; cursor:pointer; }
+.keys .field{ border:none; border-radius:0; padding:0; background:none; margin-top:16px; }
+.keys .kb{ display:flex; flex-direction:column; gap:10px; margin-top:16px; }
+.urow{ display:flex; justify-content:space-between; gap:12px; padding:6px 2px; font-size:15px; border-top:1px solid var(--line); }
+.urow:first-child{ border-top:none; }
+.urow.sum{ font-weight:700; font-size:16px; }
+/* カラー：見本と、組み合わせ */
+.cprev{ border:1px solid var(--line); border-radius:16px; padding:12px; display:flex; flex-direction:column; gap:8px; }
+.cprev span{ max-width:82%; padding:8px 12px; border:1px solid; border-radius:16px; font-size:15px; line-height:1.6; }
+.cprev .pm{ align-self:flex-end; border-bottom-right-radius:5px; }
+.cprev .pi{ align-self:flex-start; border-bottom-left-radius:5px; }
+.cset{ width:100%; text-align:left; padding:8px; border:1px solid var(--line); border-radius:18px; background:#fffdf9; color:var(--text); font:inherit; display:flex; flex-direction:column; gap:6px; }
+.cset.now{ box-shadow:0 0 0 3px #7fb0bf; }
+.cset small{ padding:0 4px; font-size:13px; color:var(--soft); }
+.cset .cprev{ padding:8px; gap:6px; }
+.cset .cprev span{ padding:4px 10px; font-size:13px; }
 </style>
 </head>
 <body>
 <div id="app">
   <header>
     <div class="hl">
-      <button id="openPersonas" class="pick" type="button"><span id="pName" class="pt">じゅんび中…</span><span class="pa">▾</span></button>
+      <div class="ttl">🌊 Cove <small id="tide"></small><small id="ver">版 2.1</small></div>
       <span class="gap"></span>
-      <span id="ver">版 2.0</span>
-      <button id="openSettings" class="plain" type="button">設定</button>
+      <button id="openCover" class="ic" type="button" aria-label="表紙へ" title="表紙へ">🏝️</button>
+      <button id="openFinder" class="ic" type="button" aria-label="さがす" title="さがす">🔍</button>
+      <button id="openSettings" class="ic" type="button" aria-label="設定" title="設定">⚙️</button>
+    </div>
+    <div id="cost"></div>
+    <div class="hl">
+      <button id="openPersonas" class="pick" type="button"><span id="pName" class="pt">じゅんび中…</span><span class="pa">▾</span></button>
     </div>
     <div class="hl">
       <button id="openRoomList" class="pick big" type="button"><span id="rName" class="pt">部屋：</span><span class="pa">▾</span></button>
@@ -306,7 +366,6 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       <button id="newRoom" class="mk" type="button">＋ 新しい部屋</button>
     </div>
     <div class="bar tools">
-      <button id="openFinder" class="plain" type="button">さがす</button>
       <button id="openCall" class="plain" type="button" hidden>呼ぶ</button>
       <button id="openPersona" class="plain" type="button">プロンプト</button>
       <button id="openMemory" class="plain" type="button">記憶</button>
@@ -389,29 +448,15 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     </div>
     <div class="pbody">
       <div class="field">
-        <h3>ClaudeのAPIキー</h3>
-        <p>Claude Console で作ったキーを貼ってください。</p>
-        <input id="keyClaude" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="sk-ant-…">
+        <h3>今月の料金</h3>
+        <div id="useLine"></div>
+        <p style="margin-top:12px">アプリが計算した目安です（1ドル162円）。請求書の金額とは、少し違うことがあります。</p>
+        <h3 style="margin-top:14px">月の料金の上限</h3>
+        <input id="capYen" type="number" inputmode="numeric" min="0" step="100">
+        <p style="margin-top:8px">円で入れます。0にすると、上限なしです。上限に達すると、その月は返事をもらえなくなります。月が変わると、使用額は0にもどります。</p>
       </div>
       <div class="field">
-        <h3>GeminiのAPIキー</h3>
-        <p>Google AI Studio で作ったキーを貼ってください。使わないなら、空のままで大丈夫です。</p>
-        <input id="keyGemini" type="password" autocomplete="off" autocapitalize="off" spellcheck="false">
-      </div>
-      <div class="field">
-        <h3>OpenAIのAPIキー</h3>
-        <p>GPTを使うときに入れます。OpenAIの管理画面で作ったキーを貼ってください。使わないなら、空のままで大丈夫です。</p>
-        <input id="keyOpenai" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="sk-…">
-      </div>
-      <div class="field">
-        <h3>GrokのAPIキー</h3>
-        <p>xAIの管理画面で作ったキーを貼ってください。使わないなら、空のままで大丈夫です。</p>
-        <input id="keyXai" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="xai-…">
-      </div>
-      <button id="showKeys" class="small" type="button">キーを見えるようにする</button>
-      <button id="saveKeys" class="go" type="button">キーを保存する</button>
-      <div class="field">
-        <h3>モデルの表示／非表示</h3>
+        <h3>モデル</h3>
         <p>使わないモデルを、選ぶ一覧からかくせます。会話の記録には影響しません。いま使っているモデルは、かくしても、その会話では選んだままです。</p>
         <div id="hideList"></div>
       </div>
@@ -423,12 +468,6 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
           <button class="tog" type="button" data-fs="19">大きめ</button>
           <button class="tog" type="button" data-fs="21">特大</button>
         </div>
-      </div>
-      <div class="field">
-        <h3>月の料金の上限</h3>
-        <p id="useLine"></p>
-        <input id="capYen" type="number" inputmode="numeric" min="0" step="100">
-        <p style="margin-top:8px">円で入れます。0にすると、上限なしです。上限に達すると、その月は返事をもらえなくなります。月が変わると、使用額は0にもどります。</p>
       </div>
       <div class="field">
         <h3>まるごと保存と復元</h3>
@@ -444,10 +483,34 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
         <input id="importFile" type="file" multiple accept=".json,application/json" hidden>
         <p style="margin-top:10px">ほかのアプリの会話を、部屋として足します。いまある会話は、消えません。料金はかかりません。<br>いま読めるのは、GPTの形のJSONファイルです。</p>
       </div>
-      <div class="field">
-        <h3>キーのあつかい</h3>
-        <p>キーは、このiPadの中だけに保存します。会話を送るときに、そのAIの会社にだけ送ります。<br>料金は、1ドル162円で計算した目安です。</p>
+      <details id="keysBox" class="field keys">
+        <summary>APIキー（押すと開きます）</summary>
+        <p style="margin-top:6px">キーは、このiPadの中だけに保存します。会話を送るときに、そのAIの会社にだけ送ります。<br>料金は、1ドル162円で計算した目安です。</p>
+        <div class="field">
+        <h3>ClaudeのAPIキー</h3>
+        <p>Claude Console で作ったキーを貼ってください。</p>
+        <input id="keyClaude" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="sk-ant-…">
       </div>
+        <div class="field">
+        <h3>GeminiのAPIキー</h3>
+        <p>Google AI Studio で作ったキーを貼ってください。使わないなら、空のままで大丈夫です。</p>
+        <input id="keyGemini" type="password" autocomplete="off" autocapitalize="off" spellcheck="false">
+      </div>
+        <div class="field">
+        <h3>OpenAIのAPIキー</h3>
+        <p>GPTを使うときに入れます。OpenAIの管理画面で作ったキーを貼ってください。使わないなら、空のままで大丈夫です。</p>
+        <input id="keyOpenai" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="sk-…">
+      </div>
+        <div class="field">
+        <h3>GrokのAPIキー</h3>
+        <p>xAIの管理画面で作ったキーを貼ってください。使わないなら、空のままで大丈夫です。</p>
+        <input id="keyXai" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" placeholder="xai-…">
+      </div>
+        <div class="kb">
+          <button id="showKeys" class="small" type="button">キーを見えるようにする</button>
+          <button id="saveKeys" class="go" type="button">キーを保存する</button>
+        </div>
+      </details>
       <div class="field">
         <h3>アプリのようす</h3>
         <p id="state"></p>
@@ -475,7 +538,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
         <button id="closeColorsX" class="x" type="button" aria-label="閉じる">✕</button>
       </div>
       <div class="cb">
-        <p class="hint">ペルソナごとに、文字欄と背景の色を選べます。選ぶと、すぐ変わります。</p>
+        <p class="hint">ペルソナごとに、文字欄と背景の色を選べます。選ぶと、すぐ変わります。背景を変えるときは、「組み合わせで選ぶ」からが、かんたんです。</p>
         <div id="colorsList" class="mlist"></div>
       </div>
       <div class="cf"><button id="closeColors" class="close2" type="button">閉じる</button></div>
@@ -500,11 +563,14 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     </div>
   </section>
   <div id="splash" aria-label="表紙">
-    <div id="orb"></div>
+    <div class="sp-stars"></div>
+    <div class="sp-moon"></div>
+    <div class="sp-moonpath"></div>
+    <div class="sp-sun"></div>
+    <div class="sp-horizon"></div>
     <div class="sp-words">
-      <h2>新しいアプリ</h2>
-      <p>（仮）</p>
-      <p class="tap">タップして はじめる</p>
+      <div class="sp-title">Cove</div>
+      <div class="sp-sub">断崖に抱かれた入り江</div>
     </div>
   </div>
   <div id="toast" role="status" aria-live="polite"></div>
@@ -523,7 +589,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
 <script>
 (function(){
   "use strict";
-  const VERSION = "2.0";
+  const VERSION = "2.1";
   const app = document.getElementById("app");
   const list = document.getElementById("list");
   const box = document.getElementById("msg");
@@ -580,7 +646,8 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
 
   /* ───────── モデルの一覧（ここ1か所にまとめる） ─────────
      pin / pout は、100万トークンあたりの料金（ドル）。
-     Claude は公式の料金表で 2026年11月11日に確認。Gemini は 2026年10月末の情報で、公式ページでは未確認。 */
+     Claude は公式の料金表で 2026年11月11日に確認。Gemini は 2026年10月末の情報で、公式ページでは未確認。
+     Gemini 4 Hydrogen は、Google の発表（2026年11月12日）の料金。モデルの名前（id）は、AI Studio のリンクから。 */
   const RATE = 162;            // 1ドル = 162円 で計算（今のCoveの表示に合わせた）
   const SEND_COUNT = 40;       // AIに送る発言の数
   const SEND_STEP = 20;        // Claudeの割引のため、古い発言は1件ずつではなく、この数ずつまとめて外す（送るのは 40〜59件）
@@ -612,6 +679,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     { id:"claude-haiku-5-5",  by:"claude", name:"Claude Haiku 5.5",  pin:0.1, pout:0.5, note:"軽くて速い・最新" },
     { id:"claude-haiku-4-5-20251001", by:"claude", name:"Claude Haiku 4.5", pin:1, pout:5, note:"軽くて速い" },
     { id:"gemini-4-argon",         by:"gemini", name:"Gemini 4 Argon",        pin:2,    pout:10,   note:"Gemini最上位・12月1日に倍額・有料枠のみ" },
+    { id:"gemini-4-hydrogen",      by:"gemini", name:"Gemini 4 Hydrogen",     pin:1.5,  pout:7.5,  note:"速い・11月12日に出た新しいモデル" },
     { id:"gemini-3.8-flash",       by:"gemini", name:"Gemini 3.8 Flash",      pin:0.75, pout:3.75, note:"Flash最新・2027年1月に倍額" },
     { id:"gemini-3.6-flash",       by:"gemini", name:"Gemini 3.6 Flash",      pin:0.75, pout:3.75, note:"2027年1月に倍額" },
     { id:"gemini-3.1-pro-preview", by:"gemini", name:"Gemini 3.1 Pro",        pin:2,    pout:12,   note:"Pro（プレビュー版・有料枠のみ）" },
@@ -987,35 +1055,24 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
 
   /* ───────── 空の色（朝・昼・夕方・夜。いつも明るい画面） ───────── */
   const SKIES = [
-    { from:5,  name:"朝",   a:"#fdf3e3", b:"#e8f3f5" },
-    { from:10, name:"昼",   a:"#e3f2f8", b:"#f3f8ef" },
-    { from:16, name:"夕方", a:"#fde4d3", b:"#f4e6ee" },
-    { from:19, name:"夜",   a:"#e4e7f5", b:"#eef0f7" }
+    { cls:"t-morning", label:"朝の入り江", a:"#fdf3e3", b:"#e8f3f5" },     // 5時〜7時
+    { cls:"t-day",     label:"昼の入り江", a:"#dff0f4", b:"#f6efe2" },     // 7時〜16時
+    { cls:"t-evening", label:"夕の入り江", a:"#f7dcc3", b:"#e4d3e0" },     // 16時〜19時
+    { cls:"t-night",   label:"夜の入り江", a:"#c4d3dc", b:"#dfe2ea" }      // 19時〜5時
   ];
   function paintSky(){
     const h = new Date().getHours();
-    let sky = SKIES[SKIES.length - 1];
-    for(const s of SKIES){ if(h >= s.from) sky = s; }
-    if(h < SKIES[0].from) sky = SKIES[SKIES.length - 1];
+    const sky = SKIES[(h >= 5 && h < 7) ? 0 : (h >= 7 && h < 16) ? 1 : (h >= 16 && h < 19) ? 2 : 3];
     const root = document.documentElement.style;
     root.setProperty("--skyA", sky.a);
     root.setProperty("--skyB", sky.b);
+    SKIES.forEach(x => document.body.classList.toggle(x.cls, x === sky));     // 表紙の絵も、これで変わる
+    document.getElementById("tide").textContent = sky.label;
     const m = document.querySelector('meta[name="theme-color"]');
     if(m) m.setAttribute("content", sky.a);
   }
   paintSky();
   setInterval(paintSky, 5 * 60 * 1000);
-  function paintOrb(){
-    const h = new Date().getHours(), o = document.getElementById("orb");
-    let c, left, top;
-    if(h >= 5 && h < 10){ c = "#fbdca0"; left = "22%"; top = "30%"; }
-    else if(h >= 10 && h < 16){ c = "#fff2b8"; left = "50%"; top = "14%"; }
-    else if(h >= 16 && h < 19){ c = "#f6a98a"; left = "76%"; top = "34%"; }
-    else{ c = "#f4f1e6"; left = "70%"; top = "20%"; }
-    o.style.background = c; o.style.left = left; o.style.top = top;
-    o.style.boxShadow = "0 0 60px 22px " + c + "99";
-  }
-  paintOrb();
 
   /* ───────── 保存の入れ物（この iPad の中だけ。IndexedDB を使う） ─────────
      部屋 → スレッド → 発言 の形。記憶などは、あとの版で入れ物を足す。
@@ -1303,15 +1360,43 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   let keys = { claude:"", gemini:"", openai:"", xai:"" };
   let prefs = { lastModel:DEFAULT_MODEL, hidden:[], fs:17, think:false, capYen:1600 };
   const savePrefs = () => putOne("meta", { key:"prefs", lastModel:prefs.lastModel, hidden:prefs.hidden, fs:prefs.fs, think:prefs.think, capYen:prefs.capYen });
-  let usage = { month:"", usd:0 };
+  let usage = { month:"", usd:0, by:{} };     // by は、会社ごとの内訳（claude、gemini、openai、xai、other）
   let backup = { last:0, level:0 };
   const monthKey = () => { const d = new Date(); return d.getFullYear() + "-" + two(d.getMonth() + 1); };
-  const usageNow = () => usage.month === monthKey() ? usage : { month:monthKey(), usd:0 };
+  const usageNow = () => usage.month === monthKey() ? usage : { month:monthKey(), usd:0, by:{} };
   const capReached = () => prefs.capYen > 0 && usageNow().usd * RATE >= prefs.capYen;
-  async function addUsage(usd){
+  async function addUsage(usd, by){
     const u = usageNow();
-    usage = { month:u.month, usd:u.usd + (usd || 0) };
-    try{ await putOne("meta", { key:"usage", month:usage.month, usd:usage.usd }); }catch(e){}
+    const b = Object.assign({}, u.by);
+    const k = COMPANY[by] ? by : "other";
+    b[k] = (b[k] || 0) + (usd || 0);
+    usage = { month:u.month, usd:u.usd + (usd || 0), by:b };
+    try{ await putOne("meta", { key:"usage", month:usage.month, usd:usage.usd, by:usage.by }); }catch(e){}
+    showCost();
+  }
+  // ヘッダーの「今月 ≈¥◯ / 上限 ¥◯」
+  function showCost(){
+    const c = document.getElementById("cost"), u = usageNow();
+    c.textContent = "今月 ";
+    c.appendChild(el("b", "", yen(u.usd)));
+    c.appendChild(document.createTextNode(prefs.capYen > 0 ? " / 上限 ¥" + Number(prefs.capYen).toLocaleString() : "（上限なし）"));
+    c.className = capReached() ? "over" : "";
+  }
+  // 内訳を持っていない月（前の版で使った分）は、残っている会話から、会社ごとに数え直す。分からない分は「その他」
+  async function fillUsageBy(){
+    if(usage.month !== monthKey() || !(usage.usd > 0)) return;
+    const d = new Date(), start = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+    const b = {};
+    (await getAll("messages")).forEach(m => {
+      if(m.role !== "ai" || typeof m.usd !== "number" || !(m.createdAt >= start)) return;
+      const mo = modelOf(m.model), k = mo ? mo.by : "other";
+      b[k] = (b[k] || 0) + m.usd;
+    });
+    const sum = Object.keys(b).reduce((a, k) => a + b[k], 0);
+    if(sum > usage.usd){ Object.keys(b).forEach(k => { b[k] = b[k] * usage.usd / sum; }); }
+    else if(usage.usd - sum > 1e-9) b.other = (b.other || 0) + (usage.usd - sum);
+    usage = { month:usage.month, usd:usage.usd, by:b };
+    try{ await putOne("meta", { key:"usage", month:usage.month, usd:usage.usd, by:usage.by }); }catch(e){}
   }
   async function loadSettings(){
     const k = await getOne("meta", "keys");
@@ -1325,7 +1410,11 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
       if(typeof p.capYen === "number") prefs.capYen = p.capYen;
     }
     const us = await getOne("meta", "usage");
-    if(us) usage = { month:us.month || "", usd:us.usd || 0 };
+    if(us){
+      usage = { month:us.month || "", usd:us.usd || 0, by:us.by || {} };
+      if(!us.by) await fillUsageBy();
+    }
+    showCost();
     const bk = await getOne("meta", "backup");
     if(bk) backup = { last:bk.last || 0, level:bk.level || 0 };
   }
@@ -1349,7 +1438,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   function showHint(){
     if(count === 0 && !hint){
       hint = note((keys.claude || keys.gemini || keys.openai || keys.xai) ? "ここから会話を始められます。"
-        : "まだAPIキーが入っていません。\n上の「設定」からキーを入れると、AIと話せます。");
+        : "まだAPIキーが入っていません。\n右上の ⚙️（設定）からキーを入れると、AIと話せます。");
       hint.style.whiteSpace = "pre-line";
     }else if(count > 0 && hint){ hint.remove(); hint = null; }
   }
@@ -1578,7 +1667,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     const model = modelOf(await currentModelId());
     if(!model){ problem("このモデルは使えなくなりました。\n入力欄の上の「モデル」から、別のモデルを選んでね。", false); return; }
     const key = keys[model.by];
-    if(!key){ problem(COMPANY[model.by] + "のAPIキーがまだ入っていません。\n上の「設定」から入れてください。", true); return; }
+    if(!key){ problem(COMPANY[model.by] + "のAPIキーがまだ入っていません。\n右上の ⚙️（設定）から入れてください。", true); return; }
     if(capReached()){ problem("今月の料金の上限（¥" + Number(prefs.capYen).toLocaleString() + "）に達しました。\n「設定」で上限を変えると、続けられます。", true); return; }
     const room = await getRoom(roomId);
     const th = await getOne("threads", threadId);
@@ -1623,7 +1712,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
         opened:mem ? mem.opened.slice() : [], logsRead:mem ? mem.logs.slice() : [], memFail:!!(mem && mem.failed) };
       if(shown.n) m.sawFiles = shown.n;
       await saveMessage(m);
-      await addUsage(r.usd);
+      await addUsage(r.usd, model.by);
       // 「もう一度見せる」は、1回見せたら元にもどす
       for(const id of shown.ids){
         try{
@@ -1729,9 +1818,52 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   const colorsSheet = document.getElementById("colors");
   const colorsList = document.getElementById("colorsList");
   let colorRoom = null;
+  // 背景に合わせた、見やすい組み合わせ（背景、わたしの文字欄、AIの文字欄）
+  const SETS = [
+    { bg:"もとの色", me:"水色", ai:"白" },
+    { bg:"白",       me:"水色", ai:"砂色" },
+    { bg:"水色",     me:"白",   ai:"黄色" },
+    { bg:"ピンク",   me:"白",   ai:"砂色" },
+    { bg:"オレンジ", me:"白",   ai:"水色" },
+    { bg:"黄色",     me:"白",   ai:"緑" },
+    { bg:"緑",       me:"白",   ai:"黄色" },
+    { bg:"うす紫",   me:"白",   ai:"ピンク" }
+  ];
+  // 色の見本（背景の上に、文字欄を2つ）
+  function colorPreview(c, small){
+    const me = palOf(c.me), ai = palOf(c.ai);
+    const p = el("div", "cprev");
+    p.style.background = backOf(c.bg).bg;
+    const a = el("span", "pi", small ? "AI" : "AIの文字欄は、こう見えます");
+    a.style.background = ai.bg; a.style.borderColor = ai.line; a.style.color = ai.text;
+    const m = el("span", "pm", small ? "わたし" : "わたしの文字欄は、こう見えます");
+    m.style.background = me.bg; m.style.borderColor = me.line; m.style.color = me.text;
+    p.appendChild(a); p.appendChild(m);
+    return p;
+  }
   function drawColors(){
     colorsList.textContent = "";
     const c = Object.assign({ me:"水色", ai:"白" }, colorRoom.colors);
+    colorsList.appendChild(el("p", "group", "いまの色"));
+    colorsList.appendChild(colorPreview(c, false));
+    colorsList.appendChild(el("p", "group", "組み合わせで選ぶ（背景に合う色が、そろって変わります）"));
+    SETS.forEach(st => {
+      const now = backOf(c.bg).name === st.bg && c.me === st.me && c.ai === st.ai;
+      const b = el("button", "cset" + (now ? " now" : ""));
+      b.type = "button";
+      b.appendChild(colorPreview(st, true));
+      b.appendChild(el("small", "", "背景：" + st.bg + " ／ わたし：" + st.me + " ／ AI：" + st.ai + (now ? "（いま）" : "")));
+      b.addEventListener("click", async () => {
+        colorRoom.colors = { me:st.me, ai:st.ai, bg:st.bg };
+        try{
+          await putOne("rooms", colorRoom);
+          if(current.roomId === colorRoom.id) await applyColors();
+          drawColors();
+        }catch(e){ tell("色を保存できませんでした。もう一度ためしてください。"); }
+      });
+      colorsList.appendChild(b);
+    });
+    colorsList.appendChild(el("p", "group", "1つずつ選ぶ"));
     [["me", "わたしの文字欄"], ["ai", "AIの文字欄"]].forEach(g => {
       colorsList.appendChild(el("p", "group", g[1]));
       PALETTE.forEach(p => {
@@ -1818,6 +1950,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   const splash = document.getElementById("splash");
   let reminded = false;
   splash.addEventListener("click", () => { splash.classList.add("hide"); backupRemind(); });
+  document.getElementById("openCover").addEventListener("click", () => { box.blur(); paintSky(); splash.classList.remove("hide"); });
 
   /* ───────── さがす ───────── */
   const finder = document.getElementById("finder");
@@ -1865,13 +1998,23 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   const modelsPanel = document.getElementById("models");
   const modelList = document.getElementById("modelList");
   let modelPick = null;     // 入っているときは、部屋のモデルではなく、ここに渡された相手のモデルを選ぶ（集まりの「呼ぶ」）
-  async function drawModels(){
+  let openCo = null;        // モデルの小窓で、開いている会社（開くたびに、いまのモデルの会社だけ開く）
+  async function drawModels(reset){
     const nowId = modelPick ? modelPick.nowId : await currentModelId();
+    const nowMo = modelOf(nowId);
+    if(reset || !openCo) openCo = new Set([nowMo ? nowMo.by : "claude"]);
     modelList.textContent = "";
-    if(!modelOf(nowId)) modelList.appendChild(note("このモデルは使えなくなりました。別のモデルを選んでね。"));
+    if(!nowMo) modelList.appendChild(note("このモデルは使えなくなりました。別のモデルを選んでね。"));
     ["claude", "gemini", "openai", "xai"].forEach(by => {
-      modelList.appendChild(el("p", "group", COMPANY[by] + (keys[by] ? "" : "（APIキーがまだ入っていません）")));
-      MODELS.filter(m => m.by === by && (m.id === nowId || !prefs.hidden.includes(m.id))).forEach(m => {
+      const mine = MODELS.filter(m => m.by === by && (m.id === nowId || !prefs.hidden.includes(m.id)));
+      const open = openCo.has(by);
+      const head = el("button", "co", (open ? "▾ " : "▸ ") + COMPANY[by]);
+      head.type = "button";
+      head.appendChild(el("small", "", (keys[by] ? "" : "キーがまだ ・ ") + mine.length + "個"));
+      head.addEventListener("click", () => { if(open) openCo.delete(by); else openCo.add(by); drawModels(); });
+      modelList.appendChild(head);
+      if(!open) return;
+      mine.forEach(m => {
         const b = el("button", "model" + (m.id === nowId ? " now" : ""));
         b.type = "button";
         const left = el("span", "mname", m.name);
@@ -1900,7 +2043,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     box.blur();
     try{
       modelPick = null;
-      await drawModels(); modelsPanel.hidden = false;
+      await drawModels(true); modelsPanel.hidden = false;
       const cur = modelList.querySelector(".now");
       if(cur) cur.scrollIntoView({ block:"center" });
     }
@@ -1925,7 +2068,12 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   function paintSettings(){
     fsBtns.forEach(b => { b.className = "tog " + (Number(b.dataset.fs) === prefs.fs ? "on" : "off"); });
     capInput.value = prefs.capYen;
-    useLine.textContent = "今月の使用額： " + yen(usageNow().usd) + (prefs.capYen > 0 ? "（上限 ¥" + Number(prefs.capYen).toLocaleString() + "）" : "（上限なし）");
+    useLine.textContent = "";
+    const u = usageNow(), row = (k, v, cls) => { const r = el("div", "urow" + (cls || "")); r.appendChild(el("span", "", k)); r.appendChild(el("span", "", v)); useLine.appendChild(r); };
+    ["claude", "gemini", "openai", "xai"].forEach(k => row(COMPANY[k], yen(u.by[k] || 0)));
+    if(u.by.other > 1e-9) row("その他（どの会社か分からない分）", yen(u.by.other));
+    row("合計", yen(u.usd) + (prefs.capYen > 0 ? " ／ 上限 ¥" + Number(prefs.capYen).toLocaleString() : "（上限なし）"), " sum");
+    showCost();
     backupLine.textContent = backup.last ? "さいごの保存： " + when(backup.last) : "まだ、まるごと保存をしていません。";
   }
   document.getElementById("openSettings").addEventListener("click", () => {
@@ -1933,12 +2081,25 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     box.blur();
     KEYDEF.forEach((d, i) => { keyInputs[i].value = keys[d[0]]; keyInputs[i].type = "password"; });
     showKeys.textContent = "キーを見えるようにする";
+    hideOpen = new Set(); document.getElementById("keysBox").open = false;
     drawHide(); paintSettings();
     settingsPanel.hidden = false;
   });
+  let hideOpen = new Set();     // 設定の「モデル」で、開いている会社
   function drawHide(){
     hideList.textContent = "";
-    MODELS.forEach(m => {
+    ["claude", "gemini", "openai", "xai"].forEach(by => {
+      const mine = MODELS.filter(m => m.by === by), open = hideOpen.has(by);
+      const head = el("button", "co", (open ? "▾ " : "▸ ") + COMPANY[by]);
+      head.type = "button";
+      head.appendChild(el("small", "", "表示中 " + mine.filter(m => !prefs.hidden.includes(m.id)).length + "／" + mine.length));
+      head.addEventListener("click", () => { if(open) hideOpen.delete(by); else hideOpen.add(by); drawHide(); });
+      hideList.appendChild(head);
+      if(open) mine.forEach(drawHideRow);
+    });
+  }
+  function drawHideRow(m){
+    {
       const row = el("div", "hrow");
       const name = el("span", "mname", m.name);
       name.appendChild(el("small", "", m.id));
@@ -1955,10 +2116,12 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
         prefs.hidden = off ? prefs.hidden.filter(x => x !== m.id) : prefs.hidden.concat(m.id);
         paint();
         try{ await savePrefs(); }catch(e){ tell("保存できませんでした。もう一度ためしてください。"); }
+        const hd = row.parentNode && Array.prototype.find.call(hideList.querySelectorAll(".co"), x => x.textContent.indexOf(COMPANY[m.by]) >= 0);
+        if(hd){ const mine = MODELS.filter(x => x.by === m.by); hd.querySelector("small").textContent = "表示中 " + mine.filter(x => !prefs.hidden.includes(x.id)).length + "／" + mine.length; }
       });
       row.appendChild(name); row.appendChild(t);
       hideList.appendChild(row);
-    });
+    }
   }
   showKeys.addEventListener("click", () => {
     const hide = keyInputs[0].type !== "password";
@@ -2717,7 +2880,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     await redraw();
     try{
       const r = await ASK[model.by](model, key, systemFor(room, promptFor(room, th), false), turns, ctl.signal, { think:false, search:false, mem:null });
-      await addUsage(r.usd);
+      await addUsage(r.usd, model.by);
       const text = (r.text || "").trim();
       if(!text) throw trouble("空のまま返ってきました。もう一度ためしてください。");
       const now = await getRoom(roomId);
@@ -2952,7 +3115,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
             toast(room.name + " は、" + m.name + " にしました");
             await openCall();
           } };
-          await drawModels(); modelsPanel.hidden = false;
+          await drawModels(true); modelsPanel.hidden = false;
           const cur = modelList.querySelector(".now");
           if(cur) cur.scrollIntoView({ block:"center" });
         }));
@@ -3040,7 +3203,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     const model = modelOf(seat.model);
     if(!model){ problem("⛵️ " + P.name + " のモデルが使えなくなりました。\n上の「呼ぶ」から、別のモデルを選んでね。", false); return false; }
     const key = keys[model.by];
-    if(!key){ problem(COMPANY[model.by] + "のAPIキーがまだ入っていません。\n上の「設定」から入れてください。", true); return false; }
+    if(!key){ problem(COMPANY[model.by] + "のAPIキーがまだ入っていません。\n右上の ⚙️（設定）から入れてください。", true); return false; }
     if(capReached()){ problem("今月の料金の上限（¥" + Number(prefs.capYen).toLocaleString() + "）に達しました。\n「設定」で上限を変えると、続けられます。", true); return false; }
     const canUse = (model.by === "claude" || model.by === "gemini") && !/gemma/i.test(model.id);
     const opt = { think:prefs.think && canUse, search:!!th.search && canUse };
@@ -3087,7 +3250,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
         opened:mem ? mem.opened.slice() : [], logsRead:mem ? mem.logs.slice() : [], memFail:!!(mem && mem.failed) };
       if(shown.n) m.sawFiles = shown.n;
       await saveMessage(m);
-      await addUsage(r.usd);
+      await addUsage(r.usd, model.by);
       for(const id of shown.ids){
         try{
           const x = await getOne("messages", id);
@@ -3234,7 +3397,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
     try{
       const names = (await membersOf(th)).map(x => x.room.name);
       const r = await ASK[model.by](model, key, groupSystem(P, th, g, names, false, []), turns, ctl.signal, { think:false, search:false, mem:null });
-      await addUsage(r.usd);
+      await addUsage(r.usd, model.by);
       const text = dropName(r.text, P.name).trim();
       if(!text) throw trouble("空のまま返ってきました。もう一度ためしてください。");
       await o.done(text, { P:P, th:th, model:model, usd:r.usd || 0, lastMsgAt:use.length ? use[use.length - 1].createdAt : Date.now() });
