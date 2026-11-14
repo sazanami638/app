@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#fdf3e3">
 <title>Cove</title>
 <style>
-/* Cove（新） 版 2.1 ── 表紙とヘッダー（旧Coveと同じ見た目）、料金の内訳、設定の並び、カラーの組み合わせ、集まれる場所（呼ぶ、次に返事する人、みんな、おまかせ、書庫、みんなの日記）、Claudeの割引（キャッシュ）、ログの取り込み、写真とファイルの添付、会話の画面、保存、ペルソナと部屋、プロンプトの切り替え、記憶（項目ごと、発言から記録、必要なときにAIが開く）、日記（ペルソナが書く。押したときだけ）、部屋のログを読んでもらう、あらすじの下書き、AIと話す（Claude・Gemini・GPT・Grok）、検索、思考、保存 */
+/* Cove（新） 版 2.2 ── Room（一覧に別々に並ぶ。書庫と呼ぶ人は Room ごと）、「保存・コピー」、背景と同じ色の文字欄を少し濃く、表紙とヘッダー（旧Coveと同じ見た目）、料金の内訳、設定の並び、Room（旧「集まれる場所」。呼ぶ、次に返事する人、みんな、おまかせ、書庫、みんなの日記）、Claudeの割引（キャッシュ）、ログの取り込み、写真とファイルの添付、会話の画面、保存、ペルソナと部屋、プロンプトの切り替え、記憶（項目ごと、発言から記録、必要なときにAIが開く）、日記（ペルソナが書く。押したときだけ）、部屋のログを読んでもらう、あらすじの下書き、AIと話す（Claude・Gemini・GPT・Grok）、検索、思考、保存 */
 :root{
   --sand:#faf6ee; --text:#37474f; --soft:#5d6c73; --line:#e4dccc; --sea:#3f7585;
   --skyA:#dff0f4; --skyB:#f6efe2;
@@ -321,6 +321,8 @@ body.t-night .sp-stars{ display:block; position:absolute; top:0; left:0; right:0
 #cost b{ color:var(--text); }
 #cost.over b{ color:#a14a3c; }
 #cost + .hl{ margin-top:6px; }
+.hl[hidden]{ display:none; }
+#outSheet .cb{ display:flex; flex-direction:column; gap:10px; padding-bottom:20px; }
 header .plain, header .pick{ border:none; background:rgba(255,255,255,.6); }
 header .plain.on, header .plain.due{ background:#d9ecf1; box-shadow:inset 0 0 0 1.5px #9cc3cf; }
 header .tools{ border-top-color:rgba(228,220,204,.7); }
@@ -334,23 +336,13 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
 .urow{ display:flex; justify-content:space-between; gap:12px; padding:6px 2px; font-size:15px; border-top:1px solid var(--line); }
 .urow:first-child{ border-top:none; }
 .urow.sum{ font-weight:700; font-size:16px; }
-/* カラー：見本と、組み合わせ */
-.cprev{ border:1px solid var(--line); border-radius:16px; padding:12px; display:flex; flex-direction:column; gap:8px; }
-.cprev span{ max-width:82%; padding:8px 12px; border:1px solid; border-radius:16px; font-size:15px; line-height:1.6; }
-.cprev .pm{ align-self:flex-end; border-bottom-right-radius:5px; }
-.cprev .pi{ align-self:flex-start; border-bottom-left-radius:5px; }
-.cset{ width:100%; text-align:left; padding:8px; border:1px solid var(--line); border-radius:18px; background:#fffdf9; color:var(--text); font:inherit; display:flex; flex-direction:column; gap:6px; }
-.cset.now{ box-shadow:0 0 0 3px #7fb0bf; }
-.cset small{ padding:0 4px; font-size:13px; color:var(--soft); }
-.cset .cprev{ padding:8px; gap:6px; }
-.cset .cprev span{ padding:4px 10px; font-size:13px; }
 </style>
 </head>
 <body>
 <div id="app">
   <header>
     <div class="hl">
-      <div class="ttl">🌊 Cove <small id="tide"></small><small id="ver">版 2.1</small></div>
+      <div class="ttl">🌊 Cove <small id="tide"></small><small id="ver">版 2.2</small></div>
       <span class="gap"></span>
       <button id="openCover" class="ic" type="button" aria-label="表紙へ" title="表紙へ">🏝️</button>
       <button id="openFinder" class="ic" type="button" aria-label="さがす" title="さがす">🔍</button>
@@ -360,7 +352,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
     <div class="hl">
       <button id="openPersonas" class="pick" type="button"><span id="pName" class="pt">じゅんび中…</span><span class="pa">▾</span></button>
     </div>
-    <div class="hl">
+    <div class="hl" id="roomRow">
       <button id="openRoomList" class="pick big" type="button"><span id="rName" class="pt">部屋：</span><span class="pa">▾</span></button>
       <span class="gap"></span>
       <button id="newRoom" class="mk" type="button">＋ 新しい部屋</button>
@@ -372,8 +364,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
       <button id="openDiary" class="plain" type="button">日記</button>
       <button id="btnColor" class="plain" type="button">カラー</button>
       <span class="gap"></span>
-      <button id="btnSave" class="plain" type="button">ファイルに保存</button>
-      <button id="btnCopy" class="plain" type="button">全文コピー</button>
+      <button id="btnOut" class="plain" type="button">保存・コピー</button>
     </div>
   </header>
   <main id="list" aria-live="polite"></main>
@@ -538,10 +529,24 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
         <button id="closeColorsX" class="x" type="button" aria-label="閉じる">✕</button>
       </div>
       <div class="cb">
-        <p class="hint">ペルソナごとに、文字欄と背景の色を選べます。選ぶと、すぐ変わります。背景を変えるときは、「組み合わせで選ぶ」からが、かんたんです。</p>
+        <p class="hint">ペルソナごとに、文字欄と背景の色を選べます。選ぶと、すぐ変わります。背景と同じ色の文字欄は、見分けやすいように、少し濃くなります。</p>
         <div id="colorsList" class="mlist"></div>
       </div>
       <div class="cf"><button id="closeColors" class="close2" type="button">閉じる</button></div>
+    </div>
+  </section>
+  <section id="outSheet" class="sheet" hidden aria-label="保存・コピー">
+    <div class="card2">
+      <div class="ch">
+        <h2>保存・コピー</h2>
+        <button id="closeOutX" class="x" type="button" aria-label="閉じる">✕</button>
+      </div>
+      <div class="cb">
+        <p class="hint">いま開いている会話を、まるごと取っておけます。</p>
+        <button id="btnSave" class="go" type="button">ファイルに保存</button>
+        <button id="btnCopy" class="go" type="button">全文コピー</button>
+        <button id="closeOut" class="close2" type="button">やめる</button>
+      </div>
     </div>
   </section>
   <section id="imp" class="sheet" hidden aria-label="ログを取り込む">
@@ -589,7 +594,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
 <script>
 (function(){
   "use strict";
-  const VERSION = "2.1";
+  const VERSION = "2.2";
   const app = document.getElementById("app");
   const list = document.getElementById("list");
   const box = document.getElementById("msg");
@@ -1172,7 +1177,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
   const sizeText = n => n >= 1048576 ? (n / 1048576).toFixed(1) + "MB" : Math.max(1, Math.round((n || 0) / 1024)) + "KB";
 
   let current = { roomId:null, threadId:null, roomName:"", threadName:"" };
-  // 集まれる場所（rooms の kind:"group"）。いま開いているのが集まりの部屋なら、grp にその rooms の1件が入る
+  // Room（rooms の kind:"group"。みんなで話す場所。1つの Room に、会話は1つ）。いま開いているのが Room なら、grp にその rooms の1件が入る
   const GROUP = "group";
   const isGroup = r => !!r && r.kind === GROUP;
   const tag = r => isGroup(r) ? r.name : "⛵️ " + r.name;
@@ -1628,7 +1633,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
     grp = isGroup(room0) ? room0 : null;
     setGroupUI();
     speakerPal.clear();
-    if(grp) (await getAll("rooms")).forEach(r => { if(!isGroup(r)) speakerPal.set(r.id, palOf((r.colors || {}).ai || "白")); });
+    if(grp) (await getAll("rooms")).forEach(r => { if(!isGroup(r)) speakerPal.set(r.id, bubbleOf((r.colors || {}).ai || "白", (grp.colors || {}).bg)); });
     showWhere();
     clearProblem();
     await showWho();
@@ -1807,10 +1812,22 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
     { name:"うす紫",   bg:"#f6f4fb" }
   ];
   const backOf = n => BACKS.find(p => p.name === n) || BACKS[0];
+  // 背景と文字欄が同じ色どうしだと、ぼやける。そのときだけ、文字欄を少し濃くする
+  const SAME = { "もとの色":"砂色", "白":"白", "水色":"水色", "ピンク":"ピンク", "オレンジ":"オレンジ", "黄色":"黄色", "緑":"緑" };
+  const DEEP = {
+    "白":     { bg:"#ffffff", line:"#cdc4b2" },
+    "水色":   { bg:"#d8ebf1", line:"#a9ccd7" },
+    "ピンク": { bg:"#f8dbe1", line:"#e5b2be" },
+    "オレンジ": { bg:"#fbe2c6", line:"#e7bc90" },
+    "黄色":   { bg:"#f8ebb4", line:"#dcc776" },
+    "砂色":   { bg:"#eee4d0", line:"#d5c9ae" },
+    "緑":     { bg:"#dbebd0", line:"#b4d0a5" }
+  };
+  const bubbleOf = (name, bgName) => { const p = palOf(name); return SAME[backOf(bgName).name] === p.name ? Object.assign({}, p, DEEP[p.name]) : p; };
   async function applyColors(){
     const room = await getRoom(current.roomId);
     const c = Object.assign({ me:"水色", ai:"白" }, room && room.colors);
-    const me = palOf(c.me), ai = palOf(c.ai), r = document.documentElement.style;
+    const me = bubbleOf(c.me, c.bg), ai = bubbleOf(c.ai, c.bg), r = document.documentElement.style;
     r.setProperty("--me-bg", me.bg); r.setProperty("--me-line", me.line); r.setProperty("--me-text", me.text);
     r.setProperty("--ai-bg", ai.bg); r.setProperty("--ai-line", ai.line); r.setProperty("--ai-text", ai.text);
     r.setProperty("--sand", backOf(c.bg).bg);
@@ -1818,57 +1835,15 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
   const colorsSheet = document.getElementById("colors");
   const colorsList = document.getElementById("colorsList");
   let colorRoom = null;
-  // 背景に合わせた、見やすい組み合わせ（背景、わたしの文字欄、AIの文字欄）
-  const SETS = [
-    { bg:"もとの色", me:"水色", ai:"白" },
-    { bg:"白",       me:"水色", ai:"砂色" },
-    { bg:"水色",     me:"白",   ai:"黄色" },
-    { bg:"ピンク",   me:"白",   ai:"砂色" },
-    { bg:"オレンジ", me:"白",   ai:"水色" },
-    { bg:"黄色",     me:"白",   ai:"緑" },
-    { bg:"緑",       me:"白",   ai:"黄色" },
-    { bg:"うす紫",   me:"白",   ai:"ピンク" }
-  ];
-  // 色の見本（背景の上に、文字欄を2つ）
-  function colorPreview(c, small){
-    const me = palOf(c.me), ai = palOf(c.ai);
-    const p = el("div", "cprev");
-    p.style.background = backOf(c.bg).bg;
-    const a = el("span", "pi", small ? "AI" : "AIの文字欄は、こう見えます");
-    a.style.background = ai.bg; a.style.borderColor = ai.line; a.style.color = ai.text;
-    const m = el("span", "pm", small ? "わたし" : "わたしの文字欄は、こう見えます");
-    m.style.background = me.bg; m.style.borderColor = me.line; m.style.color = me.text;
-    p.appendChild(a); p.appendChild(m);
-    return p;
-  }
   function drawColors(){
     colorsList.textContent = "";
     const c = Object.assign({ me:"水色", ai:"白" }, colorRoom.colors);
-    colorsList.appendChild(el("p", "group", "いまの色"));
-    colorsList.appendChild(colorPreview(c, false));
-    colorsList.appendChild(el("p", "group", "組み合わせで選ぶ（背景に合う色が、そろって変わります）"));
-    SETS.forEach(st => {
-      const now = backOf(c.bg).name === st.bg && c.me === st.me && c.ai === st.ai;
-      const b = el("button", "cset" + (now ? " now" : ""));
-      b.type = "button";
-      b.appendChild(colorPreview(st, true));
-      b.appendChild(el("small", "", "背景：" + st.bg + " ／ わたし：" + st.me + " ／ AI：" + st.ai + (now ? "（いま）" : "")));
-      b.addEventListener("click", async () => {
-        colorRoom.colors = { me:st.me, ai:st.ai, bg:st.bg };
-        try{
-          await putOne("rooms", colorRoom);
-          if(current.roomId === colorRoom.id) await applyColors();
-          drawColors();
-        }catch(e){ tell("色を保存できませんでした。もう一度ためしてください。"); }
-      });
-      colorsList.appendChild(b);
-    });
-    colorsList.appendChild(el("p", "group", "1つずつ選ぶ"));
     [["me", "わたしの文字欄"], ["ai", "AIの文字欄"]].forEach(g => {
       colorsList.appendChild(el("p", "group", g[1]));
-      PALETTE.forEach(p => {
+      PALETTE.forEach(p0 => {
+        const p = bubbleOf(p0.name, c.bg);
         const now = c[g[0]] === p.name;
-        const b = el("button", "sw" + (now ? " now" : ""), p.name + (now ? "（いま）" : ""));
+        const b = el("button", "sw" + (now ? " now" : ""), p.name + (now ? "（いま）" : "") + (p !== p0 ? "　※背景と同じ色なので、少し濃くなります" : ""));
         b.type = "button";
         b.style.background = p.bg; b.style.borderColor = p.line; b.style.color = p.text;
         b.addEventListener("click", async () => {
@@ -1928,7 +1903,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
     box.blur();
     try{
       const p = await currentPair();
-      if(p) await saveFile(fileSafe(p.room.name + "_" + p.th.name) + "_" + stamp() + ".txt", "text/plain", await threadText(p.th, p.room));
+      if(p) await saveFile(fileSafe(isGroup(p.room) ? p.room.name : p.room.name + "_" + p.th.name) + "_" + stamp() + ".txt", "text/plain", await threadText(p.th, p.room));
     }catch(e){ tell("保存できませんでした。もう一度ためしてください。"); }
   });
   document.getElementById("btnCopy").addEventListener("click", async () => {
@@ -1945,6 +1920,15 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
     }catch(e){}
     try{ await copyText(await make()); }catch(e){ tell("コピーできませんでした。もう一度ためしてください。"); }
   });
+
+  const outSheet = document.getElementById("outSheet");
+  const closeOut = () => { outSheet.hidden = true; };
+  document.getElementById("btnOut").addEventListener("click", () => { if(!db) return; box.blur(); outSheet.hidden = false; });
+  document.getElementById("closeOut").addEventListener("click", closeOut);
+  document.getElementById("closeOutX").addEventListener("click", closeOut);
+  outSheet.addEventListener("click", e => { if(e.target === outSheet) closeOut(); });
+  document.getElementById("btnSave").addEventListener("click", closeOut);
+  document.getElementById("btnCopy").addEventListener("click", closeOut);
 
   /* ───────── 表紙 ───────── */
   const splash = document.getElementById("splash");
@@ -1976,7 +1960,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
       const th = tmap.get(m.threadId), rm = rmap.get(th.roomId);
       const b = el("button", "hit", snippet(m.text, q));
       b.type = "button";
-      b.appendChild(el("small", "", (rm ? rm.name : "") + " ／ " + th.name + " ・ " + (m.role === "ai" ? (m.speakerName || "AI") : "わたし") + " ・ " + when(m.createdAt)));
+      b.appendChild(el("small", "", (rm ? (isGroup(rm) ? rm.name : rm.name + " ／ " + th.name) : th.name) + " ・ " + (m.role === "ai" ? (m.speakerName || "AI") : "わたし") + " ・ " + when(m.createdAt)));
       b.addEventListener("click", async () => {
         try{
           if(!rm) return;
@@ -2172,7 +2156,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
   async function threadText(th, room){
     const all = await ask(db.transaction("messages").objectStore("messages").index("threadId").getAll(th.id));
     all.sort((a, b) => a.createdAt - b.createdAt);
-    let out = "【" + room.name + " ／ " + th.name + "】\n\n";
+    let out = "【" + (isGroup(room) ? room.name : room.name + " ／ " + th.name) + "】\n\n";
     all.forEach(m => {
       const mo = modelOf(m.model);
       out += (m.role === "ai" ? (m.speakerName || "AI") + (mo ? "（" + mo.name + "）" : "") : "わたし") + "　" + when(m.createdAt) + "\n" + (m.files && m.files.length ? attNote(m.files) + "\n" : "") + m.text + "\n\n";
@@ -2453,11 +2437,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
   async function makeThread(room, name){
     const now = Date.now();
     const th = { id:newId(), roomId:room.id, name:name, createdAt:now, updatedAt:now, model:prefs.lastModel };
-    if(isGroup(room)){     // 集まりの部屋は、前の部屋に来ていた人を、そのまま呼んでおく
-      const prev = (await threadsOf(room.id))[0];
-      th.members = (prev && prev.members) ? prev.members.map(x => ({ roomId:x.roomId, model:x.model })) : [];
-      th.next = (prev && prev.next) || "";
-    }
+    if(isGroup(room)){ th.members = []; th.next = ""; }
     await putOne("threads", th);
     return th;
   }
@@ -2470,7 +2450,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
   // ⛵️ ペルソナを選ぶ（manage が true のときは、名前を変える・削除する画面）
   async function openPersonaList(manage){
     const rooms = (await sortedRooms()).filter(r => !isGroup(r)), threads = await getAll("threads");
-    const box2 = openPick(manage ? "ペルソナの名前を変える・削除する" : "ペルソナを選ぶ", manage ? "削除すると、中の部屋と会話も消えます。" : "");
+    const box2 = openPick(manage ? "名前を変える・削除する" : "ペルソナ・Roomを選ぶ", manage ? "削除すると、中の部屋と会話も消えます。" : "");
     rooms.forEach(room => {
       const now = room.id === current.roomId;
       const mine = threads.filter(t => t.roomId === room.id);
@@ -2515,11 +2495,47 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
       await goPersona(room);
       toast("「" + v + "」を作りました。プロンプトは、上の「プロンプト」から書けます");
     }));
-    if(!manage){
-      box2.appendChild(el("p", "group", "みんなで話す"));
-      box2.appendChild(choice("集まれる場所", (grp ? "いま開いている ・ " : "") + "ペルソナを呼んで、いっしょに話す", !!grp, () => grp ? closePick() : goGroup()));
-    }
-    box2.appendChild(btn("small", manage ? "もどる" : "ペルソナの名前を変える・削除する", () => openPersonaList(!manage)));
+    // Room（みんなで話す場所）。一覧に、別々に並ぶ
+    const groups = (await sortedRooms()).filter(isGroup);
+    box2.appendChild(el("p", "group", "みんなで話す"));
+    groups.forEach(g => {
+      const now = g.id === current.roomId;
+      const mine = threads.filter(t => t.roomId === g.id);
+      if(!manage){
+        const who = ((mine[0] && mine[0].members) || []).map(x => (rooms.find(r => r.id === x.roomId) || {}).name).filter(Boolean);
+        box2.appendChild(choice(g.name, (now ? "いま開いている ・ " : "") + (who.length ? "呼んでいる人：" + who.join("、") : "まだ、だれも呼んでいません"), now, () => now ? closePick() : goGroup(g)));
+        return;
+      }
+      const row = el("div", "thread");
+      row.appendChild(el("span", "tname", g.name + (now ? "（いま開いている）" : "")));
+      row.appendChild(btn("small", "名前を変える", async () => {
+        const v = await dialog({ text:"Roomの名前\n（例：Room1（雑談））", input:true, value:g.name, yes:"変える" });
+        if(!v) return;
+        await renameGroup(g.id, v);
+        if(now){ current.roomName = v; current.threadName = v; showWhere(); }
+        await openPersonaList(true);
+      }));
+      row.appendChild(btn("small danger", "削除", async () => {
+        const ok = await dialog({ text:"「" + g.name + "」を削除しますか？\n中の会話と、書庫がすべて消えます。元に戻せません。\n（ペルソナの日記に保存したものは、残ります）", yes:"削除する" });
+        if(!ok) return;
+        await removeThreads(mine.map(t => t.id), g.id);
+        if(now) await goPersona(rooms[0]);
+        await openPersonaList(true);
+      }));
+      box2.appendChild(row);
+    });
+    if(!manage) box2.appendChild(btn("add", "＋ 新しいRoom", async () => {
+      const used = groups.map(g => g.name);
+      let n = groups.length + 1;
+      while(used.some(x => x === "Room" + n || x.indexOf("Room" + n + "（") === 0)) n++;
+      const v = await dialog({ text:"新しいRoomの名前\n（あとで変えられます。例：Room1（雑談））", input:true, value:"Room" + n, yes:"作る" });
+      if(!v) return;
+      const g = { id:newId(), kind:GROUP, name:v, createdAt:Date.now(), order:9999, persona:"", colors:{ me:"水色", ai:"白" }, memories:[], me:(groups[0] && groups[0].me) || "" };
+      ensurePrompts(g);
+      await putOne("rooms", g);
+      await goGroup(g);
+    }));
+    box2.appendChild(btn("small", manage ? "もどる" : "名前を変える・削除する（ペルソナ・Room）", () => openPersonaList(!manage)));
   }
   document.getElementById("openPersonas").addEventListener("click", () => {
     if(!db) return;
@@ -2674,11 +2690,11 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
     if(!room) return;
     if(!Array.isArray(room.memories)) room.memories = [];
     const save = () => putOne("rooms", room);
-    document.getElementById("memoryTitle").textContent = grp ? "書庫" : "⛵️ " + room.name + " の記憶";
+    document.getElementById("memoryTitle").textContent = grp ? room.name + " の書庫" : "⛵️ " + room.name + " の記憶";
     memoryBody.textContent = "";
     const f = el("div", "field");
     const total = shownMemories(room).reduce((n, m) => n + m.text.trim().length, 0);
-    f.appendChild(el("p", "", grp ? "この場所に集まる、みんなが読める書庫です。項目ごとに、見せ方を選べます。（ペルソナそれぞれの記憶は、ほかの人には見えません）" : "このペルソナだけの記憶です。項目ごとに、見せ方を選べます。"));
+    f.appendChild(el("p", "", grp ? "「" + room.name + "」の書庫です。ここに来ている、みんなが読めます。項目ごとに、見せ方を選べます。（ほかのRoomの書庫とは、別です。ペルソナそれぞれの記憶は、ほかの人には見えません）" : "このペルソナだけの記憶です。項目ごとに、見せ方を選べます。"));
     f.appendChild(el("p", "", "・いつも見せる：毎回、中身をAIに伝えます。\n・必要なとき：ふだんは名前だけ伝えて、AIが必要だと思ったときに自分で開きます。\n・見せない：取っておくだけです。")).style.whiteSpace = "pre-line";
     f.appendChild(el("p", "", "いつも見せている量：およそ " + total + " 文字　／　必要なとき：" + needMemories(room).length + " 項目"));
     memoryBody.appendChild(f);
@@ -3021,8 +3037,8 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
   });
   document.getElementById("closeDiary").addEventListener("click", () => { diaryPanel.hidden = true; });
 
-  /* ───────── 集まれる場所（ペルソナを呼んで、いっしょに話す部屋） ─────────
-     入れ物は増やさない。rooms に kind:"group" の1件（画面では「集まれる場所」）。その下の threads が、集まりの部屋。
+  /* ───────── Room（ペルソナを呼んで、いっしょに話す場所。版 2.1 までは「集まれる場所」） ─────────
+     入れ物は増やさない。rooms に kind:"group" の1件が、Room 1つ。その下の threads は1つだけで、それが Room の会話。
      部屋には members:[{ roomId, model }]（来ているペルソナと、ここでのモデル）、next（次に返事する人。ペルソナの id か "all"）、
      gDrafts（みんなの日記の下書き）。ペルソナの発言には speaker（ペルソナの id）と speakerName（そのときの名前）。
      書庫は、group の rooms の memories（記憶と同じ形）。me は、わたしの呼び名。
@@ -3052,6 +3068,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
     const g = !!grp;
     promptTop.hidden = g; document.getElementById("btnColor").hidden = g; modelBtn.hidden = g;
     callBtn.hidden = !g; whoRow.hidden = !g;
+    document.getElementById("roomRow").hidden = g;     // Room では、部屋を分けない
     memBtn.textContent = g ? "書庫" : "記憶";
   }
   // 入力欄の上の「次に返事する人」
@@ -3075,17 +3092,58 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
     whoRow.appendChild(el("span", "gap"));
     whoRow.appendChild(btn("pill", "おまかせ", openAuto));
   }
-  // 「⛵️ ▾」の一覧から、集まれる場所へ（はじめてのときは、ここで作る）
-  async function goGroup(){
-    let g = (await getAll("rooms")).find(isGroup);
-    if(!g){
-      g = { id:newId(), kind:GROUP, name:"集まれる場所", createdAt:Date.now(), order:9999, persona:"", colors:{ me:"水色", ai:"白" }, memories:[] };
-      ensurePrompts(g);
-      await putOne("rooms", g);
+  // 一覧から、Room へ。会話は1つだけ（なければ、ここで作る）。だれも呼んでいなければ、「呼ぶ」を開く
+  async function goGroup(g){
+    let th = (await threadsOf(g.id))[0];
+    if(!th) th = await makeThread(g, g.name);
+    await goThread(th, g);
+    if(!(th.members && th.members.length)) await openCall();
+  }
+  // Room の名前を変える（中の会話の名前も、同じにしておく。日記や「読みに行ける部屋」に出る名前）
+  async function renameGroup(id, name){
+    const g = await getRoom(id);
+    if(!g) return;
+    g.name = name; await putOne("rooms", g);
+    for(const t of await threadsOf(id)){ t.name = name; await putOne("threads", t); }
+    if(grp && grp.id === id) grp = g;
+  }
+  /* 版 2.1 までは「集まれる場所」が1つで、その中に部屋をいくつも作る形だった。
+     版 2.2 からは、Room が一覧に別々に並び、1つの Room に会話は1つ。古い形のものは、部屋ごとに Room に分ける（1回だけ。会話は消さない）。
+     書庫は、分けた Room のそれぞれに、写しを入れる。 */
+  async function splitGroups(){
+    const groups = (await sortedRooms()).filter(isGroup);
+    if(!groups.length) return;
+    const threads = await getAll("threads");
+    let n = 0;
+    const plain = t => /^\d+月\d+日$/.test(t.name || "");
+    for(const g of groups){
+      const mine = threads.filter(t => t.roomId === g.id).sort((a, b) => a.createdAt - b.createdAt);
+      const old = g.name === "集まれる場所";
+      if(mine.length < 2 && !old){ n++; continue; }
+      for(let i = 0; i < Math.max(1, mine.length); i++){
+        n++;
+        const t = mine[i];
+        const name = old ? "Room" + n + ((t && !plain(t)) ? "（" + t.name + "）" : "") : (i === 0 ? g.name : g.name + "（" + t.name + "）");
+        if(i === 0){
+          g.name = name; await putOne("rooms", g);
+          if(t){ t.name = name; await putOne("threads", t); }
+          continue;
+        }
+        const g2 = Object.assign({}, g, { id:newId(), name:name, createdAt:t.createdAt || Date.now(),
+          memories:(g.memories || []).map(m => Object.assign({}, m, { id:newId() })) });
+        delete g2.sumDraft;
+        const msgs = await ask(db.transaction("messages").objectStore("messages").index("threadId").getAll(t.id));
+        await tx(["rooms","threads","messages","meta"], "readwrite", x => {
+          x.objectStore("rooms").put(g2);
+          t.roomId = g2.id; t.name = name;
+          x.objectStore("threads").put(t);
+          msgs.forEach(m => { m.roomId = g2.id; x.objectStore("messages").put(m); });
+        });
+        if(current.threadId === t.id){ current.roomId = g2.id; await setCurrent(g2.id, t.id); }
+      }
     }
-    await goPersona(g);
-    const th = await getOne("threads", current.threadId);
-    if(!(th && th.members && th.members.length)) await openCall();
+    const cur = await getOne("threads", current.threadId), rm = cur ? await getRoom(cur.roomId) : null;
+    if(cur && rm) current = { roomId:rm.id, threadId:cur.id, roomName:rm.name, threadName:cur.name };
   }
   // 「呼ぶ」：この部屋に来るペルソナと、ここでのモデル
   async function openCall(){
@@ -3094,7 +3152,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
     if(!g || !th) return;
     const rooms = (await sortedRooms()).filter(r => !isGroup(r));
     const members = (th.members || []).filter(x => rooms.some(r => r.id === x.roomId));
-    const box2 = openPick("呼ぶ", "部屋「" + th.name + "」に来るペルソナを選びます。モデルは、ここでの分を、ペルソナごとに選べます。");
+    const box2 = openPick("呼ぶ", "「" + g.name + "」に来るペルソナを選びます。モデルは、ここでの分を、ペルソナごとに選べます。");
     const save = async list2 => {
       const t = await getOne("threads", th.id);
       t.members = list2;
@@ -3170,14 +3228,14 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
   // 前置き：Pのプロンプト＋Pの記憶＋Pの日記（ふつうの部屋と同じ）＋場の説明＋書庫
   function groupSystem(P, th, g, names, canOpen, logs){
     let out = systemFor(P, mainOf(P), canOpen, logs);
-    out += (out.trim() ? "\n\n" : "") + "【この場所について】\nここは、みんなが集まって話す部屋「" + th.name + "」です。" + meOf(g) + "と、" + names.join("、") + "が、いっしょにいます。\n"
+    out += (out.trim() ? "\n\n" : "") + "【この場所について】\nここは、みんなが集まって話す部屋「" + g.name + "」です。" + meOf(g) + "と、" + names.join("、") + "が、いっしょにいます。\n"
       + "・あなたは " + P.name + " です。\n"
       + "・ほかの人の発言は、頭に「名前：」が付いて届きます。\n"
       + "・あなた自身の発言だけを書いてください。ほかの人の台詞は書かないでください。\n"
       + "・自分の発言の頭に、名前は付けないでください。";
     const al = shownMemories(g);
     if(al.length){
-      out += "\n\n【書庫】\n（この場所に集まる、みんなが読めるものです）";
+      out += "\n\n【書庫】\n（この部屋に来ている、みんなが読めるものです）";
       al.forEach(m => { out += "\n\n■ " + m.title + "\n" + m.text.trim(); });
     }
     const nd = canOpen ? needMemories(g) : [];
@@ -3449,7 +3507,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
     if(diarySel.threadId !== th.id) diarySel = { threadId:th.id, off:new Set() };
     const ms = await membersOf(th);
     const msgs = await loadThread(th.id);
-    document.getElementById("diaryTitle").textContent = "日記（部屋：" + th.name + "）";
+    document.getElementById("diaryTitle").textContent = grp.name + " の日記";
     diaryBody.textContent = "";
     const f = el("div", "field");
     f.appendChild(el("p", "", "来ている人に、それぞれ自分の言葉で、日記を書いてもらえます。下のボタンを押したときだけ書きます。"));
@@ -3512,7 +3570,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
     });
   }
 
-  /* ───────── 書庫（集まれる場所の、みんなが読めるもの。作りは「記憶」と同じ） ───────── */
+  /* ───────── 書庫（Room ごとの、みんなが読めるもの。作りは「記憶」と同じ） ───────── */
   // ここまでの話を、だれかにまとめてもらう（下書き → 書庫の項目へ）
   async function pickSummarizer(){
     const th = await getOne("threads", current.threadId);
@@ -3520,7 +3578,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
     const msgs = await loadThread(th.id);
     if(!ms.length){ await tell("まだ、だれも呼んでいません。\n上の「呼ぶ」から、ペルソナを呼んでね。"); return; }
     if(!msgs.length){ await tell("この部屋には、まだ会話がありません。"); return; }
-    const box2 = openPick("だれに、まとめてもらいますか？", "部屋「" + th.name + "」の、ここまでの話を、まとめてもらいます。下書きとして出ます。");
+    const box2 = openPick("だれに、まとめてもらいますか？", "「" + th.name + "」の、ここまでの話を、まとめてもらいます。下書きとして出ます。");
     ms.forEach(x => {
       const mo = modelOf(x.model);
       box2.appendChild(choice("⛵️ " + x.room.name, (mo ? mo.name : "") + " ・ 料金の目安 " + yen(estUsd(x, msgs)), false, async () => {
@@ -3531,7 +3589,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
         if(g.sumDraft) q += "\n\n（いまの下書きは、新しいものに置きかわります）";
         if(!await dialog({ text:q, yes:"書いてもらう" })) return;
         await groupSide({ pid:x.room.id, kind:"sum", label:"⛵️ " + x.room.name + " が、まとめを書いています",
-          req:"【ここからは、会話の外からのお願いです】\nここまでの、みんなの会話を、短くまとめてください。この場所の書庫に置いて、あとでみんなが読み返すためのものです。\n"
+          req:"【ここからは、会話の外からのお願いです】\nここまでの、みんなの会話を、短くまとめてください。この部屋の書庫に置いて、あとでみんなが読み返すためのものです。\n"
             + "・何を話したかを、ざっくりと書く。決まったことがあれば、それも書く。\n"
             + "・5〜8文くらい。\n"
             + "・会話に出てこなかったことは書かない。\n"
@@ -3777,6 +3835,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
       try{ fdb = await openFiles(); fdb.onversionchange = () => { fdb.close(); }; }catch(e){ fdb = null; }
       sweepSoon();
       await prepare();
+      await splitGroups();
       await loadSettings();
       applyFont();
       await openCurrent();
