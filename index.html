@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#fdf3e3">
 <title>Cove</title>
 <style>
-/* Cove（新） 版 2.3 ── 一覧のペルソナを、それぞれの色で。Roomのカラー。一覧の上が切れるのを直した。Room（一覧に別々に並ぶ。書庫と呼ぶ人は Room ごと）、「保存・コピー」、背景と同じ色の文字欄を少し濃く、表紙とヘッダー（旧Coveと同じ見た目）、料金の内訳、設定の並び、Room（旧「集まれる場所」。呼ぶ、次に返事する人、みんな、おまかせ、書庫、みんなの日記）、Claudeの割引（キャッシュ）、ログの取り込み、写真とファイルの添付、会話の画面、保存、ペルソナと部屋、プロンプトの切り替え、記憶（項目ごと、発言から記録、必要なときにAIが開く）、日記（ペルソナが書く。押したときだけ）、部屋のログを読んでもらう、あらすじの下書き、AIと話す（Claude・Gemini・GPT・Grok）、検索、思考、保存 */
+/* Cove（新） 版 2.5 ── ログの取り込みで、Claude公式の「データを書き出す」のファイル（zipのまま、または conversations.json）も読める。会話が多いときは、名前でさがして選ぶ。ログの取り込みで、会話を書き出したHTMLファイル（Human／Assistant の形）も読める。一覧のペルソナを、それぞれの色で。Roomのカラー。一覧の上が切れるのを直した。Room（一覧に別々に並ぶ。書庫と呼ぶ人は Room ごと）、「保存・コピー」、背景と同じ色の文字欄を少し濃く、表紙とヘッダー（旧Coveと同じ見た目）、料金の内訳、設定の並び、Room（旧「集まれる場所」。呼ぶ、次に返事する人、みんな、おまかせ、書庫、みんなの日記）、Claudeの割引（キャッシュ）、ログの取り込み、写真とファイルの添付、会話の画面、保存、ペルソナと部屋、プロンプトの切り替え、記憶（項目ごと、発言から記録、必要なときにAIが開く）、日記（ペルソナが書く。押したときだけ）、部屋のログを読んでもらう、あらすじの下書き、AIと話す（Claude・Gemini・GPT・Grok）、検索、思考、保存 */
 :root{
   --sand:#faf6ee; --text:#37474f; --soft:#5d6c73; --line:#e4dccc; --sea:#3f7585;
   --skyA:#dff0f4; --skyB:#f6efe2;
@@ -223,6 +223,9 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
 .model.now{ box-shadow:0 0 0 2px #7fb0bf; }
 .model small{ display:block; font-size:13px; line-height:1.6; color:var(--soft); }
 #imp .card2{ max-width:520px; }
+#impQ{ width:100%; margin:0 0 10px; padding:11px 14px; border:1px solid var(--line); border-radius:14px; background:#fff; color:var(--text); font:inherit; font-size:17px; outline:none; }
+#impQ:focus{ border-color:#9cc3cf; }
+#impQ[hidden], #impCount[hidden]{ display:none; }
 .group{ margin:4px 4px -6px; font-size:14px; font-weight:700; color:var(--soft); }
 .model{
   width:100%; min-height:56px; text-align:left; padding:10px 14px; border:1px solid var(--line); border-radius:16px;
@@ -342,7 +345,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
 <div id="app">
   <header>
     <div class="hl">
-      <div class="ttl">🌊 Cove <small id="tide"></small><small id="ver">版 2.3</small></div>
+      <div class="ttl">🌊 Cove <small id="tide"></small><small id="ver">版 2.5</small></div>
       <span class="gap"></span>
       <button id="openCover" class="ic" type="button" aria-label="表紙へ" title="表紙へ">🏝️</button>
       <button id="openFinder" class="ic" type="button" aria-label="さがす" title="さがす">🔍</button>
@@ -471,8 +474,8 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
       <div class="field">
         <h3>ログを取り込む</h3>
         <button id="importBtn" class="small" type="button">ログを取り込む</button>
-        <input id="importFile" type="file" multiple accept=".json,application/json" hidden>
-        <p style="margin-top:10px">ほかのアプリの会話を、部屋として足します。いまある会話は、消えません。料金はかかりません。<br>いま読めるのは、GPTの形のJSONファイルです。</p>
+        <input id="importFile" type="file" multiple accept=".json,application/json,.html,.htm,text/html,.zip,application/zip" hidden>
+        <p style="margin-top:10px">ほかのアプリの会話を、部屋として足します。いまある会話は、消えません。料金はかかりません。<br>いま読めるのは、Claude公式の「データを書き出す」のファイル（zipのまま、または中の conversations.json）、Claudeの会話を書き出したHTMLファイル、GPTの形のJSONファイルです。</p>
       </div>
       <details id="keysBox" class="field keys">
         <summary>APIキー（押すと開きます）</summary>
@@ -557,6 +560,8 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
       </div>
       <div class="cb">
         <p class="hint">入れたい会話を押して、チェックを付けてください。会話1つが、部屋1つになります。</p>
+        <input id="impQ" type="text" autocomplete="off" placeholder="会話の名前でさがす" hidden>
+        <p id="impCount" class="hint" hidden></p>
         <div id="impList" class="mlist"></div>
         <p class="group" style="margin:20px 4px 8px">入れ先のペルソナ</p>
         <div id="impRooms" class="mlist"></div>
@@ -594,7 +599,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
 <script>
 (function(){
   "use strict";
-  const VERSION = "2.3";
+  const VERSION = "2.5";
   const app = document.getElementById("app");
   const list = document.getElementById("list");
   const box = document.getElementById("msg");
@@ -2218,12 +2223,15 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
      いま読めるのは「GPTの形」：[{ title, create_time, current_node, mapping:{ id:{ message, parent, children } } }]。
      発言の日付は、ログのものを守る（順番が前後しないように、少なくとも1ミリ秒ずつ後ろへ）。
      取り込んだ部屋と発言には imported:true を付ける。部屋には importCount（発言の数）も持たせて、二重の取り込みに気づけるようにする。
+     会話を書き出したHTMLファイルは、readHtmlLog が読む（版 2.4）。Claude公式の書き出しは、readClaudeConv が読む（版 2.5。zip のままでもよい）。
+     会話が IMP_MANY 件より多いときは、チェックなしで始めて、新しい順に並べ、名前でさがせるようにする。
      読める形を増やすときは、readLog と同じ形 { title, msgs:[{ role, text, at }], nodate } を返す読み手を足す。 */
   const toMs = v => { v = Number(v) || 0; return v > 1e11 ? Math.round(v) : Math.round(v * 1000); };
   function readLog(j, fileName){
     const arr = Array.isArray(j) ? j : (j && Array.isArray(j.conversations)) ? j.conversations : [j];
     const out = [];
     arr.forEach(c => {
+      if(c && typeof c === "object" && !c.mapping && Array.isArray(c.chat_messages || c.messages)){ const r = readClaudeConv(c); if(r) out.push(r); return; }
       if(!c || typeof c !== "object" || !c.mapping || typeof c.mapping !== "object") return;
       const mp = c.mapping, chain = [], seen = new Set();
       if(c.current_node && mp[c.current_node]){      // いま見えている枝を、さいごから根へたどる
@@ -2259,6 +2267,116 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
     });
     return out;
   }
+
+
+  /* Claude公式の「データを書き出す」の conversations.json（版 2.5）。形は：
+     [{ name, created_at, chat_messages:[{ sender:"human"／"assistant", text, content:[{ type:"text", text }…], created_at, attachments, files }] }]
+     発言として読むのは、content の中の type:"text" だけ（なければ text）。道具の記録、思考、案内の表示は、読まない。
+     文字がなくて添付だけの発言は、「（添付：◯◯）」というメモにする。会話は、並んでいる順（Claudeの書き出しは、一本道）。
+     公式の資料では形を確かめられなかったので、書き出しを読むほかの道具の説明（2026年11月14日に見た）に合わせた。 */
+  function readClaudeConv(c){
+    const list = Array.isArray(c.chat_messages) ? c.chat_messages : c.messages;
+    const msgs = [];
+    let prev = 0, dated = false;
+    list.forEach(m => {
+      if(!m || typeof m !== "object") return;
+      const who = m.sender || m.role;
+      const role = (who === "human" || who === "user") ? "me" : who === "assistant" ? "ai" : "";
+      if(!role) return;
+      let text = Array.isArray(m.content) ? m.content.filter(b => b && b.type === "text" && typeof b.text === "string" && b.text.trim()).map(b => b.text.trim()).join("\n\n") : "";
+      if(!text) text = typeof m.content === "string" ? m.content : (typeof m.text === "string" ? m.text : "");
+      text = text.replace(/\r\n?/g, "\n").replace(/^\s+/, "").replace(/\s+$/, "");
+      if(!text){
+        const names = [].concat(m.attachments || [], m.files || []).map(x => x && (x.file_name || x.name)).filter(Boolean);
+        if(role !== "me" || !names.length) return;
+        text = "（添付：" + names.join("、") + "）";
+      }
+      let t = Date.parse(m.created_at || "");
+      if(t > 946684800000) dated = true; else t = prev + 1000;
+      if(t <= prev) t = prev + 1;
+      prev = t;
+      msgs.push({ role:role, text:text, at:t });
+    });
+    if(!msgs.length) return null;
+    const title = String(c.name || c.title || "").trim() || "名前のない会話";
+    return { title:title.slice(0, 60), msgs:msgs, nodate:!dated };
+  }
+  // zip の中から、名前が合うファイルを1つ取り出して、文字にする（なければ null）
+  async function unzipFind(buf, want){
+    const u = new Uint8Array(buf), dv = new DataView(buf);
+    let e = -1;
+    for(let i = u.length - 22; i >= Math.max(0, u.length - 65557); i--){ if(dv.getUint32(i, true) === 0x06054b50){ e = i; break; } }
+    if(e < 0) throw new Error("zip");
+    const n = dv.getUint16(e + 10, true);
+    let p = dv.getUint32(e + 16, true);
+    for(let k = 0; k < n && p + 46 <= u.length; k++){
+      if(dv.getUint32(p, true) !== 0x02014b50) break;
+      const method = dv.getUint16(p + 10, true), csize = dv.getUint32(p + 20, true), nl = dv.getUint16(p + 28, true),
+        xl = dv.getUint16(p + 30, true), cl = dv.getUint16(p + 32, true), lo = dv.getUint32(p + 42, true);
+      const name = new TextDecoder().decode(u.subarray(p + 46, p + 46 + nl));
+      if(want.test(name)){
+        if(csize === 0xffffffff || lo === 0xffffffff) throw new Error("zip");     // とても大きい zip の形には、対応していない
+        const s = lo + 30 + dv.getUint16(lo + 26, true) + dv.getUint16(lo + 28, true);
+        const data = u.subarray(s, s + csize);
+        if(method === 0) return new TextDecoder().decode(data);
+        if(method !== 8 || typeof DecompressionStream === "undefined") throw new Error("zip");
+        return await new Response(new Blob([data]).stream().pipeThrough(new DecompressionStream("deflate-raw"))).text();
+      }
+      p += 46 + nl + xl + cl;
+    }
+    return null;
+  }
+  const isZip = async f => { try{ const h = new Uint8Array(await f.slice(0, 4).arrayBuffer()); return h[0] === 0x50 && h[1] === 0x4b && h[2] === 3 && h[3] === 4; }catch(e){ return false; } };
+  /* 会話を書き出したHTMLファイルを読む（版 2.4）。形は：
+     <h1>題名</h1> <p class="meta">Created 2026-05-10T15:50:09Z</p>
+     <section class="turn turn-human">…<div class="turn-body"><div class="text"><p>…</p></div></div></section>（Assistant は turn-assistant）
+     発言として読むのは、turn-body の中の class="text" だけ。道具の記録、思考、添付の一覧、案内の表示（unknown）は、読まない。
+     段落（p）の間は1行あけ、<br> は改行にする。発言ごとの時刻はファイルにないので、始まった日から1秒ずつ並べる。 */
+  function htmlText(node){
+    const BLOCK = /^(P|DIV|PRE|UL|OL|LI|H[1-6]|BLOCKQUOTE|TABLE|TR|SECTION|HR)$/;
+    let out = "";
+    const brk = n => { out = out.replace(/[ \t]+$/, ""); const have = (/\n*$/.exec(out) || [""])[0].length; if(out && have < n) out += "\n".repeat(n - have); };
+    const walk = (n, pre) => {
+      n.childNodes.forEach(c => {
+        if(c.nodeType === 3){ out += pre ? c.nodeValue : c.nodeValue.replace(/[ \t\r\n]+/g, " ").replace(/^ /, /(^|\n)$/.test(out) ? "" : " "); return; }
+        if(c.nodeType !== 1) return;
+        const t = c.tagName;
+        if(t === "BR"){ out = out.replace(/[ \t]+$/, "") + "\n"; return; }
+        if(t === "SCRIPT" || t === "STYLE") return;
+        const block = BLOCK.test(t);
+        if(block) brk(t === "LI" || t === "TR" ? 1 : 2);
+        if(t === "LI") out += "・";
+        walk(c, pre || t === "PRE");
+        if(t === "TD" || t === "TH") out += "　";
+        if(block) brk(t === "LI" || t === "TR" ? 1 : 2);
+      });
+    };
+    walk(node, false);
+    return out.replace(/[ \t]+\n/g, "\n").replace(/\n{3,}/g, "\n\n").replace(/^\s+/, "").replace(/\s+$/, "");
+  }
+  function readHtmlLog(html, fileName){
+    const doc = new DOMParser().parseFromString(html, "text/html");
+    const turns = Array.from(doc.querySelectorAll("section.turn"));
+    if(!turns.length) return [];
+    const meta = doc.querySelector(".meta");
+    const dm = meta ? /(\d{4}-\d{2}-\d{2}T[\d:.]+(?:Z|[+-]\d{2}:?\d{2})?)/.exec(meta.textContent || "") : null;
+    let start = dm ? Date.parse(dm[1].replace(/(\.\d{3})\d+/, "$1")) : NaN;
+    const dated = start > 946684800000;
+    if(!dated) start = 0;
+    const msgs = [];
+    turns.forEach(s => {
+      const role = s.classList.contains("turn-human") ? "me" : s.classList.contains("turn-assistant") ? "ai" : "";
+      if(!role) return;
+      const body = s.querySelector(".turn-body") || s;
+      const text = Array.from(body.children).filter(x => x.classList && x.classList.contains("text")).map(htmlText).filter(x => x).join("\n\n");
+      if(!text.trim()) return;
+      msgs.push({ role:role, text:text, at:start + msgs.length * 1000 });
+    });
+    if(!msgs.length) return [];
+    const h1 = doc.querySelector("main h1") || doc.querySelector("h1");
+    const title = ((h1 && h1.textContent) || doc.title || "").trim() || String(fileName || "").replace(/\.html?$/i, "") || "名前のないログ";
+    return [{ title:title.slice(0, 60), msgs:msgs, nodate:!dated }];
+  }
   const ymd = ms => { const d = new Date(ms); return d.getFullYear() + "年" + (d.getMonth() + 1) + "月" + d.getDate() + "日"; };
   const impSheet = document.getElementById("imp");
   const impList = document.getElementById("impList");
@@ -2268,9 +2386,18 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
   let imp = null;     // { convs:[{ title, msgs, nodate, on }], rooms, roomId, newName, done:{ roomId:Set } }
   const impKey = (name, n) => name + "\n" + n;
   const impDup = c => !!(imp.roomId && imp.done[imp.roomId] && imp.done[imp.roomId].has(impKey(c.title, c.msgs.length)));
+  const IMP_MANY = 10, IMP_SHOW = 100;
+  const impQ = document.getElementById("impQ"), impCount = document.getElementById("impCount");
+  impQ.addEventListener("input", () => { if(imp) paintImp(); });
   function paintImp(){
     impList.textContent = "";
-    imp.convs.forEach(c => {
+    const many = imp.convs.length > IMP_MANY;
+    impQ.hidden = !many; impCount.hidden = !many;
+    const q = many ? impQ.value.trim().toLowerCase() : "";
+    const hit = q ? imp.convs.filter(c => c.title.toLowerCase().includes(q)) : imp.convs;
+    if(many) impCount.textContent = "会話が " + imp.convs.length + "件あります。" + (q ? "「" + impQ.value.trim() + "」が名前に入っているもの：" + hit.length + "件" : "新しい順に並んでいます。")
+      + (hit.length > IMP_SHOW ? "（はじめの " + IMP_SHOW + "件を出しています。名前でさがすと、しぼれます）" : "");
+    hit.slice(0, many ? IMP_SHOW : hit.length).forEach(c => {
       const b = el("button", "model" + (c.on ? " now" : ""), (c.on ? "✓ " : "□ ") + c.title);
       b.type = "button";
       const first = c.msgs[0].at, last = c.msgs[c.msgs.length - 1].at;
@@ -2299,7 +2426,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
     impGo.disabled = !n;
     impGo.style.opacity = n ? "" : ".45";
   }
-  const closeImp = () => { impSheet.hidden = true; imp = null; };
+  const closeImp = () => { impQ.blur(); impSheet.hidden = true; imp = null; };
   document.getElementById("closeImp").addEventListener("click", closeImp);
   document.getElementById("closeImpX").addEventListener("click", closeImp);
   document.getElementById("importBtn").addEventListener("click", () => { if(db) importFile.click(); });
@@ -2310,7 +2437,11 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
     const convs = [], bad = [];
     for(const f of fs){
       try{
-        const got = readLog(JSON.parse((await f.text()).replace(/^\ufeff/, "")), f.name);
+        let raw;
+        if(await isZip(f)){ raw = await unzipFind(await f.arrayBuffer(), /(^|\/)conversations\.json$/i); if(raw == null){ bad.push(f.name); continue; } }
+        else raw = await f.text();
+        raw = raw.replace(/^\ufeff/, "");
+        const got = (/\.html?$/i.test(f.name || "") || /^\s*</.test(raw)) ? readHtmlLog(raw, f.name) : readLog(JSON.parse(raw), f.name);
         if(!got.length){ bad.push(f.name); continue; }
         got.forEach(c => {
           if(c.nodate){      // 日付のないログは、ファイルの日付を、さいごの発言の時刻にする
@@ -2321,15 +2452,17 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
         });
       }catch(e){ bad.push(f.name); }
     }
-    if(bad.length) await tell("読めなかったファイルがあります。\n" + bad.join("\n") + "\n\nいま読めるのは、GPTの形のJSONファイルです。");
+    if(bad.length) await tell("読めなかったファイルがあります。\n" + bad.join("\n") + "\n\nいま読めるのは、Claude公式の「データを書き出す」のファイル（zipのまま、または中の conversations.json）、Claudeの会話を書き出したHTMLファイル、GPTの形のJSONファイルです。\n（zipが読めないときは、zipを開いて、中の conversations.json を選んでください）");
     if(!convs.length) return;
     try{
-      convs.sort((a, b) => a.msgs[0].at - b.msgs[0].at);
+      const many = convs.length > IMP_MANY;
+      convs.sort((a, b) => many ? b.msgs[b.msgs.length - 1].at - a.msgs[a.msgs.length - 1].at : a.msgs[0].at - b.msgs[0].at);
+      impQ.value = "";
       const rooms = (await getAll("rooms")).filter(r => !isGroup(r)).sort((a, b) => (a.order || 0) - (b.order || 0));
       const done = {};
       (await getAll("threads")).forEach(t => { if(t.imported){ (done[t.roomId] = done[t.roomId] || new Set()).add(impKey(t.name, t.importCount)); } });
       imp = { convs:convs, rooms:rooms, roomId:grp ? ((rooms[0] && rooms[0].id) || "") : current.roomId, newName:"", done:done };
-      convs.forEach(c => { c.on = !impDup(c); });
+      convs.forEach(c => { c.on = !many && !impDup(c); });
       paintImp();
       impSheet.hidden = false;
     }catch(e){ tell("一覧を作れませんでした。もう一度ためしてください。"); }
