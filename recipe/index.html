@@ -1,0 +1,738 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Recipe Book</title>
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Recipes">
+<meta name="theme-color" content="#22362d">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-180.png">
+<style>
+:root{
+  --cloth:#22362d; --cloth-2:#2c4539; --gilt:#d9c9a3;
+  --page:#fbfaf6; --wash:#efede6; --line:#d8d5ca;
+  --ink:#1f1d1a; --soft:#6c7269; --warn:#8a3b2e;
+  --display:"Didot","Bodoni 72","Hiragino Mincho ProN","Yu Mincho","Noto Serif CJK JP","Noto Serif JP",serif;
+  --text:"Baskerville","Hiragino Mincho ProN","Yu Mincho","Noto Serif CJK JP","Noto Serif JP",serif;
+  --ui:-apple-system,"Hiragino Sans","Noto Sans CJK JP",sans-serif;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--page);color:var(--ink);font-family:var(--text);font-size:17px;line-height:1.85;-webkit-font-smoothing:antialiased}
+button,input,select,textarea{font:inherit;color:inherit}
+button{cursor:pointer;-webkit-tap-highlight-color:transparent}
+:focus-visible{outline:2px solid var(--cloth);outline-offset:2px}
+.hidden{display:none!important}
+
+/* 表紙（ヘッダー） */
+.cover{background:var(--cloth);color:var(--gilt);padding:calc(env(safe-area-inset-top) + 28px) max(24px,env(safe-area-inset-left)) 30px}
+.cover-in{max-width:1080px;margin:0 auto;display:flex;align-items:flex-end;justify-content:space-between;gap:16px;flex-wrap:wrap}
+.cover h1{font-family:var(--display);font-weight:400;font-size:clamp(34px,6vw,56px);line-height:1.1;margin:0;letter-spacing:.01em}
+.cover p{margin:8px 0 0;font-style:italic;font-size:15px;opacity:.8}
+.cover-actions{display:flex;gap:10px;align-items:center}
+.btn{border:1px solid var(--cloth);background:var(--cloth);color:#fff;padding:10px 20px;border-radius:2px;font-family:var(--text);font-size:16px;line-height:1.3}
+.btn.gilt{background:var(--gilt);border-color:var(--gilt);color:var(--cloth)}
+.btn.quiet{background:transparent;color:var(--cloth)}
+.cover .btn.quiet{color:var(--gilt);border-color:rgba(217,201,163,.5)}
+.btn.danger{background:transparent;border-color:var(--warn);color:var(--warn)}
+.btn:disabled{opacity:.45}
+.linkish{background:none;border:0;padding:0;color:var(--soft);text-decoration:underline;text-underline-offset:3px;font-size:15px}
+
+main{max-width:1080px;margin:0 auto;padding:24px max(24px,env(safe-area-inset-left)) calc(env(safe-area-inset-bottom) + 80px)}
+
+/* 読み取りの状況 */
+.queue{display:flex;align-items:center;gap:12px;width:100%;text-align:left;background:var(--wash);border:0;border-left:3px solid var(--cloth);padding:10px 16px;margin:0 0 20px;font-size:15px;line-height:1.5}
+.queue.stop{border-left-color:var(--warn)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--cloth);flex:none}
+.dot.live{animation:pulse 1.4s ease-in-out infinite}
+@keyframes pulse{50%{opacity:.25}}
+@media (prefers-reduced-motion:reduce){.dot.live{animation:none}}
+
+/* 探す */
+.find{display:flex;gap:12px;align-items:center;border-bottom:1px solid var(--ink);padding-bottom:6px}
+.find input{flex:1;border:0;background:none;font-size:20px;padding:6px 0;outline:none;min-width:0}
+.find input::placeholder{color:#a9aba3}
+.tabs{display:flex;gap:22px;overflow-x:auto;margin:18px 0 6px;padding-bottom:4px;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{background:none;border:0;padding:4px 0;white-space:nowrap;font-size:16px;color:var(--soft);border-bottom:1px solid transparent}
+.tabs button[aria-pressed=true]{color:var(--ink);border-bottom-color:var(--ink)}
+.chips{display:flex;flex-wrap:wrap;gap:6px 14px;margin:8px 0 0;font-size:14.5px;color:var(--soft)}
+.chips button{background:none;border:0;padding:2px 0;color:inherit}
+.chips button:hover{color:var(--ink)}
+.count{color:var(--soft);font-size:14.5px;margin:22px 0 14px}
+
+/* 一覧 */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(168px,1fr));gap:34px 26px}
+@media (min-width:700px){.grid{grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:44px 34px}}
+.card{display:block;text-align:left;background:none;border:0;padding:0;color:inherit}
+.plate{aspect-ratio:4/5;background:var(--wash);overflow:hidden;display:flex;align-items:center;justify-content:center}
+.plate img{width:100%;height:100%;object-fit:cover;display:block}
+.plate .initial{font-family:var(--display);font-size:84px;line-height:1;color:#c3c1b6}
+.tone .plate img,.tone .hero img{filter:saturate(.86) contrast(.97) brightness(1.02) sepia(.05)}
+.card h3{font-family:var(--text);font-weight:400;font-size:17px;line-height:1.5;margin:12px 0 0}
+.card small{color:var(--soft);font-size:13.5px}
+.empty{padding:60px 0;text-align:center;color:var(--soft)}
+.empty p{max-width:30em;margin:0 auto 18px}
+
+/* レシピのページ */
+.back{margin:0 0 18px}
+.spread{display:grid;gap:30px}
+@media (min-width:860px){.spread.has-photo{grid-template-columns:minmax(0,5fr) minmax(0,6fr);gap:56px;align-items:start}
+  .spread.has-photo .hero{position:sticky;top:24px}}
+.hero img{width:100%;display:block;max-height:82vh;object-fit:cover}
+.recipe h2{font-family:var(--text);font-weight:400;font-size:clamp(26px,4vw,36px);line-height:1.4;margin:0 0 6px}
+.meta{color:var(--soft);font-size:15px;margin:0 0 26px;overflow-wrap:anywhere}
+.meta a{color:inherit}
+.recipe h4{font-family:var(--text);font-weight:400;font-size:19px;margin:34px 0 10px;padding-bottom:6px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:baseline}
+.recipe h4 i{font-family:var(--display);font-size:15px;color:var(--soft)}
+.ings{list-style:none;margin:0;padding:0}
+.ings li{display:flex;align-items:baseline;gap:8px;padding:3px 0}
+.ings li::after{content:"";order:2;flex:1;border-bottom:1px dotted #b9b7ac;transform:translateY(-5px);min-width:16px}
+.ings .n{order:1}.ings .a{order:3;color:var(--soft);text-align:right;max-width:55%}
+.ings li.group{padding-top:14px;color:var(--soft);font-size:15px}
+.ings li.group::after{display:none}
+.steps{list-style:none;margin:0;padding:0;counter-reset:s}
+.steps li{counter-increment:s;display:grid;grid-template-columns:44px 1fr;padding:8px 0}
+.steps li::before{content:counter(s);font-family:var(--display);font-size:30px;line-height:1.15;color:var(--cloth)}
+.memo{white-space:pre-wrap;color:#45423d}
+details.orig{margin-top:40px;border-top:1px solid var(--line);padding-top:14px}
+details.orig summary{color:var(--soft);font-size:15px;cursor:pointer}
+.origs{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px;margin-top:14px}
+.origs img{width:100%;display:block;border:1px solid var(--line)}
+.rawtext{white-space:pre-wrap;font-family:var(--ui);font-size:14px;line-height:1.7;color:#55524c;background:var(--wash);padding:14px;margin-top:14px}
+
+/* 入力 */
+.form{max-width:680px}
+.form h2,.sheet h2{font-family:var(--text);font-weight:400;font-size:24px;margin:0 0 18px}
+label.f{display:block;margin:0 0 18px;font-size:14.5px;color:var(--soft)}
+label.f>input,label.f>select,label.f>textarea,.rows input{display:block;width:100%;margin-top:4px;border:1px solid var(--line);background:#fff;border-radius:2px;padding:10px 12px;font-family:var(--ui);font-size:16px;line-height:1.6;color:var(--ink)}
+textarea{resize:vertical}
+.rows{margin:4px 0 18px}
+.rows .row{display:grid;grid-template-columns:3fr 2fr 40px;gap:8px;margin-bottom:8px}
+.rows .row button{border:1px solid var(--line);background:#fff;border-radius:2px;color:var(--soft)}
+.bar{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:22px}
+.bar .sp{flex:1}
+.hint{font-size:14px;color:var(--soft);line-height:1.7;margin:6px 0 0}
+.section{border-top:1px solid var(--line);padding-top:22px;margin-top:30px}
+.section h3{font-family:var(--text);font-weight:400;font-size:19px;margin:0 0 12px}
+.check{display:flex;gap:10px;align-items:flex-start;font-size:15.5px;margin:10px 0;line-height:1.6}
+.check input{margin-top:6px;width:18px;height:18px;accent-color:var(--cloth)}
+
+dialog{border:0;padding:0;background:var(--page);color:var(--ink);width:min(640px,calc(100vw - 24px));max-height:calc(100dvh - 24px);border-radius:3px;box-shadow:0 20px 60px rgba(20,30,25,.35)}
+dialog::backdrop{background:rgba(24,34,29,.55)}
+.sheet{padding:26px 26px 22px}
+.pick{display:block;border:1px dashed var(--soft);padding:18px;text-align:center;border-radius:2px;margin-bottom:12px;color:var(--cloth)}
+.pick input{position:absolute;opacity:0;width:1px;height:1px}
+.thumbs{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
+.thumbs div{position:relative}
+.thumbs img{width:72px;height:96px;object-fit:cover;display:block;border:1px solid var(--line)}
+.thumbs button.x{position:absolute;top:-8px;right:-8px;width:24px;height:24px;border-radius:50%;border:0;background:var(--ink);color:#fff;font-size:13px;line-height:1}
+.thumbs button.choose{border:0;padding:0;background:none}
+.jobs{list-style:none;margin:0;padding:0}
+.jobs li{display:grid;grid-template-columns:48px 1fr;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);font-size:15px;line-height:1.6}
+.jobs img,.jobs .noimg{width:48px;height:64px;object-fit:cover;background:var(--wash)}
+.jobs .err{color:var(--warn)}
+.cropwrap{display:flex;justify-content:center;background:var(--wash);padding:14px;touch-action:none}
+.cropwrap canvas{width:min(100%,320px);aspect-ratio:4/5;cursor:grab;touch-action:none}
+input[type=range]{width:100%;accent-color:var(--cloth)}
+#toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 22px);transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 20px;border-radius:2px;font-size:15px;max-width:calc(100vw - 32px);z-index:50;transition:opacity .25s;opacity:0;pointer-events:none}
+#toast.on{opacity:1}
+</style>
+</head>
+<body>
+<header class="cover"><div class="cover-in">
+  <div><h1 id="bookTitle"></h1><p id="bookSub"></p></div>
+  <div class="cover-actions">
+    <button class="btn quiet" id="btnSettings">設定</button>
+    <button class="btn gilt" id="btnAdd">レシピを足す</button>
+  </div>
+</div></header>
+<main id="app"></main>
+<dialog id="dlg"></dialog>
+<div id="toast" role="status"></div>
+
+<script>
+'use strict';
+/* ================= 基本の道具 ================= */
+const $=(s,r=document)=>r.querySelector(s);
+function h(tag,a,...kids){
+  const e=document.createElement(tag);
+  for(const [k,v] of Object.entries(a||{})){
+    if(v==null||v===false)continue;
+    if(k.startsWith('on'))e.addEventListener(k.slice(2),v);
+    else if(k==='class')e.className=v;
+    else if(k==='value')e.value=v;
+    else if(k==='checked')e.checked=!!v;
+    else e.setAttribute(k,v===true?'':v);
+  }
+  for(const c of kids.flat(Infinity)){ if(c==null||c===false)continue; e.append(c.nodeType?c:String(c)); }
+  return e;
+}
+const uid=()=>Date.now().toString(36)+Math.random().toString(36).slice(2,8);
+let toastT;
+function toast(msg,ms=2800){const t=$('#toast');t.textContent=msg;t.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>t.classList.remove('on'),ms);}
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+
+/* ================= 設定（この端末に保存） ================= */
+const DEFAULT_CATS=['お菓子','パン','主菜','副菜','汁もの','ごはん・麺','飲みもの','その他'];
+const DEFAULT_SYN=`卵、たまご、玉子、タマゴ、全卵
+生クリーム、ホイップ、ホイップクリーム、クリーム、フレッシュクリーム
+薄力粉、小麦粉、フラワー
+強力粉、パン用粉、小麦粉
+砂糖、上白糖、グラニュー糖、きび砂糖、てんさい糖、シュガー
+粉砂糖、粉糖、パウダーシュガー
+バター、無塩バター、有塩バター、発酵バター
+牛乳、ミルク
+チョコレート、チョコ、ショコラ、クーベルチュール
+ココア、ココアパウダー、カカオパウダー
+ベーキングパウダー、BP、ふくらし粉
+イースト、ドライイースト、酵母
+片栗粉、コーンスターチ
+はちみつ、蜂蜜、ハチミツ、ハニー
+じゃがいも、ジャガイモ、じゃが芋、馬鈴薯、ポテト
+さつまいも、サツマイモ、さつま芋、薩摩芋
+玉ねぎ、たまねぎ、玉葱、タマネギ、オニオン
+長ねぎ、長ネギ、ねぎ、ネギ、葱、白ねぎ
+にんじん、人参、ニンジン、キャロット
+ピーマン、パプリカ
+なす、茄子、ナス、なすび
+かぼちゃ、南瓜、カボチャ、パンプキン
+ほうれん草、ほうれんそう、ホウレンソウ
+きのこ、キノコ、茸、しめじ、まいたけ、えのき、エリンギ、マッシュルーム
+しいたけ、椎茸、シイタケ
+にんにく、ニンニク、大蒜、ガーリック
+しょうが、生姜、ショウガ、ジンジャー
+大葉、しそ、紫蘇、青じそ
+鶏肉、とり肉、鳥肉、チキン、鶏もも、鶏むね、ささみ
+豚肉、ぶた肉、ポーク、豚バラ、豚こま
+牛肉、ビーフ
+ひき肉、挽き肉、挽肉、ミンチ
+えび、海老、エビ、シュリンプ
+鮭、さけ、サーモン、しゃけ
+豆腐、とうふ
+醤油、しょうゆ、しょう油
+味噌、みそ
+酢、お酢、ビネガー
+ごま、胡麻、ゴマ
+ごま油、胡麻油、ゴマ油
+レモン、檸檬
+りんご、林檎、リンゴ、アップル
+いちご、苺、イチゴ、ストロベリー
+ヨーグルト、プレーンヨーグルト
+チーズ、クリームチーズ、粉チーズ、ピザ用チーズ
+ごはん、ご飯、米、お米、ライス
+パスタ、スパゲティ、スパゲッティ`;
+const LS='recipebook.';
+const S={
+  get key(){return localStorage.getItem(LS+'key')||''}, set key(v){localStorage.setItem(LS+'key',v.trim())},
+  get model(){return localStorage.getItem(LS+'model')||''}, set model(v){localStorage.setItem(LS+'model',v)},
+  get autoModel(){return localStorage.getItem(LS+'autoModel')||''}, set autoModel(v){localStorage.setItem(LS+'autoModel',v)},
+  get cats(){try{const c=JSON.parse(localStorage.getItem(LS+'cats'));if(Array.isArray(c)&&c.length)return c;}catch(e){}return DEFAULT_CATS.slice()},
+  set cats(v){localStorage.setItem(LS+'cats',JSON.stringify(v))},
+  get syn(){const v=localStorage.getItem(LS+'syn');return v==null?DEFAULT_SYN:v}, set syn(v){localStorage.setItem(LS+'syn',v);synCache=null},
+  get title(){return localStorage.getItem(LS+'title')||"Nokka's Recipes"}, set title(v){localStorage.setItem(LS+'title',v)},
+  get tone(){return localStorage.getItem(LS+'tone')!=='0'}, set tone(v){localStorage.setItem(LS+'tone',v?'1':'0')},
+  get lastBackup(){return +localStorage.getItem(LS+'lastBackup')||0}, set lastBackup(v){localStorage.setItem(LS+'lastBackup',v)},
+};
+
+/* ================= 保存場所（IndexedDB） ================= */
+let db;
+function openDB(){return new Promise((res,rej)=>{
+  const r=indexedDB.open('recipebook',1);
+  r.onupgradeneeded=()=>{const d=r.result;for(const s of ['recipes','images','jobs'])if(!d.objectStoreNames.contains(s))d.createObjectStore(s,{keyPath:'id'});};
+  r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error);
+});}
+function tx(store,mode,fn){return new Promise((res,rej)=>{
+  const t=db.transaction(store,mode); let out; const rq=fn(t.objectStore(store));
+  if(rq)rq.onsuccess=()=>{out=rq.result};
+  t.oncomplete=()=>res(out); t.onerror=t.onabort=()=>rej(t.error||new Error('保存に失敗しました'));
+});}
+const dbGet=(s,k)=>tx(s,'readonly',o=>o.get(k));
+const dbAll=s=>tx(s,'readonly',o=>o.getAll());
+const dbPut=(s,v)=>tx(s,'readwrite',o=>o.put(v));
+const dbDel=(s,k)=>tx(s,'readwrite',o=>o.delete(k));
+async function putImage(id,blob){await dbPut('images',{id,type:blob.type||'image/jpeg',buf:await blob.arrayBuffer()});}
+async function getImage(id){const r=await dbGet('images',id);return r?new Blob([r.buf],{type:r.type}):null;}
+
+/* ================= 画像の道具 ================= */
+function loadImg(blob){return new Promise((res,rej)=>{
+  const url=URL.createObjectURL(blob),im=new Image();
+  im.onload=()=>{URL.revokeObjectURL(url);res(im)}; im.onerror=()=>{URL.revokeObjectURL(url);rej(new Error('この画像は開けませんでした'))}; im.src=url;
+});}
+function drawTo(im,sx,sy,sw,sh,maxSide){
+  const k=Math.min(1,maxSide/Math.max(sw,sh)); const c=document.createElement('canvas');
+  c.width=Math.max(1,Math.round(sw*k)); c.height=Math.max(1,Math.round(sh*k));
+  const g=c.getContext('2d'); g.fillStyle='#fff'; g.fillRect(0,0,c.width,c.height);
+  g.drawImage(im,sx,sy,sw,sh,0,0,c.width,c.height); return c;
+}
+const toBlob=(c,q=.85)=>new Promise(r=>c.toBlob(b=>r(b),'image/jpeg',q));
+function readAs(blob,how){return new Promise((res,rej)=>{const f=new FileReader();f.onload=()=>res(f.result);f.onerror=()=>rej(f.error);f[how](blob);});}
+const toB64=async blob=>(await readAs(blob,'readAsDataURL')).split(',')[1];
+async function shrink(file){const im=await loadImg(file);return toBlob(drawTo(im,0,0,im.naturalWidth,im.naturalHeight,1600),.85);}
+
+/* ================= ことばの幅（検索） ================= */
+const norm=s=>(s||'').normalize('NFKC').toLowerCase().replace(/[ァ-ヶ]/g,c=>String.fromCharCode(c.charCodeAt(0)-0x60)).replace(/\s+/g,'');
+let synCache=null;
+function synGroups(){ if(!synCache)synCache=S.syn.split('\n').map(l=>l.split(/[、,，]/).map(norm).filter(Boolean)).filter(g=>g.length>1); return synCache; }
+function variants(term){const out=new Set([term]);for(const g of synGroups())if(g.includes(term))g.forEach(w=>out.add(w));return [...out];}
+function indexOf(r){return norm([r.title,r.category,r.servings,r.memo,r.source,(r.ingredients||[]).map(i=>i.name).join(' '),(r.steps||[]).join(' '),(r.words||[]).join(' ')].join(' '));}
+function matches(r,q){const terms=q.normalize('NFKC').split(/\s+/).map(norm).filter(Boolean);return terms.every(t=>variants(t).some(v=>r._ix.includes(v)));}
+const cleanIng=n=>(n||'').replace(/[（(［\[].*?[)）］\]]/g,'').replace(/^[★☆◎●○■□▲△◆◇・*\-\s]+/,'').replace(/^[A-ZＡ-Ｚa-z][\s　:：.．]+/,'').trim();
+
+/* ================= Gemini（文字の読み取り） ================= */
+const API='https://generativelanguage.googleapis.com/v1beta';
+class GErr extends Error{constructor(kind,msg,wait){super(msg);this.kind=kind;this.wait=wait;}}
+function schema(){return {type:'OBJECT',properties:{
+  is_recipe:{type:'BOOLEAN'}, title:{type:'STRING'}, category:{type:'STRING',enum:S.cats}, servings:{type:'STRING'},
+  ingredients:{type:'ARRAY',items:{type:'OBJECT',properties:{name:{type:'STRING'},amount:{type:'STRING'}},required:['name']}},
+  steps:{type:'ARRAY',items:{type:'STRING'}}, memo:{type:'STRING'}, source:{type:'STRING'},
+  search_words:{type:'ARRAY',items:{type:'STRING'}},
+  photo:{type:'OBJECT',properties:{image_index:{type:'INTEGER'},box_2d:{type:'ARRAY',items:{type:'INTEGER'}}}}
+},required:['is_recipe','title','category','ingredients','steps']};}
+function prompt(nImg,hasText){return `あなたはレシピを書き写す係です。${nImg?`画像が${nImg}枚`:''}${nImg&&hasText?'と、':''}${hasText?'貼り付けられた文章が':''}あります。全部あわせて「ひとつのレシピ」として、次のJSONにまとめてください。
+
+大事な決まり:
+- 書いてある内容を忠実に書き写す。書かれていない材料・分量・手順を想像で足さない。
+- 縦書き、横書き、手書き風の文字、飾り文字、写真の上に重なった文字も読む。どうしても読めない文字は「□」にする。
+- インスタなどのスクショの場合、いいね数・コメント・ボタン・広告・ハッシュタグの羅列・「保存してね」のような呼びかけは無視する。
+- 文字は日本語のまま。分量の表記（大さじ1、100g など）は元のまま。
+
+各項目:
+- is_recipe: 材料か作り方が少しでも読み取れたら true。
+- title: 料理名。書かれていなければ内容から短く付ける。
+- category: 次の中からいちばん近いものをひとつ: ${S.cats.join(' / ')}
+- servings: 「2人分」「18cm型1台」など。なければ空文字。
+- ingredients: 材料ごとに name と amount。「A」「生地」「ソース」のようなまとまりの見出しは、name を「【生地】」のように【】で囲み amount は空にして、その位置に入れる。
+- steps: 作り方を1手順ずつ。先頭の番号は付けない。
+- memo: コツ、ポイント、保存方法、焼き時間の補足など。なければ空文字。
+- source: 投稿者のアカウント名やサイト名が分かれば。なければ空文字。
+- search_words: あとで検索しやすくするための言葉。主な材料それぞれについて、ひらがな・カタカナ・漢字の書き方と、よく使われる別の呼び方を入れる（例: 卵→たまご, 玉子 ／ 生クリーム→ホイップクリーム）。料理の種類を表す言葉（例: クッキー, 焼き菓子, 煮物）も入れる。20語まで。
+- photo: できあがった料理の写真が写っている画像があれば、その番号 image_index（最初の画像が0）と、写真部分の範囲 box_2d を [ymin, xmin, ymax, xmax]（画像全体を0〜1000とした値）で。文字やボタンがなるべく入らない範囲にする。料理の写真がなければ image_index を -1 にする。`;}
+
+let modelList=null; const badModels=new Set();
+async function fetchModels(){
+  const res=await fetch(API+'/models?pageSize=200',{headers:{'x-goog-api-key':S.key}}).catch(()=>{throw new GErr('retry','通信できませんでした')});
+  const j=await res.json().catch(()=>null);
+  if(!res.ok)throw classify(res.status,j);
+  const out=[];
+  for(const m of j.models||[]){
+    const id=(m.name||'').replace(/^models\//,'');
+    if(!(m.supportedGenerationMethods||[]).includes('generateContent'))continue;
+    const mm=id.match(/^gemini-(\d+(?:\.\d+)?)-flash(-lite)?(.*)$/); if(!mm)continue;
+    if(/image|tts|audio|live|embed|robot|computer|omni|thinking|exp/.test(mm[3]))continue;
+    out.push({id,score:(mm[3]===''?1000:0)+(mm[2]?0:500)+parseFloat(mm[1])*10});
+  }
+  out.sort((a,b)=>b.score-a.score); modelList=out.map(o=>o.id); return modelList;
+}
+async function currentModel(){
+  if(S.model)return S.model;
+  if(S.autoModel&&!badModels.has(S.autoModel))return S.autoModel;
+  if(!modelList)await fetchModels();
+  const m=modelList.find(x=>!badModels.has(x));
+  if(!m)throw new GErr('fatal','無料で使えるGeminiのモデルが見つかりませんでした。設定の「読み取りに使うモデル」を確かめてください。');
+  S.autoModel=m; return m;
+}
+function classify(status,j){
+  const er=(j&&j.error)||{}; const msg=er.message||('エラー '+status);
+  if(status===429){
+    if(/limit:\s*0\b/.test(msg))return new GErr('model',msg);
+    if(/per\s*day|perday|daily/i.test(msg+JSON.stringify(er.details||'')))return new GErr('day',msg);
+    let wait=20; const d=(er.details||[]).find(x=>x.retryDelay); const m=msg.match(/retry in ([\d.]+)s/i);
+    if(d)wait=parseFloat(d.retryDelay)||wait; else if(m)wait=parseFloat(m[1]);
+    return new GErr('wait',msg,Math.min(120,Math.ceil(wait)+2));
+  }
+  if(status===404)return new GErr('model',msg);
+  if(status===401||status===403||(status===400&&/api key/i.test(msg)))return new GErr('key',msg);
+  if(status===400)return new GErr('schema',msg);
+  return new GErr('retry',msg);
+}
+async function askGemini(parts,noSchema){
+  const model=await currentModel();
+  const gen={temperature:0.1,responseMimeType:'application/json'}; if(!noSchema)gen.responseSchema=schema();
+  const ctl=new AbortController(); const to=setTimeout(()=>ctl.abort(),150000); let res;
+  try{res=await fetch(`${API}/models/${model}:generateContent`,{method:'POST',headers:{'Content-Type':'application/json','x-goog-api-key':S.key},body:JSON.stringify({contents:[{role:'user',parts}],generationConfig:gen}),signal:ctl.signal});}
+  catch(e){throw new GErr('retry',ctl.signal.aborted?'時間がかかりすぎました':'通信できませんでした');}
+  finally{clearTimeout(to);}
+  const j=await res.json().catch(()=>null);
+  if(!res.ok){const e=classify(res.status,j); if(e.kind==='model'){ if(S.model===model)throw new GErr('fatal','設定で選んだモデル（'+model+'）が使えませんでした。設定で「おまかせ」に戻してみてください。'); badModels.add(model); if(S.autoModel===model)S.autoModel='';} throw e;}
+  const c=j&&j.candidates&&j.candidates[0];
+  const text=((c&&c.content&&c.content.parts)||[]).filter(p=>!p.thought).map(p=>p.text||'').join('').trim();
+  if(!text)throw new GErr('retry','返事が空でした');
+  try{const s=text.replace(/^```(?:json)?/i,'').replace(/```$/,'').trim(); const a=s.indexOf('{'),b=s.lastIndexOf('}'); return JSON.parse(s.slice(a,b+1));}
+  catch(e){throw new GErr('retry','返事の形が崩れていました');}
+}
+
+/* ================= 読み取りの順番待ち ================= */
+let R=[];              // 保存済みレシピ（メモリ上）
+let jobsCache=[]; let workingId=null; let paused=null; let pumping=false; let pumpTimer=null;
+const BACKOFF=[6,15,30,60,120];
+async function refreshJobs(){jobsCache=(await dbAll('jobs')).sort((a,b)=>a.createdAt-b.createdAt);renderQueue();}
+async function pump(){
+  if(pumping)return; pumping=true; clearTimeout(pumpTimer);
+  try{
+    for(;;){
+      await refreshJobs();
+      if(paused)break;
+      const pend=jobsCache.filter(j=>j.status==='pending'); if(!pend.length)break;
+      if(!S.key){paused='key';break;}
+      const now=Date.now(); const job=pend.find(j=>(j.nextAt||0)<=now);
+      if(!job){pumpTimer=setTimeout(pump,Math.max(500,Math.min(...pend.map(j=>j.nextAt))-now+100));break;}
+      workingId=job.id; renderQueue();
+      try{await runJob(job);}
+      catch(e){
+        const k=e.kind||'retry';
+        if(k==='key'){paused='key';}
+        else if(k==='day'){paused='day';}
+        else if(k==='model'){/* 別のモデルでそのまま続ける */}
+        else if(k==='schema'&&!job.noSchema){job.noSchema=true;await dbPut('jobs',job);}
+        else if(k==='wait'||k==='retry'){
+          job.tries=(job.tries||0)+1;
+          if(job.tries>BACKOFF.length){job.status='error';job.error='何度か試しましたが読み取れませんでした（'+e.message+'）';}
+          else job.nextAt=Date.now()+1000*(e.wait||BACKOFF[job.tries-1]);
+          await dbPut('jobs',job);
+        }else{job.status='error';job.error=k==='norecipe'?'レシピらしい文字が見つかりませんでした':(e.message||'読み取れませんでした');if(k==='norecipe')job.keepable=true;await dbPut('jobs',job);}
+      }
+      workingId=null;
+    }
+  }finally{workingId=null;pumping=false;await refreshJobs();}
+}
+async function runJob(job){
+  const blobs=[]; for(const id of job.imageIds){const b=await getImage(id); if(b)blobs.push(b);}
+  const parts=[{text:prompt(blobs.length,!!job.text)+(job.noSchema?'\n\nJSONだけを返してください。キーは is_recipe, title, category, servings, ingredients[{name,amount}], steps[], memo, source, search_words[], photo{image_index, box_2d} です。':'')}];
+  if(job.text)parts.push({text:'--- 貼り付けられた文章 ---\n'+job.text});
+  for(const b of blobs)parts.push({inline_data:{mime_type:'image/jpeg',data:await toB64(b)}});
+  const r=await askGemini(parts,job.noSchema);
+  const ings=(r.ingredients||[]).filter(i=>i&&i.name).map(i=>({name:String(i.name).trim(),amount:String(i.amount||'').trim()}));
+  const steps=(r.steps||[]).map(s=>String(s).replace(/^\s*[\d０-９]+[.．、)）]\s*/,'').trim()).filter(Boolean);
+  if(!ings.length&&!steps.length)throw new GErr('norecipe','');
+  const cats=S.cats;
+  const rec={id:job.id,title:(r.title||'').trim()||'名前のないレシピ',category:cats.includes(r.category)?r.category:cats[cats.length-1],
+    servings:(r.servings||'').trim(),ingredients:ings,steps,memo:(r.memo||'').trim(),source:(r.source||'').trim(),url:job.url||'',
+    words:(r.search_words||[]).map(String).slice(0,30),rawText:job.text||'',imageIds:job.imageIds,coverId:null,thumb:null,createdAt:job.createdAt,updatedAt:Date.now()};
+  try{ // 料理写真を切り抜いて表紙にする
+    const p=r.photo,bx=p&&p.box_2d;
+    if(p&&p.image_index>=0&&p.image_index<blobs.length&&Array.isArray(bx)&&bx.length===4){
+      const im=await loadImg(blobs[p.image_index]); const W=im.naturalWidth,H=im.naturalHeight;
+      const [y0,x0,y1,x1]=bx.map(v=>Math.max(0,Math.min(1000,+v||0))/1000);
+      const sw=(x1-x0)*W,sh=(y1-y0)*H;
+      if(sw>W*.25&&sh>H*.12)await setCover(rec,im,x0*W,y0*H,sw,sh);
+    }
+  }catch(e){/* 表紙が作れなくてもレシピは保存する */}
+  await saveRecipe(rec); await dbDel('jobs',job.id);
+  toast('「'+rec.title+'」を読み取りました');
+}
+async function setCover(rec,im,sx,sy,sw,sh){
+  const big=await toBlob(drawTo(im,sx,sy,sw,sh,1400),.86);
+  rec.coverId=rec.id+'-cover'; await putImage(rec.coverId,big);
+  rec.thumb=drawTo(im,sx,sy,sw,sh,520).toDataURL('image/jpeg',.8);
+}
+async function saveRecipe(rec){
+  const {_ix,...plain}=rec; await dbPut('recipes',plain);
+  rec._ix=indexOf(rec); const i=R.findIndex(x=>x.id===rec.id); if(i>=0)R[i]=rec; else R.unshift(rec);
+  R.sort((a,b)=>b.createdAt-a.createdAt); if(route().name==='home')render();
+}
+async function deleteRecipe(rec){
+  for(const id of [...(rec.imageIds||[]),rec.coverId])if(id)await dbDel('images',id);
+  await dbDel('recipes',rec.id); R=R.filter(x=>x.id!==rec.id);
+}
+async function addJob(text,url,blobs){
+  const id=uid(); const imageIds=[];
+  for(let i=0;i<blobs.length;i++){const iid=id+'-'+i;await putImage(iid,blobs[i]);imageIds.push(iid);}
+  await dbPut('jobs',{id,createdAt:Date.now(),text:text||'',url:url||'',imageIds,status:'pending',tries:0,nextAt:0});
+}
+
+/* ================= 画面 ================= */
+function route(){const p=location.hash.replace(/^#\/?/,'').split('/');return {name:p[0]||'home',id:p[1]};}
+const go=hsh=>{location.hash=hsh;};
+let view={cat:'',q:''}; let urls=[];
+const objUrl=b=>{const u=URL.createObjectURL(b);urls.push(u);return u;};
+function render(){
+  urls.forEach(u=>URL.revokeObjectURL(u)); urls=[];
+  document.body.classList.toggle('tone',S.tone);
+  $('#bookTitle').textContent=S.title; document.title=S.title;
+  $('#bookSub').textContent=R.length?R.length+(R.length===1?' recipe':' recipes'):'';
+  const r=route(); const app=$('#app'); app.textContent='';
+  if(r.name==='r')return renderRecipe(app,r.id);
+  if(r.name==='e')return renderEdit(app,r.id);
+  if(r.name==='settings')return renderSettings(app);
+  renderHome(app);
+}
+function queueBar(){
+  const pend=jobsCache.filter(j=>j.status==='pending').length, err=jobsCache.filter(j=>j.status==='error').length;
+  if(!pend&&!err)return null;
+  let msg,stop=false,live=false;
+  if(paused==='key'){msg='Geminiの鍵がまだ入っていない、または使えませんでした。ここを押して確かめてください。';stop=true;}
+  else if(paused==='day'){msg='今日の無料ぶんを使い切りました。残り'+pend+'件は、明日「続きから読み取る」で再開できます。';stop=true;}
+  else{
+    const parts=[]; if(pend){parts.push((workingId?'読み取っています':'少し待ってから自動でやり直します')+'（残り'+pend+'件）');live=true;}
+    if(err){parts.push('読み取れなかったものが'+err+'件あります');stop=!pend;}
+    msg=parts.join('／');
+  }
+  return h('button',{class:'queue'+(stop?' stop':''),id:'queueBar',onclick:openQueue},h('span',{class:'dot'+(live?' live':'')}),h('span',{},msg));
+}
+function renderQueue(){
+  const old=$('#queueBar'); const neu=route().name==='home'?queueBar():null;
+  if(old&&neu)old.replaceWith(neu); else if(old)old.remove(); else if(neu&&$('#queueSlot'))$('#queueSlot').append(neu);
+  if($('#dlg').open&&$('#dlg').dataset.kind==='queue')fillQueue();
+}
+function renderHome(app){
+  const slot=h('div',{id:'queueSlot'}); const qb=queueBar(); if(qb)slot.append(qb); app.append(slot);
+  if(!R.length){
+    app.append(h('div',{class:'empty'},
+      S.key?h('p',{},'まだレシピがありません。インスタのスクショや投稿文を入れると、ここに並びます。')
+           :h('p',{},'はじめに、設定でGeminiの鍵を入れてください。そのあとレシピを足せるようになります。'),
+      S.key?h('button',{class:'btn',onclick:openAdd},'レシピを足す'):h('button',{class:'btn',onclick:()=>go('#/settings')},'設定をひらく')));
+    return;
+  }
+  const input=h('input',{type:'search',placeholder:'材料や料理名でさがす',value:view.q,'aria-label':'レシピをさがす',enterkeyhint:'search',
+    oninput:e=>{view.q=e.target.value;list();}});
+  app.append(h('div',{class:'find'},input, h('button',{class:'linkish',onclick:()=>{view.q='';input.value='';list();}},'消す')));
+  const tabs=h('div',{class:'tabs',role:'group','aria-label':'項目'}); app.append(tabs);
+  const chips=h('div',{class:'chips'}); app.append(chips);
+  const count=h('p',{class:'count'}); const grid=h('div',{class:'grid'}); app.append(count,grid);
+  function list(){
+    tabs.textContent=''; const used=new Set(R.map(r=>r.category));
+    for(const c of ['',...S.cats.filter(c=>used.has(c))])tabs.append(h('button',{'aria-pressed':String(view.cat===c),onclick:()=>{view.cat=c;list();}},c||'すべて'));
+    const inCat=R.filter(r=>!view.cat||r.category===view.cat);
+    chips.textContent='';
+    if(view.cat){const n=new Map();for(const r of inCat)for(const i of r.ingredients){const k=cleanIng(i.name);if(k&&!k.startsWith('【')&&k.length<=8)n.set(k,(n.get(k)||0)+1);}
+      [...n].sort((a,b)=>b[1]-a[1]).slice(0,14).forEach(([k])=>chips.append(h('button',{onclick:()=>{view.q=k;input.value=k;list();}},k)));}
+    const hit=view.q.trim()?inCat.filter(r=>matches(r,view.q)):inCat;
+    count.textContent=view.q.trim()||view.cat?hit.length+'件':'';
+    grid.textContent='';
+    if(!hit.length){grid.append(h('p',{class:'hint'},'見つかりませんでした。別の言い方でも試してみてください。言い換えは設定の「言い換え辞書」で足せます。'));return;}
+    for(const r of hit)grid.append(h('button',{class:'card',onclick:()=>go('#/r/'+r.id)},
+      h('div',{class:'plate'},r.thumb?h('img',{src:r.thumb,alt:'',loading:'lazy'}):h('span',{class:'initial','aria-hidden':'true'},[...r.title][0]||'R')),
+      h('h3',{},r.title),h('small',{},r.category)));
+  }
+  list();
+}
+async function renderRecipe(app,id){
+  const r=R.find(x=>x.id===id); if(!r){go('#/');return;}
+  const cover=r.coverId?await getImage(r.coverId):null;
+  if(route().id!==id)return;
+  app.append(h('div',{class:'bar back'},h('button',{class:'linkish',onclick:()=>go('#/')},'一覧へもどる'),h('span',{class:'sp'}),h('button',{class:'btn quiet',onclick:()=>go('#/e/'+id)},'直す')));
+  const meta=[r.category,r.servings,r.source].filter(Boolean).join('　');
+  const body=h('div',{},h('h2',{},r.title),
+    h('p',{class:'meta'},meta,r.url?['　',h('a',{href:r.url,target:'_blank',rel:'noopener'},'元の投稿をひらく')]:null),
+    r.ingredients.length?[h('h4',{},'材料',h('i',{},'Ingredients')),h('ul',{class:'ings'},r.ingredients.map(i=>/^【.*】$/.test(i.name)&&!i.amount
+      ?h('li',{class:'group'},i.name.slice(1,-1)):h('li',{},h('span',{class:'n'},i.name),h('span',{class:'a'},i.amount))))]:null,
+    r.steps.length?[h('h4',{},'作り方',h('i',{},'Method')),h('ol',{class:'steps'},r.steps.map(s=>h('li',{},h('span',{},s))))]:null,
+    r.memo?[h('h4',{},'メモ',h('i',{},'Notes')),h('p',{class:'memo'},r.memo)]:null);
+  app.append(h('article',{class:'recipe spread'+(cover?' has-photo':'')},cover?h('div',{class:'hero'},h('img',{src:objUrl(cover),alt:r.title})):null,body));
+  if((r.imageIds&&r.imageIds.length)||r.rawText){
+    const box=h('div',{}); const d=h('details',{class:'orig'},h('summary',{},'元の画像や文章を見る'),box);
+    d.addEventListener('toggle',async()=>{ if(!d.open||box.childNodes.length)return;
+      const g=h('div',{class:'origs'}); for(const iid of r.imageIds||[]){const b=await getImage(iid); if(b)g.append(h('img',{src:objUrl(b),alt:'元の画像'}));}
+      if(g.childNodes.length)box.append(g); if(r.rawText)box.append(h('div',{class:'rawtext'},r.rawText)); });
+    app.append(d);
+  }
+  window.scrollTo(0,0);
+}
+function renderEdit(app,id){
+  const r=R.find(x=>x.id===id); if(!r){go('#/');return;}
+  const f={title:h('input',{type:'text',value:r.title}),cat:h('select',{},S.cats.map(c=>h('option',{value:c},c))),
+    serv:h('input',{type:'text',value:r.servings}),steps:h('textarea',{rows:Math.max(6,r.steps.length+2)}),memo:h('textarea',{rows:4}),
+    source:h('input',{type:'text',value:r.source}),url:h('input',{type:'url',value:r.url,inputmode:'url'}),words:h('input',{type:'text',value:(r.words||[]).join('、')})};
+  f.cat.value=S.cats.includes(r.category)?r.category:S.cats[0]; f.steps.value=r.steps.join('\n'); f.memo.value=r.memo;
+  const rows=h('div',{class:'rows'});
+  const addRow=(n='',a='')=>{const row=h('div',{class:'row'},h('input',{type:'text',value:n,placeholder:'材料','aria-label':'材料'}),h('input',{type:'text',value:a,placeholder:'分量','aria-label':'分量'}),h('button',{type:'button','aria-label':'この行を消す',onclick:()=>row.remove()},'×'));rows.append(row);return row;};
+  r.ingredients.forEach(i=>addRow(i.name,i.amount));
+  const L=(t,el,hint)=>h('label',{class:'f'},t,el,hint?h('span',{class:'hint'},hint):null);
+  app.append(h('div',{class:'form'},h('h2',{},'レシピを直す'),
+    L('料理名',f.title),L('項目',f.cat),L('分量（何人分など）',f.serv),
+    h('div',{class:'f',style:'font-size:14.5px;color:var(--soft)'},'材料'),rows,
+    h('button',{class:'linkish',type:'button',onclick:()=>addRow().firstChild.focus()},'材料を1行足す'),
+    h('p',{class:'hint',style:'margin-bottom:18px'},'「【生地】」のように【】で囲むと、まとまりの見出しになります。'),
+    L('作り方（1行にひとつ）',f.steps),L('メモ',f.memo),L('どこのレシピか',f.source),L('元の投稿のリンク',f.url),
+    L('検索用のことば',f.words,'「、」で区切ります。ここにある言葉でも検索に出てきます。'),
+    h('div',{class:'section'},h('h3',{},'表紙の写真'),
+      h('div',{class:'bar',style:'margin-top:0'},h('button',{class:'btn quiet',type:'button',onclick:()=>openCoverPick(r)},'表紙の写真を選ぶ'),
+        r.coverId?h('button',{class:'linkish',type:'button',onclick:async e=>{await dbDel('images',r.coverId);r.coverId=null;r.thumb=null;await saveRecipe(r);toast('表紙をはずしました');e.target.remove();}},'表紙をはずす'):null),
+      h('p',{class:'hint'},'表紙を変えても、この画面で直している途中の内容はそのまま残ります。')),
+    h('div',{class:'bar'},
+      h('button',{class:'btn',onclick:async()=>{
+        r.title=f.title.value.trim()||'名前のないレシピ'; r.category=f.cat.value; r.servings=f.serv.value.trim();
+        r.ingredients=[...rows.children].map(x=>({name:x.children[0].value.trim(),amount:x.children[1].value.trim()})).filter(i=>i.name);
+        r.steps=f.steps.value.split('\n').map(s=>s.trim()).filter(Boolean); r.memo=f.memo.value.trim(); r.source=f.source.value.trim(); r.url=f.url.value.trim();
+        r.words=f.words.value.split(/[、,，\n]/).map(s=>s.trim()).filter(Boolean); r.updatedAt=Date.now();
+        await saveRecipe(r); toast('保存しました'); go('#/r/'+id);}},'保存する'),
+      h('button',{class:'btn quiet',onclick:()=>go('#/r/'+id)},'やめる'),h('span',{class:'sp'}),
+      h('button',{class:'btn danger',onclick:async()=>{if(!confirm('「'+r.title+'」を消します。元に戻せません。よろしいですか？'))return;await deleteRecipe(r);toast('消しました');go('#/');}},'このレシピを消す'))));
+  window.scrollTo(0,0);
+}
+
+/* ---- レシピを足す ---- */
+function openDlg(kind,node){const d=$('#dlg');d.textContent='';d.dataset.kind=kind;d.append(node);if(!d.open)d.showModal();d.scrollTop=0;}
+const closeDlg=()=>{const d=$('#dlg');if(d.open)d.close();};
+$('#dlg').addEventListener('click',e=>{if(e.target===e.currentTarget)closeDlg();});
+function openAdd(){
+  if(!S.key){toast('先に設定でGeminiの鍵を入れてください');go('#/settings');return;}
+  let imgs=[]; const thumbs=h('div',{class:'thumbs'}); const text=h('textarea',{rows:6,placeholder:'ここに貼り付け'}); const url=h('input',{type:'url',inputmode:'url',placeholder:'https://'});
+  const sep=h('input',{type:'checkbox'}); const sepRow=h('label',{class:'check hidden'},sep,h('span',{},'1枚ずつ別のレシピとして読む'));
+  const startBtn=h('button',{class:'btn',disabled:true},'読み取りを始める');
+  const upd=()=>{thumbs.textContent='';imgs.forEach((im,i)=>thumbs.append(h('div',{},h('img',{src:im.url,alt:''}),h('button',{class:'x','aria-label':'この画像をはずす',onclick:()=>{URL.revokeObjectURL(im.url);imgs.splice(i,1);upd();}},'×'))));
+    sepRow.classList.toggle('hidden',imgs.length<2); startBtn.disabled=!imgs.length&&!text.value.trim();};
+  text.addEventListener('input',upd);
+  const file=h('input',{type:'file',accept:'image/*',multiple:true,onchange:async e=>{
+    const files=[...e.target.files]; e.target.value='';
+    for(const fl of files){try{const b=await shrink(fl);imgs.push({blob:b,url:URL.createObjectURL(b)});upd();}catch(err){toast(err.message);}}}});
+  startBtn.addEventListener('click',async()=>{
+    startBtn.disabled=true; const t=text.value.trim(),u=url.value.trim();
+    if(sep.checked&&imgs.length>1){for(const im of imgs)await addJob('',u,[im.blob]);}
+    else await addJob(t,u,imgs.map(i=>i.blob));
+    imgs.forEach(i=>URL.revokeObjectURL(i.url)); closeDlg(); toast('受け付けました。裏で読み取ります'); if(paused==='day')paused=null; pump();
+  });
+  openDlg('add',h('div',{class:'sheet'},h('h2',{},'レシピを足す'),
+    h('label',{class:'pick'},file,'スクショや写真を選ぶ（何枚でも）'),thumbs,
+    h('p',{class:'hint',style:'margin:-4px 0 14px'},'切り抜かなくて大丈夫です。同じレシピのスクショはまとめて選んでください。'),sepRow,
+    h('label',{class:'f'},'投稿文やレシピの文章',text),
+    h('label',{class:'f'},'元の投稿のリンク（なくてもよい）',url),
+    h('div',{class:'bar'},startBtn,h('button',{class:'btn quiet',onclick:closeDlg},'やめる'))));
+}
+/* ---- 読み取りの状況 ---- */
+function openQueue(){ if(paused==='key'){go('#/settings');return;} openDlg('queue',h('div',{class:'sheet',id:'queueSheet'})); fillQueue(); }
+async function fillQueue(){
+  const box=$('#queueSheet'); if(!box)return; const ul=h('ul',{class:'jobs'});
+  for(const j of jobsCache){
+    const b=j.imageIds[0]?await getImage(j.imageIds[0]):null;
+    let st; if(j.status==='error')st=h('span',{class:'err'},j.error);
+    else if(j.id===workingId)st='読み取っています';
+    else if(j.tries)st='うまくいかなかったので、少し待ってから自動でやり直します（'+j.tries+'回目）';
+    else st='順番を待っています';
+    ul.append(h('li',{},b?h('img',{src:objUrl(b),alt:''}):h('div',{class:'noimg'}),h('div',{},
+      h('div',{},j.imageIds.length?'画像'+j.imageIds.length+'枚':'',j.text?(j.imageIds.length?'と文章':'文章')+'「'+j.text.slice(0,18)+'…」':''),h('div',{},st),
+      h('div',{class:'bar',style:'margin-top:6px'},
+        j.status==='error'?h('button',{class:'linkish',onclick:async()=>{j.status='pending';j.tries=0;j.nextAt=0;j.error='';await dbPut('jobs',j);pump();}},'もう一度読む'):null,
+        j.status==='error'?h('button',{class:'linkish',onclick:()=>keepAsIs(j)},'読まずにそのまま保存'):null,
+        j.id!==workingId?h('button',{class:'linkish',onclick:async()=>{for(const i of j.imageIds)await dbDel('images',i);await dbDel('jobs',j.id);refreshJobs();}},'取り消す'):null))));
+  }
+  if(!$('#queueSheet'))return; box.textContent='';
+  box.append(h('h2',{},'読み取りの状況'),jobsCache.length?ul:h('p',{},'待っているものはありません。'),
+    h('div',{class:'bar'},paused==='day'?h('button',{class:'btn',onclick:()=>{paused=null;pump();}},'続きから読み取る'):null,h('button',{class:'btn quiet',onclick:closeDlg},'閉じる')));
+}
+async function keepAsIs(j){
+  const cats=S.cats; const rec={id:j.id,title:'あとで直すレシピ',category:cats[cats.length-1],servings:'',ingredients:[],steps:[],memo:j.text||'',source:'',url:j.url||'',words:[],rawText:j.text||'',imageIds:j.imageIds,coverId:null,thumb:null,createdAt:j.createdAt,updatedAt:Date.now()};
+  await saveRecipe(rec); await dbDel('jobs',j.id); await refreshJobs(); closeDlg(); go('#/e/'+rec.id);
+}
+/* ---- 表紙を選ぶ・位置を決める ---- */
+async function openCoverPick(r){
+  const box=h('div',{class:'thumbs'});
+  for(const iid of r.imageIds||[]){const b=await getImage(iid); if(b)box.append(h('button',{class:'choose','aria-label':'この画像を使う',onclick:()=>openCrop(r,b)},h('img',{src:objUrl(b),alt:''})));}
+  const file=h('input',{type:'file',accept:'image/*',onchange:async e=>{const fl=e.target.files[0]; if(fl){try{openCrop(r,await shrink(fl));}catch(err){toast(err.message);}}}});
+  openDlg('cover',h('div',{class:'sheet'},h('h2',{},'表紙の写真を選ぶ'),box.childNodes.length?h('p',{class:'hint',style:'margin:0 0 10px'},'元の画像から選ぶ'):null,box,
+    h('label',{class:'pick'},file,'ほかの写真を選ぶ'),h('div',{class:'bar'},h('button',{class:'btn quiet',onclick:closeDlg},'やめる'))));
+}
+async function openCrop(r,blob){
+  const im=await loadImg(blob); const W=im.naturalWidth,H=im.naturalHeight; const cv=h('canvas',{width:640,height:800}); const g=cv.getContext('2d');
+  const base=Math.max(640/W,800/H); let zoom=1,cx=W/2,cy=H/2;
+  const rect=()=>{const s=base*zoom,sw=640/s,sh=800/s; cx=Math.max(sw/2,Math.min(W-sw/2,cx)); cy=Math.max(sh/2,Math.min(H-sh/2,cy)); return [cx-sw/2,cy-sh/2,sw,sh];};
+  const draw=()=>{const [sx,sy,sw,sh]=rect(); g.drawImage(im,sx,sy,sw,sh,0,0,640,800);};
+  let last=null;
+  cv.addEventListener('pointerdown',e=>{last=[e.clientX,e.clientY];cv.setPointerCapture(e.pointerId);});
+  cv.addEventListener('pointermove',e=>{if(!last)return;const k=640/cv.getBoundingClientRect().width/(base*zoom);cx-=(e.clientX-last[0])*k;cy-=(e.clientY-last[1])*k;last=[e.clientX,e.clientY];draw();});
+  const end=()=>{last=null}; cv.addEventListener('pointerup',end); cv.addEventListener('pointercancel',end);
+  const range=h('input',{type:'range',min:1,max:5,step:.01,value:1,'aria-label':'大きさ',oninput:e=>{zoom=+e.target.value;draw();}});
+  openDlg('crop',h('div',{class:'sheet'},h('h2',{},'写真の位置を決める'),h('div',{class:'cropwrap'},cv),
+    h('p',{class:'hint'},'指で動かして位置を、下のつまみで大きさを決めます。'),range,
+    h('div',{class:'bar'},h('button',{class:'btn',onclick:async()=>{const [sx,sy,sw,sh]=rect();await setCover(r,im,sx,sy,sw,sh);r.updatedAt=Date.now();await saveRecipe(r);closeDlg();toast('表紙を変えました');if(route().name!=='e')render();}},'これにする'),
+      h('button',{class:'btn quiet',onclick:closeDlg},'やめる'))));
+  draw();
+}
+
+/* ---- 設定 ---- */
+function renderSettings(app){
+  const key=h('input',{type:'password',value:S.key,autocomplete:'off',placeholder:'AIza…'}); const keyMsg=h('p',{class:'hint'});
+  const model=h('select',{},h('option',{value:''},'おまかせ（無料で使えるものを自動で選ぶ）')); if(S.model){model.append(h('option',{value:S.model},S.model));model.value=S.model;}
+  const title=h('input',{type:'text',value:S.title}); const cats=h('textarea',{rows:8}); cats.value=S.cats.join('\n');
+  const syn=h('textarea',{rows:10}); syn.value=S.syn; const tone=h('input',{type:'checkbox',checked:S.tone});
+  const withOrig=h('input',{type:'checkbox',checked:true}); const imp=h('input',{type:'file',accept:'.json,application/json',class:'hidden',onchange:e=>{const f=e.target.files[0];e.target.value='';if(f)importBackup(f);}});
+  const L=(t,el,hint)=>h('label',{class:'f'},t,el,hint?h('span',{class:'hint'},hint):null);
+  const days=S.lastBackup?Math.floor((Date.now()-S.lastBackup)/864e5):null;
+  app.append(h('div',{class:'form'},h('div',{class:'bar back'},h('button',{class:'linkish',onclick:()=>go('#/')},'一覧へもどる')),h('h2',{},'設定'),
+    h('div',{class:'section',style:'border:0;padding:0;margin:0'},h('h3',{},'文字の読み取り（Gemini）'),
+      L('Geminiの鍵（APIキー）',key,'鍵はこの端末の中だけに保存されます。バックアップには入りません。'),
+      h('div',{class:'bar',style:'margin:-6px 0 6px'},h('button',{class:'btn',onclick:async()=>{
+        S.key=key.value; S.autoModel=''; badModels.clear(); modelList=null; keyMsg.textContent='確かめています…';
+        try{const list=await fetchModels(); const cur=model.value; while(model.options.length>1)model.remove(1); list.forEach(m=>model.append(h('option',{value:m},m))); model.value=list.includes(cur)?cur:''; S.model=model.value;
+          keyMsg.textContent='鍵を確かめました。使えます。'; if(paused==='key')paused=null; pump();}
+        catch(e){keyMsg.textContent=e.kind==='key'?'この鍵は使えませんでした。写し間違いがないか見てください。':'確かめられませんでした（'+e.message+'）。鍵は保存しました。';}}},'鍵を保存して確かめる')),keyMsg,
+      L('読み取りに使うモデル',model,'ふだんは「おまかせ」のままで大丈夫です。'))
+    ,h('div',{class:'section'},h('h3',{},'本のなまえと見た目'),L('本のなまえ',title),
+      h('label',{class:'check'},tone,h('span',{},'写真の色味を少し落ち着かせて、全体をそろえる')),
+      L('項目（1行にひとつ）',cats,'いちばん下の項目は、迷ったときの入れ先になります。'))
+    ,h('div',{class:'section'},h('h3',{},'言い換え辞書'),
+      L('同じものとして探す言葉を、1行に「、」で区切って並べます',syn,'例: 卵、たまご、玉子'))
+    ,h('div',{class:'bar'},h('button',{class:'btn',onclick:()=>{
+        S.model=model.value; S.title=title.value.trim()||"Nokka's Recipes"; S.tone=tone.checked;
+        const c=cats.value.split('\n').map(s=>s.trim()).filter(Boolean); if(c.length)S.cats=[...new Set(c)]; S.syn=syn.value; toast('設定を保存しました'); render();}},'設定を保存する'))
+    ,h('div',{class:'section'},h('h3',{},'バックアップ'),
+      h('p',{class:'hint',style:'margin:0 0 10px'},days==null?'まだバックアップしていません。':'前回のバックアップから'+days+'日たっています。','　レシピはこの端末の中にあります。ときどきファイルに書き出しておくと安心です。'),
+      h('label',{class:'check'},withOrig,h('span',{},'元のスクショも入れる（はずすとファイルが軽くなります）')),
+      h('div',{class:'bar',style:'margin-top:8px'},h('button',{class:'btn',onclick:e=>exportBackup(withOrig.checked,e.target)},'バックアップを書き出す'),
+        h('button',{class:'btn quiet',onclick:()=>imp.click()},'バックアップから読み込む'),imp))));
+  window.scrollTo(0,0);
+}
+
+/* ================= バックアップ ================= */
+async function exportBackup(withOrig,btn){
+  btn.disabled=true; const label=btn.textContent;
+  try{
+    const parts=[JSON.stringify({type:'meta',app:'recipebook',version:1,exportedAt:new Date().toISOString(),settings:{cats:S.cats,syn:S.syn,title:S.title,tone:S.tone}})+'\n'];
+    let n=0;
+    for(const r of R){
+      const {_ix,...data}=r; const images=[];
+      for(const iid of [...(withOrig?(r.imageIds||[]):[]),r.coverId].filter(Boolean)){const rec=await dbGet('images',iid); if(rec)images.push({id:iid,type:rec.type,data:await toB64(new Blob([rec.buf]))});}
+      if(!withOrig)data.imageIds=[];
+      parts.push(JSON.stringify({type:'recipe',data,images})+'\n'); btn.textContent='書き出しています '+(++n)+'/'+R.length;
+    }
+    const d=new Date(); const name='recipes-backup-'+d.getFullYear()+String(d.getMonth()+1).padStart(2,'0')+String(d.getDate()).padStart(2,'0')+'.json';
+    const file=new File(parts,name,{type:'application/json'});
+    let done=false;
+    if(navigator.canShare&&navigator.canShare({files:[file]})){try{await navigator.share({files:[file]});done=true;}catch(e){if(e.name==='AbortError'){toast('書き出しをやめました');return;}}}
+    if(!done){const u=URL.createObjectURL(file);const a=h('a',{href:u,download:name});document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(u),60000);}
+    S.lastBackup=Date.now(); toast(R.length+'件を書き出しました');
+  }catch(e){toast('書き出せませんでした：'+e.message,5000);}
+  finally{btn.disabled=false;btn.textContent=label;}
+}
+async function* fileLines(file){
+  if(file.stream&&window.TextDecoderStream){
+    const rd=file.stream().pipeThrough(new TextDecoderStream()).getReader(); let buf='';
+    for(;;){const {value,done}=await rd.read(); if(done)break; buf+=value; let i; while((i=buf.indexOf('\n'))>=0){yield buf.slice(0,i);buf=buf.slice(i+1);}}
+    if(buf.trim())yield buf;
+  }else for(const l of (await file.text()).split('\n'))if(l.trim())yield l;
+}
+async function importBackup(file){
+  let n=0,ok=false;
+  try{
+    for await(const line of fileLines(file)){
+      if(!line.trim())continue; const o=JSON.parse(line);
+      if(o.type==='meta'){ if(o.app!=='recipebook')throw new Error('このアプリのバックアップではないようです'); ok=true;
+        const s=o.settings||{}; if(Array.isArray(s.cats)&&s.cats.length)S.cats=[...new Set([...S.cats,...s.cats])]; if(typeof s.syn==='string'&&S.syn===DEFAULT_SYN)S.syn=s.syn; if(s.title&&S.title==="Nokka's Recipes")S.title=s.title; }
+      else if(o.type==='recipe'){ if(!ok)throw new Error('このアプリのバックアップではないようです');
+        for(const im of o.images||[]){const bin=atob(im.data);const u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);await dbPut('images',{id:im.id,type:im.type,buf:u.buffer});}
+        await dbPut('recipes',o.data); n++; if(n%5===0)toast(n+'件読み込みました…'); }
+    }
+    await loadAll(); toast(n+'件のレシピを読み込みました'); render();
+  }catch(e){await loadAll(); toast('読み込めませんでした：'+e.message+(n?'（'+n+'件までは入りました）':''),6000); render();}
+}
+
+/* ================= はじまり ================= */
+async function loadAll(){R=(await dbAll('recipes')).map(r=>{r.ingredients=r.ingredients||[];r.steps=r.steps||[];r._ix=indexOf(r);return r;}).sort((a,b)=>b.createdAt-a.createdAt);}
+$('#btnAdd').addEventListener('click',openAdd);
+$('#btnSettings').addEventListener('click',()=>go('#/settings'));
+window.addEventListener('hashchange',()=>{closeDlg();render();});
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&!paused)pump();});
+(async()=>{
+  try{db=await openDB();await loadAll();}
+  catch(e){$('#app').append(h('p',{class:'empty'},'保存場所をひらけませんでした。Safariの「プライベートブラウズ」では使えません。ふつうの画面でひらき直してください。'));return;}
+  if(navigator.storage&&navigator.storage.persist)navigator.storage.persist().catch(()=>{});
+  render(); pump();
+})();
+</script>
+</body>
+</html>
