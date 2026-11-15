@@ -10,7 +10,7 @@
 <meta name="theme-color" content="#fdf3e3">
 <title>Cove</title>
 <style>
-/* Cove（新） 版 2.5 ── ログの取り込みで、Claude公式の「データを書き出す」のファイル（zipのまま、または conversations.json）も読める。会話が多いときは、名前でさがして選ぶ。ログの取り込みで、会話を書き出したHTMLファイル（Human／Assistant の形）も読める。一覧のペルソナを、それぞれの色で。Roomのカラー。一覧の上が切れるのを直した。Room（一覧に別々に並ぶ。書庫と呼ぶ人は Room ごと）、「保存・コピー」、背景と同じ色の文字欄を少し濃く、表紙とヘッダー（旧Coveと同じ見た目）、料金の内訳、設定の並び、Room（旧「集まれる場所」。呼ぶ、次に返事する人、みんな、おまかせ、書庫、みんなの日記）、Claudeの割引（キャッシュ）、ログの取り込み、写真とファイルの添付、会話の画面、保存、ペルソナと部屋、プロンプトの切り替え、記憶（項目ごと、発言から記録、必要なときにAIが開く）、日記（ペルソナが書く。押したときだけ）、部屋のログを読んでもらう、あらすじの下書き、AIと話す（Claude・Gemini・GPT・Grok）、検索、思考、保存 */
+/* Cove（新） 版 2.6 ── ログの取り込みで、旧Coveで保存した文章のファイル（◆ 私(日時) の形）も読める。ログの取り込みで、Claude公式の「データを書き出す」のファイル（zipのまま、または conversations.json）も読める。会話が多いときは、名前でさがして選ぶ。ログの取り込みで、会話を書き出したHTMLファイル（Human／Assistant の形）も読める。一覧のペルソナを、それぞれの色で。Roomのカラー。一覧の上が切れるのを直した。Room（一覧に別々に並ぶ。書庫と呼ぶ人は Room ごと）、「保存・コピー」、背景と同じ色の文字欄を少し濃く、表紙とヘッダー（旧Coveと同じ見た目）、料金の内訳、設定の並び、Room（旧「集まれる場所」。呼ぶ、次に返事する人、みんな、おまかせ、書庫、みんなの日記）、Claudeの割引（キャッシュ）、ログの取り込み、写真とファイルの添付、会話の画面、保存、ペルソナと部屋、プロンプトの切り替え、記憶（項目ごと、発言から記録、必要なときにAIが開く）、日記（ペルソナが書く。押したときだけ）、部屋のログを読んでもらう、あらすじの下書き、AIと話す（Claude・Gemini・GPT・Grok）、検索、思考、保存 */
 :root{
   --sand:#faf6ee; --text:#37474f; --soft:#5d6c73; --line:#e4dccc; --sea:#3f7585;
   --skyA:#dff0f4; --skyB:#f6efe2;
@@ -345,7 +345,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
 <div id="app">
   <header>
     <div class="hl">
-      <div class="ttl">🌊 Cove <small id="tide"></small><small id="ver">版 2.5</small></div>
+      <div class="ttl">🌊 Cove <small id="tide"></small><small id="ver">版 2.6</small></div>
       <span class="gap"></span>
       <button id="openCover" class="ic" type="button" aria-label="表紙へ" title="表紙へ">🏝️</button>
       <button id="openFinder" class="ic" type="button" aria-label="さがす" title="さがす">🔍</button>
@@ -474,8 +474,8 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
       <div class="field">
         <h3>ログを取り込む</h3>
         <button id="importBtn" class="small" type="button">ログを取り込む</button>
-        <input id="importFile" type="file" multiple accept=".json,application/json,.html,.htm,text/html,.zip,application/zip" hidden>
-        <p style="margin-top:10px">ほかのアプリの会話を、部屋として足します。いまある会話は、消えません。料金はかかりません。<br>いま読めるのは、Claude公式の「データを書き出す」のファイル（zipのまま、または中の conversations.json）、Claudeの会話を書き出したHTMLファイル、GPTの形のJSONファイルです。</p>
+        <input id="importFile" type="file" multiple accept=".json,application/json,.html,.htm,text/html,.zip,application/zip,.txt,.md,text/plain" hidden>
+        <p style="margin-top:10px">ほかのアプリの会話を、部屋として足します。いまある会話は、消えません。料金はかかりません。<br>いま読めるのは、Claude公式の「データを書き出す」のファイル（zipのまま、または中の conversations.json）、Claudeの会話を書き出したHTMLファイル、旧Coveで保存した文章のファイル、GPTの形のJSONファイルです。</p>
       </div>
       <details id="keysBox" class="field keys">
         <summary>APIキー（押すと開きます）</summary>
@@ -599,7 +599,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
 <script>
 (function(){
   "use strict";
-  const VERSION = "2.5";
+  const VERSION = "2.6";
   const app = document.getElementById("app");
   const list = document.getElementById("list");
   const box = document.getElementById("msg");
@@ -2223,7 +2223,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
      いま読めるのは「GPTの形」：[{ title, create_time, current_node, mapping:{ id:{ message, parent, children } } }]。
      発言の日付は、ログのものを守る（順番が前後しないように、少なくとも1ミリ秒ずつ後ろへ）。
      取り込んだ部屋と発言には imported:true を付ける。部屋には importCount（発言の数）も持たせて、二重の取り込みに気づけるようにする。
-     会話を書き出したHTMLファイルは、readHtmlLog が読む（版 2.4）。Claude公式の書き出しは、readClaudeConv が読む（版 2.5。zip のままでもよい）。
+     会話を書き出したHTMLファイルは、readHtmlLog が読む（版 2.4）。Claude公式の書き出しは、readClaudeConv が読む（版 2.5。zip のままでもよい）。旧Coveの文章のファイルは、readCoveText が読む（版 2.6）。
      会話が IMP_MANY 件より多いときは、チェックなしで始めて、新しい順に並べ、名前でさがせるようにする。
      読める形を増やすときは、readLog と同じ形 { title, msgs:[{ role, text, at }], nodate } を返す読み手を足す。 */
   const toMs = v => { v = Number(v) || 0; return v > 1e11 ? Math.round(v) : Math.round(v * 1000); };
@@ -2327,6 +2327,50 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
     return null;
   }
   const isZip = async f => { try{ const h = new Uint8Array(await f.slice(0, 4).arrayBuffer()); return h[0] === 0x50 && h[1] === 0x4b && h[2] === 3 && h[3] === 4; }catch(e){ return false; } };
+
+  /* 旧Coveで「ファイルに保存」した文章を読む（版 2.6）。形は：
+     # 部屋の名前 ／ スレッドの名前
+     （キャラ設定など。ここは読まない）
+     ======== 🐚 スレッドの名前 ========
+     ◆ 私(2026/9/15 21:31:55)
+     本文…
+     ◆ Gemini 3.8 Flash(2026/9/15 21:32:04)
+     本文…
+     「◆ 名前(日時)」の行が、発言のはじまり。名前が「私」ならわたし、ほかはAI。日時は、そのまま使う。スレッド1つが、部屋1つ。
+     だれの発言かのしるしがない文章（ただコピーしたもの）は、ここでは読めない。 */
+  const COVE_MARK = /^◆ (.+?)[(（](\d{4})\/(\d{1,2})\/(\d{1,2}) (\d{1,2}):(\d{2})(?::(\d{2}))?[)）]\s*$/;
+  const isCoveText = t => t.split("\n", 400).some(l => COVE_MARK.test(l));
+  function readCoveText(text, fileName){
+    const lines = text.replace(/\r\n?/g, "\n").split("\n");
+    const head = /^#\s*(.+?)\s*$/.exec(lines[0] || "");
+    const place = head ? head[1].split(" ／ ")[0].trim() : "";
+    const out = [];
+    let cur = null, msg = null, prev = 0;
+    const closeMsg = () => {
+      if(msg){ const t = msg.lines.join("\n").replace(/^\s+/, "").replace(/\s+$/, ""); if(t) cur.msgs.push({ role:msg.role, text:t, at:msg.at }); }
+      msg = null;
+    };
+    const closeThread = () => { closeMsg(); if(cur && cur.msgs.length) out.push(cur); cur = null; };
+    const open = name => { closeThread(); prev = 0; cur = { title:name, msgs:[], nodate:false }; };
+    lines.forEach(l => {
+      const th = /^={4,}\s*(.*?)\s*={4,}\s*$/.exec(l);
+      if(th){ const n = th[1].replace(/^🐚\s*/, "").trim(); open(((place ? place + " ／ " : "") + (n || "名前のない部屋")).slice(0, 60)); return; }
+      const m = COVE_MARK.exec(l);
+      if(m){
+        if(!cur) open((head ? head[1] : String(fileName || "").replace(/\.[A-Za-z0-9]+$/, "") || "名前のないログ").slice(0, 60));
+        closeMsg();
+        let at = new Date(+m[2], +m[3] - 1, +m[4], +m[5], +m[6], +(m[7] || 0)).getTime();
+        if(!(at > 0)) at = prev + 1000;
+        if(at <= prev) at = prev + 1;
+        prev = at;
+        msg = { role:/^(私|わたし|ユーザー|user)$/i.test(m[1].trim()) ? "me" : "ai", at:at, lines:[] };
+        return;
+      }
+      if(msg) msg.lines.push(l);
+    });
+    closeThread();
+    return out;
+  }
   /* 会話を書き出したHTMLファイルを読む（版 2.4）。形は：
      <h1>題名</h1> <p class="meta">Created 2026-05-10T15:50:09Z</p>
      <section class="turn turn-human">…<div class="turn-body"><div class="text"><p>…</p></div></div></section>（Assistant は turn-assistant）
@@ -2441,7 +2485,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
         if(await isZip(f)){ raw = await unzipFind(await f.arrayBuffer(), /(^|\/)conversations\.json$/i); if(raw == null){ bad.push(f.name); continue; } }
         else raw = await f.text();
         raw = raw.replace(/^\ufeff/, "");
-        const got = (/\.html?$/i.test(f.name || "") || /^\s*</.test(raw)) ? readHtmlLog(raw, f.name) : readLog(JSON.parse(raw), f.name);
+        const got = (/\.html?$/i.test(f.name || "") || /^\s*</.test(raw)) ? readHtmlLog(raw, f.name) : isCoveText(raw) ? readCoveText(raw, f.name) : readLog(JSON.parse(raw), f.name);
         if(!got.length){ bad.push(f.name); continue; }
         got.forEach(c => {
           if(c.nodate){      // 日付のないログは、ファイルの日付を、さいごの発言の時刻にする
@@ -2452,7 +2496,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
         });
       }catch(e){ bad.push(f.name); }
     }
-    if(bad.length) await tell("読めなかったファイルがあります。\n" + bad.join("\n") + "\n\nいま読めるのは、Claude公式の「データを書き出す」のファイル（zipのまま、または中の conversations.json）、Claudeの会話を書き出したHTMLファイル、GPTの形のJSONファイルです。\n（zipが読めないときは、zipを開いて、中の conversations.json を選んでください）");
+    if(bad.length) await tell("読めなかったファイルがあります。\n" + bad.join("\n") + "\n\nいま読めるのは、Claude公式の「データを書き出す」のファイル（zipのまま、または中の conversations.json）、Claudeの会話を書き出したHTMLファイル、旧Coveで保存した文章のファイル、GPTの形のJSONファイルです。\n（zipが読めないときは、zipを開いて、中の conversations.json を選んでください）");
     if(!convs.length) return;
     try{
       const many = convs.length > IMP_MANY;
