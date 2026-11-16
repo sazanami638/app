@@ -162,6 +162,7 @@ input[type=range]{width:100%;accent-color:var(--cloth)}
 
 <script>
 'use strict';
+const VERSION='2026-11-16 b（QRコードの動画）'; // 直すたびにここを書きかえる
 /* ================= 基本の道具 ================= */
 const $=(s,r=document)=>r.querySelector(s);
 function h(tag,a,...kids){
@@ -743,7 +744,13 @@ function renderSettings(app){
       h('p',{class:'hint',style:'margin:0 0 10px'},days==null?'まだバックアップしていません。':'前回のバックアップから'+days+'日たっています。','　レシピはこの端末の中にあります。ときどきファイルに書き出しておくと安心です。'),
       h('label',{class:'check'},withOrig,h('span',{},'元のスクショも入れる（はずすとファイルが軽くなります）')),
       h('div',{class:'bar',style:'margin-top:8px'},h('button',{class:'btn',onclick:e=>exportBackup(withOrig.checked,e.target)},'バックアップを書き出す'),
-        h('button',{class:'btn quiet',onclick:()=>imp.click()},'バックアップから読み込む'),imp))));
+        h('button',{class:'btn quiet',onclick:()=>imp.click()},'バックアップから読み込む'),imp))
+    ,h('div',{class:'section'},h('h3',{},'このアプリの版'),
+      h('p',{class:'hint',style:'margin:0 0 10px'},'いまの版: '+VERSION),
+      h('button',{class:'btn quiet',onclick:async e=>{e.target.disabled=true;e.target.textContent='新しい版を取りにいっています…';
+        try{await fetch(location.pathname,{cache:'reload'});}catch(err){}
+        location.reload();}},'最新の版にする'),
+      h('p',{class:'hint'},'GitHubに新しいファイルを置いたあと、ここを押すと入れ替わります。置いてから1〜2分は古いままのことがあります。'))));
   window.scrollTo(0,0);
 }
 
