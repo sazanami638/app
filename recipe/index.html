@@ -105,6 +105,11 @@ details.orig summary{color:var(--soft);font-size:15px;cursor:pointer}
 .origs img{width:100%;display:block;border:1px solid var(--line)}
 .rawtext{white-space:pre-wrap;font-family:var(--ui);font-size:14px;line-height:1.7;color:#55524c;background:var(--wash);padding:14px;margin-top:14px}
 
+.video{margin:0 0 14px}
+.video .frame{position:relative;aspect-ratio:16/9;background:#000;margin-bottom:4px}
+.video iframe{position:absolute;inset:0;width:100%;height:100%;border:0}
+.video a{font-size:14.5px;color:var(--soft)}
+
 /* 入力 */
 .form{max-width:680px}
 .form h2,.sheet h2{font-family:var(--text);font-weight:400;font-size:24px;margin:0 0 18px}
@@ -157,6 +162,7 @@ input[type=range]{width:100%;accent-color:var(--cloth)}
 
 <script>
 'use strict';
+const VERSION='2026-11-16 b（QRコードの動画）'; // 直すたびにここを書きかえる
 /* ================= 基本の道具 ================= */
 const $=(s,r=document)=>r.querySelector(s);
 function h(tag,a,...kids){
@@ -282,6 +288,66 @@ function variants(term){const out=new Set([term]);for(const g of synGroups())if(
 function indexOf(r){return norm([r.title,r.category,r.servings,r.memo,r.source,(r.ingredients||[]).map(i=>i.name).join(' '),(r.steps||[]).join(' '),(r.words||[]).join(' ')].join(' '));}
 function matches(r,q){const terms=q.normalize('NFKC').split(/\s+/).map(norm).filter(Boolean);return terms.every(t=>variants(t).some(v=>r._ix.includes(v)));}
 const cleanIng=n=>(n||'').replace(/[（(［\[].*?[)）］\]]/g,'').replace(/^[★☆◎●○■□▲△◆◇・*\-\s]+/,'').replace(/^[A-ZＡ-Ｚa-z][\s　:：.．]+/,'').trim();
+
+/* ================= QRコード（動画のリンク） ================= */
+const JSQR_URL='https://cdn.jsdelivr.net/npm/jsqr@1.4.0/dist/jsQR.js';
+let jsqrP=null;
+function loadJsQR(){
+  if(window.jsQR)return Promise.resolve();
+  if(!jsqrP)jsqrP=new Promise((res,rej)=>{const s=document.createElement('script');s.src=JSQR_URL;s.onload=()=>res();
+    s.onerror=()=>{jsqrP=null;s.remove();rej(new Error('QRコードを読む部品を取ってこられませんでした。電波のよいところでもう一度試してください。'))};document.head.append(s);});
+  return jsqrP;
+}
+// 画像の中のQRコードを全部さがして、リンク（http…）だけを返す。
+// 大きめの画像で「全体→9つの部分」、次に小さめの画像で全体、の順に見る（大きさによって読めたり読めなかったりするので2通り試す）。
+// 見つけたQRは白く塗って、同じ画像の次のQRをさがす。
+async function scanQR(blob){
+  await loadJsQR();
+  const im=await loadImg(blob); const W=im.naturalWidth,H=im.naturalHeight; const found=[];
+  const k1=Math.min(1,3000/Math.max(W,H));
+  for(const [k,tiles] of [[k1,true],[k1*.62,false]]){
+    const c=document.createElement('canvas'); c.width=Math.max(1,Math.round(W*k)); c.height=Math.max(1,Math.round(H*k));
+    const g=c.getContext('2d',{willReadFrequently:true}); g.fillStyle='#fff'; g.fillRect(0,0,c.width,c.height); g.drawImage(im,0,0,c.width,c.height);
+    const tw=Math.ceil(c.width/2),th=Math.ceil(c.height/2); const areas=[[0,0,c.width,c.height]];
+    if(tiles)for(let y=0;y<3;y++)for(let x=0;x<3;x++)areas.push([Math.floor(x*(c.width-tw)/2),Math.floor(y*(c.height-th)/2),tw,th]);
+    for(const [ax,ay,aw,ah] of areas){
+      for(let n=0;n<8;n++){
+        const d=g.getImageData(ax,ay,aw,ah); const r=window.jsQR(d.data,aw,ah,{inversionAttempts:'dontInvert'}); if(!r)break;
+        const p=r.location,pts=[p.topLeftCorner,p.topRightCorner,p.bottomRightCorner,p.bottomLeftCorner];
+        const x0=Math.min(...pts.map(q=>q.x)),x1=Math.max(...pts.map(q=>q.x)),y0=Math.min(...pts.map(q=>q.y)),y1=Math.max(...pts.map(q=>q.y)),pad=(x1-x0)*.12+4;
+        g.fillRect(ax+x0-pad,ay+y0-pad,x1-x0+pad*2,y1-y0+pad*2);
+        const t=(r.data||'').trim(); if(t&&!found.includes(t))found.push(t);
+      }
+      await sleep(0);
+    }
+    c.width=c.height=1;
+  }
+  return found.filter(t=>/^https?:\/\//i.test(t));
+}
+// YouTube / Vimeo のリンクを、ページの中で再生できる形にする。できないリンクは null。
+function videoEmbed(u){
+  let m;
+  if((m=u.match(/(?:youtu\.be\/|youtube(?:-nocookie)?\.com\/(?:watch\?(?:[^#]*&)?v=|shorts\/|live\/|embed\/))([\w-]{11})/)))return 'https://www.youtube-nocookie.com/embed/'+m[1];
+  if((m=u.match(/vimeo\.com\/(?:video\/|channels\/[^\/]+\/|groups\/[^\/]+\/videos\/|manage\/videos\/)?(\d{6,})(?:\/([0-9a-f]{6,})|[^#]*?[?&]h=([0-9a-f]+))?/)))return 'https://player.vimeo.com/video/'+m[1]+((m[2]||m[3])?'?h='+(m[2]||m[3]):'');
+  return null;
+}
+function videoBlock(r){
+  const vids=r.videos||[];
+  if(!vids.length)return r.imageIds&&r.imageIds.length?h('p',{class:'video'},h('button',{class:'linkish',onclick:e=>findVideos(r,e.target)},'元の画像からQRコードの動画をさがす')):null;
+  return [h('h4',{},'動画',h('i',{},'Video')),vids.map(u=>{const e=videoEmbed(u);return h('div',{class:'video'},
+    e?h('div',{class:'frame'},h('iframe',{src:e,loading:'lazy',title:'動画',allow:'fullscreen; picture-in-picture; encrypted-media',allowfullscreen:true,referrerpolicy:'strict-origin-when-cross-origin'})):null,
+    h('a',{href:u,target:'_blank',rel:'noopener'},e?'ここで映らないときは、こちらからひらく':'動画をひらく'));})];
+}
+async function findVideos(r,btn){
+  const label=btn.textContent; btn.disabled=true; btn.textContent='さがしています…';
+  try{
+    const out=[...(r.videos||[])]; const before=out.length;
+    for(const iid of r.imageIds||[]){const b=await getImage(iid); if(b)for(const u of await scanQR(b))if(!out.includes(u))out.push(u);}
+    if(out.length>before){r.videos=out;r.updatedAt=Date.now();await saveRecipe(r);toast('動画のリンクを見つけました');if(route().name==='r')render();return;}
+    toast('QRコードは見つかりませんでした');
+  }catch(e){toast(e.message,5000);}
+  btn.disabled=false; btn.textContent=label;
+}
 
 /* ================= Gemini（文字の読み取り） ================= */
 const API='https://generativelanguage.googleapis.com/v1beta';
@@ -411,7 +477,7 @@ async function runJob(job){
   if(!ings.length&&!steps.length)throw new GErr('norecipe','');
   const cats=S.cats;
   const rec={id:job.id,title:(r.title||'').trim()||'名前のないレシピ',category:cats.includes(r.category)?r.category:cats[cats.length-1],
-    servings:(r.servings||'').trim(),ingredients:ings,steps,memo:(r.memo||'').trim(),source:(r.source||'').trim(),url:job.url||'',
+    servings:(r.servings||'').trim(),ingredients:ings,steps,memo:(r.memo||'').trim(),source:(r.source||'').trim(),url:job.url||'',videos:job.links||[],
     words:(r.search_words||[]).map(String).slice(0,30),rawText:job.text||'',imageIds:job.imageIds,coverId:null,thumb:null,createdAt:job.createdAt,updatedAt:Date.now()};
   try{ // 料理写真を切り抜いて表紙にする
     const p=r.photo,bx=p&&p.box_2d;
@@ -439,10 +505,10 @@ async function deleteRecipe(rec){
   for(const id of [...(rec.imageIds||[]),rec.coverId])if(id)await dbDel('images',id);
   await dbDel('recipes',rec.id); R=R.filter(x=>x.id!==rec.id);
 }
-async function addJob(text,url,blobs){
+async function addJob(text,url,blobs,links){
   const id=uid(); const imageIds=[];
   for(let i=0;i<blobs.length;i++){const iid=id+'-'+i;await putImage(iid,blobs[i]);imageIds.push(iid);}
-  await dbPut('jobs',{id,createdAt:Date.now(),text:text||'',url:url||'',imageIds,status:'pending',tries:0,nextAt:0});
+  await dbPut('jobs',{id,createdAt:Date.now(),text:text||'',url:url||'',links:links||[],imageIds,status:'pending',tries:0,nextAt:0});
 }
 
 /* ================= 画面 ================= */
@@ -519,6 +585,7 @@ async function renderRecipe(app,id){
   const meta=[r.category,r.servings,r.source].filter(Boolean).join('　');
   const body=h('div',{},h('h2',{},r.title),
     h('p',{class:'meta'},meta,r.url?['　',h('a',{href:r.url,target:'_blank',rel:'noopener'},'元の投稿をひらく')]:null),
+    videoBlock(r),
     r.ingredients.length?[h('h4',{},'材料',h('i',{},'Ingredients')),h('ul',{class:'ings'},r.ingredients.map(i=>/^【.*】$/.test(i.name)&&!i.amount
       ?h('li',{class:'group'},i.name.slice(1,-1)):h('li',{},h('span',{class:'n'},i.name),h('span',{class:'a'},i.amount))))]:null,
     r.steps.length?[h('h4',{},'作り方',h('i',{},'Method')),h('ol',{class:'steps'},r.steps.map(s=>h('li',{},h('span',{},s))))]:null,
@@ -537,8 +604,8 @@ function renderEdit(app,id){
   const r=R.find(x=>x.id===id); if(!r){go('#/');return;}
   const f={title:h('input',{type:'text',value:r.title}),cat:h('select',{},S.cats.map(c=>h('option',{value:c},c))),
     serv:h('input',{type:'text',value:r.servings}),steps:h('textarea',{rows:Math.max(6,r.steps.length+2)}),memo:h('textarea',{rows:4}),
-    source:h('input',{type:'text',value:r.source}),url:h('input',{type:'url',value:r.url,inputmode:'url'}),words:h('input',{type:'text',value:(r.words||[]).join('、')})};
-  f.cat.value=S.cats.includes(r.category)?r.category:S.cats[0]; f.steps.value=r.steps.join('\n'); f.memo.value=r.memo;
+    source:h('input',{type:'text',value:r.source}),url:h('input',{type:'url',value:r.url,inputmode:'url'}),words:h('input',{type:'text',value:(r.words||[]).join('、')}),videos:h('textarea',{rows:2})};
+  f.cat.value=S.cats.includes(r.category)?r.category:S.cats[0]; f.steps.value=r.steps.join('\n'); f.memo.value=r.memo; f.videos.value=(r.videos||[]).join('\n');
   const rows=h('div',{class:'rows'});
   const addRow=(n='',a='')=>{const row=h('div',{class:'row'},h('input',{type:'text',value:n,placeholder:'材料','aria-label':'材料'}),h('input',{type:'text',value:a,placeholder:'分量','aria-label':'分量'}),h('button',{type:'button','aria-label':'この行を消す',onclick:()=>row.remove()},'×'));rows.append(row);return row;};
   r.ingredients.forEach(i=>addRow(i.name,i.amount));
@@ -548,7 +615,7 @@ function renderEdit(app,id){
     h('div',{class:'f',style:'font-size:14.5px;color:var(--soft)'},'材料'),rows,
     h('button',{class:'linkish',type:'button',onclick:()=>addRow().firstChild.focus()},'材料を1行足す'),
     h('p',{class:'hint',style:'margin-bottom:18px'},'「【生地】」のように【】で囲むと、まとまりの見出しになります。'),
-    L('作り方（1行にひとつ）',f.steps),L('メモ',f.memo),L('どこのレシピか',f.source),L('元の投稿のリンク',f.url),
+    L('作り方（1行にひとつ）',f.steps),L('メモ',f.memo),L('どこのレシピか',f.source),L('元の投稿のリンク',f.url),L('動画のリンク（1行にひとつ）',f.videos,'QRコードから読んだリンクがここに入ります。'),
     L('検索用のことば',f.words,'「、」で区切ります。ここにある言葉でも検索に出てきます。'),
     h('div',{class:'section'},h('h3',{},'表紙の写真'),
       h('div',{class:'bar',style:'margin-top:0'},h('button',{class:'btn quiet',type:'button',onclick:()=>openCoverPick(r)},'表紙の写真を選ぶ'),
@@ -558,7 +625,7 @@ function renderEdit(app,id){
       h('button',{class:'btn',onclick:async()=>{
         r.title=f.title.value.trim()||'名前のないレシピ'; r.category=f.cat.value; r.servings=f.serv.value.trim();
         r.ingredients=[...rows.children].map(x=>({name:x.children[0].value.trim(),amount:x.children[1].value.trim()})).filter(i=>i.name);
-        r.steps=f.steps.value.split('\n').map(s=>s.trim()).filter(Boolean); r.memo=f.memo.value.trim(); r.source=f.source.value.trim(); r.url=f.url.value.trim();
+        r.steps=f.steps.value.split('\n').map(s=>s.trim()).filter(Boolean); r.memo=f.memo.value.trim(); r.source=f.source.value.trim(); r.url=f.url.value.trim(); r.videos=f.videos.value.split('\n').map(s=>s.trim()).filter(Boolean);
         r.words=f.words.value.split(/[、,，\n]/).map(s=>s.trim()).filter(Boolean); r.updatedAt=Date.now();
         await saveRecipe(r); toast('保存しました'); go('#/r/'+id);}},'保存する'),
       h('button',{class:'btn quiet',onclick:()=>go('#/r/'+id)},'やめる'),h('span',{class:'sp'}),
@@ -574,22 +641,25 @@ function openAdd(){
   if(!S.key){toast('先に設定でGeminiの鍵を入れてください');go('#/settings');return;}
   let imgs=[]; const thumbs=h('div',{class:'thumbs'}); const text=h('textarea',{rows:6,placeholder:'ここに貼り付け'}); const url=h('input',{type:'url',inputmode:'url',placeholder:'https://'});
   const sep=h('input',{type:'checkbox'}); const sepRow=h('label',{class:'check hidden'},sep,h('span',{},'1枚ずつ別のレシピとして読む'));
-  const startBtn=h('button',{class:'btn',disabled:true},'読み取りを始める');
+  const startBtn=h('button',{class:'btn',disabled:true},'読み取りを始める'); const qrMsg=h('p',{class:'hint hidden',style:'margin:-4px 0 14px'});
+  let scans=Promise.resolve(),nScan=0,started=false; // QRさがしは裏で1枚ずつ進める
   const upd=()=>{thumbs.textContent='';imgs.forEach((im,i)=>thumbs.append(h('div',{},h('img',{src:im.url,alt:''}),h('button',{class:'x','aria-label':'この画像をはずす',onclick:()=>{URL.revokeObjectURL(im.url);imgs.splice(i,1);upd();}},'×'))));
-    sepRow.classList.toggle('hidden',imgs.length<2); startBtn.disabled=!imgs.length&&!text.value.trim();};
+    const nq=new Set(imgs.flatMap(i=>i.links)).size; qrMsg.textContent=nScan?'動画のQRコードがないか見ています…':nq?'QRコードから動画のリンクを'+nq+'個見つけました。':''; qrMsg.classList.toggle('hidden',!nScan&&!nq);
+    sepRow.classList.toggle('hidden',imgs.length<2); startBtn.disabled=started||(!imgs.length&&!text.value.trim());};
   text.addEventListener('input',upd);
   const file=h('input',{type:'file',accept:'image/*',multiple:true,onchange:async e=>{
     const files=[...e.target.files]; e.target.value='';
-    for(const fl of files){try{const b=await shrink(fl);imgs.push({blob:b,url:URL.createObjectURL(b)});upd();}catch(err){toast(err.message);}}}});
+    for(const fl of files){try{const b=await shrink(fl);const im={blob:b,url:URL.createObjectURL(b),links:[]};imgs.push(im);nScan++;upd();
+      scans=scans.then(()=>scanQR(fl)).then(l=>{im.links=l;},()=>{/* QRが読めなくてもレシピは取り込む */}).then(()=>{nScan--;upd();});}catch(err){toast(err.message);}}}});
   startBtn.addEventListener('click',async()=>{
-    startBtn.disabled=true; const t=text.value.trim(),u=url.value.trim();
-    if(sep.checked&&imgs.length>1){for(const im of imgs)await addJob('',u,[im.blob]);}
-    else await addJob(t,u,imgs.map(i=>i.blob));
+    started=true; startBtn.disabled=true; if(nScan)startBtn.textContent='QRコードを見ています…'; await scans; const t=text.value.trim(),u=url.value.trim();
+    if(sep.checked&&imgs.length>1){for(const im of imgs)await addJob('',u,[im.blob],im.links);}
+    else await addJob(t,u,imgs.map(i=>i.blob),[...new Set(imgs.flatMap(i=>i.links))]);
     imgs.forEach(i=>URL.revokeObjectURL(i.url)); closeDlg(); toast('受け付けました。裏で読み取ります'); if(paused==='day')paused=null; pump();
   });
   openDlg('add',h('div',{class:'sheet'},h('h2',{},'レシピを足す'),
     h('label',{class:'pick'},file,'スクショや写真を選ぶ（何枚でも）'),thumbs,
-    h('p',{class:'hint',style:'margin:-4px 0 14px'},'切り抜かなくて大丈夫です。同じレシピのスクショはまとめて選んでください。'),sepRow,
+    h('p',{class:'hint',style:'margin:-4px 0 14px'},'切り抜かなくて大丈夫です。同じレシピのスクショはまとめて選んでください。'),qrMsg,sepRow,
     h('label',{class:'f'},'投稿文やレシピの文章',text),
     h('label',{class:'f'},'元の投稿のリンク（なくてもよい）',url),
     h('div',{class:'bar'},startBtn,h('button',{class:'btn quiet',onclick:closeDlg},'やめる'))));
@@ -616,7 +686,7 @@ async function fillQueue(){
     h('div',{class:'bar'},paused==='day'?h('button',{class:'btn',onclick:()=>{paused=null;pump();}},'続きから読み取る'):null,h('button',{class:'btn quiet',onclick:closeDlg},'閉じる')));
 }
 async function keepAsIs(j){
-  const cats=S.cats; const rec={id:j.id,title:'あとで直すレシピ',category:cats[cats.length-1],servings:'',ingredients:[],steps:[],memo:j.text||'',source:'',url:j.url||'',words:[],rawText:j.text||'',imageIds:j.imageIds,coverId:null,thumb:null,createdAt:j.createdAt,updatedAt:Date.now()};
+  const cats=S.cats; const rec={id:j.id,title:'あとで直すレシピ',category:cats[cats.length-1],servings:'',ingredients:[],steps:[],memo:j.text||'',source:'',url:j.url||'',videos:j.links||[],words:[],rawText:j.text||'',imageIds:j.imageIds,coverId:null,thumb:null,createdAt:j.createdAt,updatedAt:Date.now()};
   await saveRecipe(rec); await dbDel('jobs',j.id); await refreshJobs(); closeDlg(); go('#/e/'+rec.id);
 }
 /* ---- 表紙を選ぶ・位置を決める ---- */
@@ -674,7 +744,13 @@ function renderSettings(app){
       h('p',{class:'hint',style:'margin:0 0 10px'},days==null?'まだバックアップしていません。':'前回のバックアップから'+days+'日たっています。','　レシピはこの端末の中にあります。ときどきファイルに書き出しておくと安心です。'),
       h('label',{class:'check'},withOrig,h('span',{},'元のスクショも入れる（はずすとファイルが軽くなります）')),
       h('div',{class:'bar',style:'margin-top:8px'},h('button',{class:'btn',onclick:e=>exportBackup(withOrig.checked,e.target)},'バックアップを書き出す'),
-        h('button',{class:'btn quiet',onclick:()=>imp.click()},'バックアップから読み込む'),imp))));
+        h('button',{class:'btn quiet',onclick:()=>imp.click()},'バックアップから読み込む'),imp))
+    ,h('div',{class:'section'},h('h3',{},'このアプリの版'),
+      h('p',{class:'hint',style:'margin:0 0 10px'},'いまの版: '+VERSION),
+      h('button',{class:'btn quiet',onclick:async e=>{e.target.disabled=true;e.target.textContent='新しい版を取りにいっています…';
+        try{await fetch(location.pathname,{cache:'reload'});}catch(err){}
+        location.reload();}},'最新の版にする'),
+      h('p',{class:'hint'},'GitHubに新しいファイルを置いたあと、ここを押すと入れ替わります。置いてから1〜2分は古いままのことがあります。'))));
   window.scrollTo(0,0);
 }
 
