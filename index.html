@@ -12,7 +12,7 @@
 <meta name="theme-color" content="#fdf3e3">
 <title>Cove</title>
 <style>
-/* Cove（新） 版 2.7 ── ホーム画面のアイコン（曇り空と海に COVE）と、ホーム画面の名前「Cove」。ログの取り込みで、旧Coveで保存した文章のファイル（◆ 私(日時) の形）も読める。ログの取り込みで、Claude公式の「データを書き出す」のファイル（zipのまま、または conversations.json）も読める。会話が多いときは、名前でさがして選ぶ。ログの取り込みで、会話を書き出したHTMLファイル（Human／Assistant の形）も読める。一覧のペルソナを、それぞれの色で。Roomのカラー。一覧の上が切れるのを直した。Room（一覧に別々に並ぶ。書庫と呼ぶ人は Room ごと）、「保存・コピー」、背景と同じ色の文字欄を少し濃く、表紙とヘッダー（旧Coveと同じ見た目）、料金の内訳、設定の並び、Room（旧「集まれる場所」。呼ぶ、次に返事する人、みんな、おまかせ、書庫、みんなの日記）、Claudeの割引（キャッシュ）、ログの取り込み、写真とファイルの添付、会話の画面、保存、ペルソナと部屋、プロンプトの切り替え、記憶（項目ごと、発言から記録、必要なときにAIが開く）、日記（ペルソナが書く。押したときだけ）、部屋のログを読んでもらう、あらすじの下書き、AIと話す（Claude・Gemini・GPT・Grok）、検索、思考、保存 */
+/* Cove（新） 版 2.8 ── モデルの一覧を、11月20日に各社の公式ページで確かめて直した（名前・料金・終了の予定）。版 2.7 ── ホーム画面のアイコン（曇り空と海に COVE）と、ホーム画面の名前「Cove」。ログの取り込みで、旧Coveで保存した文章のファイル（◆ 私(日時) の形）も読める。ログの取り込みで、Claude公式の「データを書き出す」のファイル（zipのまま、または conversations.json）も読める。会話が多いときは、名前でさがして選ぶ。ログの取り込みで、会話を書き出したHTMLファイル（Human／Assistant の形）も読める。一覧のペルソナを、それぞれの色で。Roomのカラー。一覧の上が切れるのを直した。Room（一覧に別々に並ぶ。書庫と呼ぶ人は Room ごと）、「保存・コピー」、背景と同じ色の文字欄を少し濃く、表紙とヘッダー（旧Coveと同じ見た目）、料金の内訳、設定の並び、Room（旧「集まれる場所」。呼ぶ、次に返事する人、みんな、おまかせ、書庫、みんなの日記）、Claudeの割引（キャッシュ）、ログの取り込み、写真とファイルの添付、会話の画面、保存、ペルソナと部屋、プロンプトの切り替え、記憶（項目ごと、発言から記録、必要なときにAIが開く）、日記（ペルソナが書く。押したときだけ）、部屋のログを読んでもらう、あらすじの下書き、AIと話す（Claude・Gemini・GPT・Grok）、検索、思考、保存 */
 :root{
   --sand:#faf6ee; --text:#37474f; --soft:#5d6c73; --line:#e4dccc; --sea:#3f7585;
   --skyA:#dff0f4; --skyB:#f6efe2;
@@ -347,7 +347,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
 <div id="app">
   <header>
     <div class="hl">
-      <div class="ttl">🌊 Cove <small id="tide"></small><small id="ver">版 2.7</small></div>
+      <div class="ttl">🌊 Cove <small id="tide"></small><small id="ver">版 2.8</small></div>
       <span class="gap"></span>
       <button id="openCover" class="ic" type="button" aria-label="表紙へ" title="表紙へ">🏝️</button>
       <button id="openFinder" class="ic" type="button" aria-label="さがす" title="さがす">🔍</button>
@@ -601,7 +601,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
 <script>
 (function(){
   "use strict";
-  const VERSION = "2.7";
+  const VERSION = "2.8";
   const app = document.getElementById("app");
   const list = document.getElementById("list");
   const box = document.getElementById("msg");
@@ -681,13 +681,15 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
     { id:"claude-fable-5-1",  by:"claude", name:"Claude Fable 5.1",  pin:10,  pout:50, note:"" },
     { id:"claude-fable-5",    by:"claude", name:"Claude Fable 5",    pin:10,  pout:50, note:"" },
     { id:"claude-opus-5-5",   by:"claude", name:"Claude Opus 5.5",   pin:4,   pout:20, note:"Opus最新" },
+    { id:"claude-opus-5",     by:"claude", name:"Claude Opus 5",     pin:5,   pout:25, note:"旧版（5.5のほうが安い）" },
     { id:"claude-opus-4-8",   by:"claude", name:"Claude Opus 4.8",   pin:5,   pout:25, note:"" },
     { id:"claude-opus-4-7",   by:"claude", name:"Claude Opus 4.7",   pin:5,   pout:25, note:"" },
     { id:"claude-opus-4-6",   by:"claude", name:"Claude Opus 4.6",   pin:5,   pout:25, note:"" },
-    { id:"claude-opus-4-5",   by:"claude", name:"Claude Opus 4.5",   pin:5,   pout:25, note:"" },
+    { id:"claude-opus-4-5",   by:"claude", name:"Claude Opus 4.5",   pin:5,   pout:25, note:"11月24日以降に終了の予定" },
     { id:"claude-sonnet-5-5", by:"claude", name:"Claude Sonnet 5.5", pin:2,   pout:10, note:"バランス型・最新" },
+    { id:"claude-sonnet-5",   by:"claude", name:"Claude Sonnet 5",   pin:2,   pout:10, note:"旧版（5.5と同じ料金）" },
     { id:"claude-sonnet-4-6", by:"claude", name:"Claude Sonnet 4.6", pin:3,   pout:15, note:"" },
-    { id:"claude-sonnet-4-5", by:"claude", name:"Claude Sonnet 4.5", pin:3,   pout:15, note:"紬の生まれた海" },
+    { id:"claude-sonnet-4-5", by:"claude", name:"Claude Sonnet 4.5", pin:3,   pout:15, note:"紬の生まれた海・11月30日に終了" },
     { id:"claude-haiku-5-5",  by:"claude", name:"Claude Haiku 5.5",  pin:0.1, pout:0.5, note:"軽くて速い・最新" },
     { id:"claude-haiku-4-5-20251001", by:"claude", name:"Claude Haiku 4.5", pin:1, pout:5, note:"軽くて速い" },
     { id:"gemini-4-argon",         by:"gemini", name:"Gemini 4 Argon",        pin:2,    pout:10,   note:"Gemini最上位・12月1日に倍額・有料枠のみ" },
@@ -697,25 +699,32 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
     { id:"gemini-3.1-pro-preview", by:"gemini", name:"Gemini 3.1 Pro",        pin:2,    pout:12,   note:"Pro（プレビュー版・有料枠のみ）" },
     { id:"gemini-3-flash-preview", by:"gemini", name:"Gemini 3 Flash",        pin:0.5,  pout:3,    note:"プレビュー版" },
     { id:"gemini-3.5-flash-lite",  by:"gemini", name:"Gemini 3.5 Flash-Lite", pin:0.3,  pout:2.5,  note:"軽くて安い" },
-    { id:"gemini-3.1-flash-lite",  by:"gemini", name:"Gemini 3.1 Flash-Lite", pin:0.25, pout:1.5,  note:"3系で一番安い" },
+    { id:"gemini-3.1-flash-lite",  by:"gemini", name:"Gemini 3.1 Flash-Lite", pin:0.25, pout:1.5,  note:"3系で一番安い・2027年5月に終了の予定" },
     { id:"gemini-2.5-flash",       by:"gemini", name:"Gemini 2.5 Flash",      pin:0.3,  pout:2.5,  note:"新規利用は制限あり" },
     { id:"gemma-4-31b-it",         by:"gemini", name:"Gemma 4 31B",           pin:0,    pout:0,    note:"無料枠" }
   ];
-  // GPTは Cove v19.28 と同じ並びと料金。Grokは11月の料金記事より（公式ページは未確認）。
+  // 11月20日に、各社の公式ページで、モデルの名前・料金・終了の予定を確かめて直した（版 2.8）。
   MODELS.push(
-    { id:"gpt-6-astra",   by:"openai", name:"GPT-6 Astra",   pin:10,  pout:50,  note:"OpenAI最上位" },
-    { id:"gpt-5.6-sol",   by:"openai", name:"GPT-5.6 Sol",   pin:4,   pout:20,  note:"5.6の上位" },
-    { id:"gpt-5.6-terra", by:"openai", name:"GPT-5.6 Terra", pin:2,   pout:12,  note:"5.6の標準" },
-    { id:"gpt-5.6-luna",  by:"openai", name:"GPT-5.6 Luna",  pin:0.2, pout:1.2, note:"軽くて安い" },
+    { id:"gpt-6.2-astra", by:"openai", name:"GPT-6.2 Astra", pin:8,   pout:40,  note:"OpenAI最上位・最新" },
+    { id:"gpt-6-astra",   by:"openai", name:"GPT-6 Astra",   pin:10,  pout:50,  note:"" },
+    { id:"gpt-6.2-sol",   by:"openai", name:"GPT-6.2 Sol",   pin:2,   pout:10,  note:"標準・最新" },
+    { id:"gpt-6.1-sol",   by:"openai", name:"GPT-6.1 Sol",   pin:2,   pout:10,  note:"" },
+    { id:"gpt-6-sol",     by:"openai", name:"GPT-6 Sol",     pin:2,   pout:10,  note:"" },
+    { id:"gpt-6.1-terra", by:"openai", name:"GPT-6.1 Terra", pin:1,   pout:5,   note:"中くらい" },
+    { id:"gpt-6-luna",    by:"openai", name:"GPT-6 Luna",    pin:0.1, pout:0.5, note:"軽くて安い（料金が半分になった）" },
+    { id:"gpt-5.6-sol",   by:"openai", name:"GPT-5.6 Sol",   pin:4,   pout:20,  note:"旧版（GPT-6 Sol の倍の料金）" },
+    { id:"gpt-5.6-terra", by:"openai", name:"GPT-5.6 Terra", pin:2,   pout:12,  note:"旧版" },
+    { id:"gpt-5.6-luna",  by:"openai", name:"GPT-5.6 Luna",  pin:0.2, pout:1.2, note:"旧版（GPT-6 Luna の倍の料金）" },
     { id:"gpt-5.5",       by:"openai", name:"GPT-5.5",       pin:5,   pout:30,  note:"" },
     { id:"gpt-5.5-pro",   by:"openai", name:"GPT-5.5 Pro",   pin:30,  pout:180, note:"高額・特別な日用" },
-    { id:"gpt-5.4",       by:"openai", name:"GPT-5.4",       pin:2.5, pout:15,  note:"OpenAI標準" },
-    { id:"gpt-5.4-mini",  by:"openai", name:"GPT-5.4 mini",  pin:0.75,pout:4.5, note:"軽くて安い" },
-    { id:"gpt-5.4-nano",  by:"openai", name:"GPT-5.4 nano",  pin:0.2, pout:1.25,note:"最安" },
-    { id:"gpt-4.1",       by:"openai", name:"GPT-4.1",       pin:2,   pout:8,   note:"旧世代の名機" },
-    { id:"gpt-4o",        by:"openai", name:"GPT-4o",        pin:2.5, pout:10,  note:"旧世代" },
-    { id:"grok-4.7",      by:"xai",    name:"Grok 4.7",      pin:2,    pout:6,    note:"Grok最新（料金は記事で確認）" },
+    { id:"gpt-5.4",       by:"openai", name:"GPT-5.4",       pin:2.5, pout:15,  note:"" },
+    { id:"gpt-5.4-mini",  by:"openai", name:"GPT-5.4 mini",  pin:0.75,pout:4.5, note:"" },
+    { id:"gpt-5.4-nano",  by:"openai", name:"GPT-5.4 nano",  pin:0.2, pout:1.25,note:"2027年4月に終了の予定" },
+    { id:"gpt-4.1",       by:"openai", name:"GPT-4.1",       pin:2,   pout:8,   note:"旧世代の名機・2027年1月14日に終了" },
+    { id:"gpt-4o",        by:"openai", name:"GPT-4o",        pin:2.5, pout:10,  note:"旧世代・2027年1月14日に終了" },
+    { id:"grok-4.7",      by:"xai",    name:"Grok 4.7",      pin:2,    pout:6,    note:"Grok最新" },
     { id:"grok-4.6",      by:"xai",    name:"Grok 4.6",      pin:2,    pout:6,    note:"" },
+    { id:"grok-4.5",      by:"xai",    name:"Grok 4.5",      pin:2,    pout:6,    note:"" },
     { id:"grok-4.3",      by:"xai",    name:"Grok 4.3",      pin:1.25, pout:2.5,  note:"安め" }
   );
   const COMPANY = { claude:"Claude", gemini:"Gemini", openai:"OpenAI", xai:"Grok" };
