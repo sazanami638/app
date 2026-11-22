@@ -12,7 +12,7 @@
 <meta name="theme-color" content="#fdf3e3">
 <title>Cove</title>
 <style>
-/* Cove（新） 版 2.8 ── モデルの一覧を、11月20日に各社の公式ページで確かめて直した（名前・料金・終了の予定）。版 2.7 ── ホーム画面のアイコン（曇り空と海に COVE）と、ホーム画面の名前「Cove」。ログの取り込みで、旧Coveで保存した文章のファイル（◆ 私(日時) の形）も読める。ログの取り込みで、Claude公式の「データを書き出す」のファイル（zipのまま、または conversations.json）も読める。会話が多いときは、名前でさがして選ぶ。ログの取り込みで、会話を書き出したHTMLファイル（Human／Assistant の形）も読める。一覧のペルソナを、それぞれの色で。Roomのカラー。一覧の上が切れるのを直した。Room（一覧に別々に並ぶ。書庫と呼ぶ人は Room ごと）、「保存・コピー」、背景と同じ色の文字欄を少し濃く、表紙とヘッダー（旧Coveと同じ見た目）、料金の内訳、設定の並び、Room（旧「集まれる場所」。呼ぶ、次に返事する人、みんな、おまかせ、書庫、みんなの日記）、Claudeの割引（キャッシュ）、ログの取り込み、写真とファイルの添付、会話の画面、保存、ペルソナと部屋、プロンプトの切り替え、記憶（項目ごと、発言から記録、必要なときにAIが開く）、日記（ペルソナが書く。押したときだけ）、部屋のログを読んでもらう、あらすじの下書き、AIと話す（Claude・Gemini・GPT・Grok）、検索、思考、保存 */
+/* Cove（新） 版 2.9 ── 長い文章も書けるように、書く小窓を画面いっぱいにした（文字数つき）。新しいプロンプトは、空で作る。版 2.8 ── モデルの一覧を、11月20日に各社の公式ページで確かめて直した（名前・料金・終了の予定）。版 2.7 ── ホーム画面のアイコン（曇り空と海に COVE）と、ホーム画面の名前「Cove」。ログの取り込みで、旧Coveで保存した文章のファイル（◆ 私(日時) の形）も読める。ログの取り込みで、Claude公式の「データを書き出す」のファイル（zipのまま、または conversations.json）も読める。会話が多いときは、名前でさがして選ぶ。ログの取り込みで、会話を書き出したHTMLファイル（Human／Assistant の形）も読める。一覧のペルソナを、それぞれの色で。Roomのカラー。一覧の上が切れるのを直した。Room（一覧に別々に並ぶ。書庫と呼ぶ人は Room ごと）、「保存・コピー」、背景と同じ色の文字欄を少し濃く、表紙とヘッダー（旧Coveと同じ見た目）、料金の内訳、設定の並び、Room（旧「集まれる場所」。呼ぶ、次に返事する人、みんな、おまかせ、書庫、みんなの日記）、Claudeの割引（キャッシュ）、ログの取り込み、写真とファイルの添付、会話の画面、保存、ペルソナと部屋、プロンプトの切り替え、記憶（項目ごと、発言から記録、必要なときにAIが開く）、日記（ペルソナが書く。押したときだけ）、部屋のログを読んでもらう、あらすじの下書き、AIと話す（Claude・Gemini・GPT・Grok）、検索、思考、保存 */
 :root{
   --sand:#faf6ee; --text:#37474f; --soft:#5d6c73; --line:#e4dccc; --sea:#3f7585;
   --skyA:#dff0f4; --skyB:#f6efe2;
@@ -355,7 +355,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
 <div id="app">
   <header>
     <div class="hl">
-      <div class="ttl">🌊 Cove <small id="tide"></small><small id="ver">版 2.8</small></div>
+      <div class="ttl">🌊 Cove <small id="tide"></small><small id="ver">版 2.9</small></div>
       <span class="gap"></span>
       <button id="openCover" class="ic" type="button" aria-label="表紙へ" title="表紙へ">🏝️</button>
       <button id="openFinder" class="ic" type="button" aria-label="さがす" title="さがす">🔍</button>
@@ -610,7 +610,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
 <script>
 (function(){
   "use strict";
-  const VERSION = "2.8";
+  const VERSION = "2.9";
   const app = document.getElementById("app");
   const list = document.getElementById("list");
   const box = document.getElementById("msg");
