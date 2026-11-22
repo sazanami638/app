@@ -274,6 +274,14 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
 #dlgInput:focus{ border-color:#9cc3cf; }
 #dlg .btns{ display:flex; gap:10px; justify-content:flex-end; }
 #dlg .btns button{ min-height:48px; min-width:96px; padding:0 16px; border-radius:14px; font:inherit; font-size:16px; font-weight:700; }
+/* 長い文章を書く小窓：画面いっぱいに広げる（プロンプト・記憶・日記など） */
+#dlg.big{ align-items:stretch; padding:calc(env(safe-area-inset-top,0px) + 10px) 10px 10px; overflow:hidden; }
+#dlg.big .card{ max-width:none; height:100%; display:flex; flex-direction:column; padding:14px; }
+#dlg.big #dlgText{ flex-shrink:0; margin:0 0 8px; font-size:15px; line-height:1.6; }
+#dlg.big #dlgArea{ flex:1 1 auto; min-height:0; height:auto; max-height:none; margin:0 0 6px; overflow-y:auto; -webkit-overflow-scrolling:touch; }
+#dlgCount{ flex-shrink:0; margin:0 0 8px; font-size:13px; color:var(--soft); text-align:right; }
+#dlgCount[hidden]{ display:none; }
+#dlg.big .btns{ flex-shrink:0; }
 #dlgNo{ border:1px solid var(--line); background:#fff; color:var(--text); }
 #dlgYes{ border:none; background:var(--sea); color:#fff; }
 .label{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
@@ -591,6 +599,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
       <p id="dlgText"></p>
       <input id="dlgInput" type="text" autocomplete="off" maxlength="60">
       <textarea id="dlgArea"></textarea>
+      <p id="dlgCount" hidden></p>
       <div class="btns">
         <button id="dlgNo" type="button">やめる</button>
         <button id="dlgYes" type="button">OK</button>
@@ -618,6 +627,9 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
   const dlgArea = document.getElementById("dlgArea");
   const dlgYes = document.getElementById("dlgYes");
   const dlgNo = document.getElementById("dlgNo");
+  const dlgCount = document.getElementById("dlgCount");
+  const countArea = () => { dlgCount.textContent = dlgArea.value.length.toLocaleString() + " 文字"; };
+  dlgArea.addEventListener("input", countArea);
   let dlgDone = null;
   // input:true なら入れた文字、そうでなければ true を返す。やめたら null
   function dialog(o){
@@ -627,6 +639,9 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
       dlgInput.value = o.value || "";
       dlgArea.hidden = !o.area;
       dlgArea.value = o.area ? (o.value || "") : "";
+      dlg.classList.toggle("big", !!o.area);
+      dlgCount.hidden = !o.area;
+      countArea();
       dlgYes.textContent = o.yes || "OK";
       dlgNo.textContent = o.no || "やめる";
       dlgNo.hidden = !!o.only;
@@ -2866,9 +2881,9 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
       f2.appendChild(c);
     });
     f2.appendChild(btn("add", "＋ 新しいプロンプト", async () => {
-      const v = await dialog({ text:"新しいプロンプトの名前\n（中身は、いまの「いつもの」を写して作ります）", input:true, value:"試し " + room.prompts.length, yes:"作る" });
+      const v = await dialog({ text:"新しいプロンプトの名前\n（中身は空で作ります。作ったあと「編集」で書いてください）", input:true, value:"試し " + room.prompts.length, yes:"作る" });
       if(!v) return;
-      room.prompts.push({ id:newId(), name:v, text:mainOf(room).text || "" }); await save();
+      room.prompts.push({ id:newId(), name:v, text:"" }); await save();
       await drawPersona();
       toast("「" + v + "」を作りました。「編集」で書きかえられます");
     }));
