@@ -12,13 +12,13 @@
 <meta name="theme-color" content="#fdf3e3">
 <title>Cove</title>
 <style>
-/* Cove（新） 版 2.9 ── 長い文章も書けるように、書く小窓を画面いっぱいにした（文字数つき）。新しいプロンプトは、空で作る。版 2.8 ── モデルの一覧を、11月20日に各社の公式ページで確かめて直した（名前・料金・終了の予定）。版 2.7 ── ホーム画面のアイコン（曇り空と海に COVE）と、ホーム画面の名前「Cove」。ログの取り込みで、旧Coveで保存した文章のファイル（◆ 私(日時) の形）も読める。ログの取り込みで、Claude公式の「データを書き出す」のファイル（zipのまま、または conversations.json）も読める。会話が多いときは、名前でさがして選ぶ。ログの取り込みで、会話を書き出したHTMLファイル（Human／Assistant の形）も読める。一覧のペルソナを、それぞれの色で。Roomのカラー。一覧の上が切れるのを直した。Room（一覧に別々に並ぶ。書庫と呼ぶ人は Room ごと）、「保存・コピー」、背景と同じ色の文字欄を少し濃く、表紙とヘッダー（旧Coveと同じ見た目）、料金の内訳、設定の並び、Room（旧「集まれる場所」。呼ぶ、次に返事する人、みんな、おまかせ、書庫、みんなの日記）、Claudeの割引（キャッシュ）、ログの取り込み、写真とファイルの添付、会話の画面、保存、ペルソナと部屋、プロンプトの切り替え、記憶（項目ごと、発言から記録、必要なときにAIが開く）、日記（ペルソナが書く。押したときだけ）、部屋のログを読んでもらう、あらすじの下書き、AIと話す（Claude・Gemini・GPT・Grok）、検索、思考、保存 */
+/* Cove（新） 版 3.2 ── 上の段を「⛵️ ペルソナ」と「👥 Room」の2つに。ペルソナを押すと、会話一覧（＋ 新しい会話）とペルソナ管理（プロンプト・記憶・日記・カラー）。「部屋」は「会話」とよぶ。版 3.0 ── 上の段を「⋯ メニュー」にまとめた。入力中は上を細い1行にする（モデルの段は残す）。「思考」の名前と囲いを旧Coveの形に。色を、少しくすんだやわらかい色に。版 2.9 ── 長い文章も書けるように、書く小窓を画面いっぱいにした（文字数つき）。新しいプロンプトは、空で作る。版 2.8 ── モデルの一覧を、11月20日に各社の公式ページで確かめて直した（名前・料金・終了の予定）。版 2.7 ── ホーム画面のアイコン（曇り空と海に COVE）と、ホーム画面の名前「Cove」。ログの取り込みで、旧Coveで保存した文章のファイル（◆ 私(日時) の形）も読める。ログの取り込みで、Claude公式の「データを書き出す」のファイル（zipのまま、または conversations.json）も読める。会話が多いときは、名前でさがして選ぶ。ログの取り込みで、会話を書き出したHTMLファイル（Human／Assistant の形）も読める。一覧のペルソナを、それぞれの色で。Roomのカラー。一覧の上が切れるのを直した。Room（一覧に別々に並ぶ。書庫と呼ぶ人は Room ごと）、「保存・コピー」、背景と同じ色の文字欄を少し濃く、表紙とヘッダー（旧Coveと同じ見た目）、料金の内訳、設定の並び、Room（旧「集まれる場所」。呼ぶ、次に返事する人、みんな、おまかせ、書庫、みんなの日記）、Claudeの割引（キャッシュ）、ログの取り込み、写真とファイルの添付、会話の画面、保存、ペルソナと部屋、プロンプトの切り替え、記憶（項目ごと、発言から記録、必要なときにAIが開く）、日記（ペルソナが書く。押したときだけ）、部屋のログを読んでもらう、あらすじの下書き、AIと話す（Claude・Gemini・GPT・Grok）、検索、思考、保存 */
 :root{
-  --sand:#faf6ee; --text:#37474f; --soft:#5d6c73; --line:#e4dccc; --sea:#3f7585;
-  --skyA:#dff0f4; --skyB:#f6efe2;
+  --sand:#f3f0eb; --text:#3e484e; --soft:#646c70; --line:#e0dcd0; --sea:#54767f;
+  --skyA:#d6dfe1; --skyB:#efebe2;
   /* 文字欄の色（あとで部屋ごとに選べるようにする。今は AI=白、自分=水色） */
-  --ai-bg:#ffffff; --ai-line:#e4dccc; --ai-text:#37474f;
-  --me-bg:#eaf5f8; --me-line:#cfe4ea; --me-text:#37474f;
+  --ai-bg:#ffffff; --ai-line:#e0dcd0; --ai-text:#3e484e;
+  --me-bg:#e3ebed; --me-line:#cad8dc; --me-text:#3e484e;
 }
 *{ box-sizing:border-box; }
 html,body{ margin:0; height:100%; overflow:hidden; overscroll-behavior:none; background:var(--sand); }
@@ -41,13 +41,13 @@ header{
 .titles{ flex:1; min-width:0; }
 .plain{
   flex-shrink:0; min-height:44px; padding:0 14px; border:1px solid var(--line); border-radius:14px;
-  background:#fffdf9; color:var(--sea); font:inherit; font-size:15px; font-weight:700;
+  background:#faf8f4; color:var(--sea); font:inherit; font-size:15px; font-weight:700;
 }
 .hl{ display:flex; align-items:center; gap:10px; }
 .hl + .hl{ margin-top:8px; }
 .pick{
   flex:0 1 auto; min-width:0; min-height:46px; display:flex; align-items:center; gap:8px; padding:0 14px;
-  border:1px solid var(--line); border-radius:14px; background:#fffdf9; color:var(--text); font:inherit; font-size:16px; text-align:left;
+  border:1px solid var(--line); border-radius:14px; background:#faf8f4; color:var(--text); font:inherit; font-size:16px; text-align:left;
 }
 .pick .pt{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
 .pick .pa{ flex-shrink:0; font-size:13px; color:var(--soft); }
@@ -59,16 +59,16 @@ header{
 #state{ margin:0; font-size:13px; color:var(--soft); }
 .sheet.top{ align-items:flex-start; padding-top:calc(env(safe-area-inset-top,0px) + 70px); }
 .pcard{ border:1px solid var(--line); border-radius:16px; padding:12px; margin-top:10px; background:#fff; }
-.pcard.main{ border:2px solid #7fb0bf; }
-.pcard h4 span.off{ background:#f1ede4; color:var(--soft); }
+.pcard.main{ border:2px solid #88a9b2; }
+.pcard h4 span.off{ background:#f1eee5; color:var(--soft); }
 .pcard h4{ margin:0 0 2px; font-size:16px; word-break:break-word; }
-.pcard h4 span{ display:inline-block; margin-left:8px; padding:2px 10px; border-radius:10px; background:#e3f1f4; font-size:12px; font-weight:400; }
+.pcard h4 span{ display:inline-block; margin-left:8px; padding:2px 10px; border-radius:10px; background:#e4ebec; font-size:12px; font-weight:400; }
 .pcard p{ margin:0 0 8px; font-size:13px; }
 .pcard .bar{ margin-top:0; }
 .pcard p.dtext{ font-size:15px; line-height:1.8; color:var(--text); white-space:pre-wrap; word-break:break-word; }
-.plain.due, .plain.on{ background:#e3f1f4; border-color:#9cc3cf; }
+.plain.due, .plain.on{ background:#e4ebec; border-color:#a9bfc4; }
 .plain[hidden], .pill[hidden], #whoRow[hidden]{ display:none; }
-#whoRow{ flex-shrink:0; display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:10px 14px 10px; background:#fffdf9; border-top:1px solid var(--line); }
+#whoRow{ flex-shrink:0; display:flex; flex-wrap:wrap; align-items:center; gap:8px; padding:10px 14px 10px; background:#faf8f4; border-top:1px solid var(--line); }
 #whoRow .wl{ width:100%; font-size:13px; color:var(--soft); }
 .who{ margin:0 8px 3px; font-size:13px; font-weight:700; color:var(--soft); }
 .tname{ flex:1; min-width:8em; font-size:16px; word-break:break-word; }
@@ -79,7 +79,7 @@ header{
 }
 .note{
   align-self:center; max-width:34em; text-align:center; font-size:15px; line-height:1.8;
-  color:var(--soft); padding:10px 16px; border:1px dashed var(--line); border-radius:16px; background:#fffdf9;
+  color:var(--soft); padding:10px 16px; border:1px dashed var(--line); border-radius:16px; background:#faf8f4;
 }
 .row{ display:flex; flex-direction:column; max-width:80%; }
 .row.me{ align-self:flex-end; align-items:flex-end; }
@@ -95,13 +95,16 @@ header{
 footer{
   flex-shrink:0; display:flex; gap:10px; align-items:flex-end; position:relative;
   padding:10px 14px calc(env(safe-area-inset-bottom,0px) + 14px);
-  background:#fffdf9;
+  background:#faf8f4;
 }
-#modelRow{ flex-shrink:0; display:flex; flex-wrap:wrap; gap:8px; padding:10px 14px 0; background:#fffdf9; border-top:1px solid var(--line); }
-#openModels{ flex:1 1 9em; min-width:0; }
+#modelRow{ flex-shrink:0; display:flex; flex-wrap:nowrap; align-items:center; justify-content:flex-start; gap:8px; padding:10px 14px 0; background:#faf8f4; border-top:1px solid var(--line); overflow-x:auto; scrollbar-width:none; }
+#modelRow::-webkit-scrollbar{ display:none; }
+.tgl{ flex:0 0 auto; min-width:46px; height:40px; padding:0 10px; border:1px solid var(--line); border-radius:16px; background:#ffffff; font:inherit; font-size:18px; line-height:1; display:flex; align-items:center; justify-content:center; opacity:.45; }
+.tgl.on{ background:#e4ebec; border-color:#88a9b2; opacity:1; }
+.mchip{ flex:0 1 auto; min-width:0; height:40px; padding:0 14px; border:1px solid var(--line); border-radius:20px; background:#ffffff; color:var(--text); font:inherit; font-size:14px; font-weight:700; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; box-shadow:0 1px 4px rgba(55,65,70,.06); }
+.mchip:active{ background:#eef3f4; border-color:#88a9b2; }
 #openPrompts{ flex:0 1 auto; min-width:0; }
-#toggleSearch, #toggleThink, #insertNow{ flex-shrink:0; }
-.pill.on{ background:#e3f1f4; border-color:#9cc3cf; font-weight:700; }
+.pill.on{ background:#e4ebec; border-color:#a9bfc4; font-weight:700; }
 .pill{
   min-height:44px; max-width:100%; padding:0 18px; border:1px solid var(--line); border-radius:22px;
   background:#ffffff; color:var(--text); font:inherit; font-size:16px;
@@ -113,17 +116,17 @@ textarea{
   font:inherit; font-size:17px; line-height:27px; height:51px; max-height:160px; overflow-y:auto;
   outline:none;
 }
-textarea:focus{ border-color:#9cc3cf; }
+textarea:focus{ border-color:#a9bfc4; }
 #send{
-  flex-shrink:0; min-height:48px; min-width:84px; padding:0 18px; border:none; border-radius:16px;
-  background:var(--sea); color:#fff; font:inherit; font-size:16px; font-weight:700;
+  flex-shrink:0; width:52px; height:52px; padding:0; border:none; border-radius:18px;
+  background:var(--sea); color:#fff; font:inherit; font-size:21px; display:flex; align-items:center; justify-content:center;
 }
 #attach{
-  flex-shrink:0; min-height:48px; padding:0 14px; border:1px solid var(--line); border-radius:16px;
-  background:#ffffff; color:var(--text); font:inherit; font-size:16px; white-space:nowrap;
+  flex-shrink:0; width:48px; height:52px; padding:0; border:1px solid var(--line); border-radius:16px;
+  background:#ffffff; color:var(--text); font:inherit; font-size:18px; display:flex; align-items:center; justify-content:center;
 }
 /* 送る前の添付（入力欄の上に並ぶ） */
-#attRow{ flex-shrink:0; display:flex; flex-wrap:wrap; gap:8px; padding:10px 14px 0; background:#fffdf9; }
+#attRow{ flex-shrink:0; display:flex; flex-wrap:wrap; gap:8px; padding:10px 14px 0; background:#faf8f4; }
 #attRow[hidden]{ display:none; }
 .chip{ display:flex; align-items:center; gap:8px; max-width:100%; padding:4px 4px 4px 10px; border:1px solid var(--line); border-radius:14px; background:#ffffff; font-size:14px; }
 .chip img{ width:40px; height:40px; object-fit:cover; border-radius:8px; flex-shrink:0; }
@@ -135,7 +138,7 @@ textarea:focus{ border-color:#9cc3cf; }
 .atts img{ display:block; max-width:100%; height:auto; border-radius:16px; border:1px solid var(--line); background:#ffffff; }
 .atts img.big{ width:100% !important; }
 .fchip{ padding:8px 12px; border:1px solid var(--line); border-radius:14px; background:#ffffff; font-size:14px; line-height:1.6; color:var(--text); word-break:break-word; }
-button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
+button:focus-visible{ outline:3px solid #a9bfc4; outline-offset:2px; }
 /* 入力欄の高さを測るための、見えない写し */
 #mirror{
   position:absolute; left:-9999px; top:0; visibility:hidden; pointer-events:none;
@@ -160,7 +163,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   padding:16px 16px calc(env(safe-area-inset-bottom,0px) + 24px);
   display:flex; flex-direction:column; gap:16px;
 }
-.room{ background:#fffdf9; border:1px solid var(--line); border-radius:20px; padding:14px; }
+.room{ background:#faf8f4; border:1px solid var(--line); border-radius:20px; padding:14px; }
 .rhead{ display:flex; flex-wrap:wrap; align-items:center; gap:8px; margin-bottom:10px; }
 .rhead h3{ flex:1; min-width:8em; margin:0; font-size:18px; word-break:break-word; }
 .small{
@@ -176,19 +179,19 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
 .topen.now{ background:var(--me-bg); border-color:var(--me-line); font-weight:700; }
 .topen small{ display:block; font-size:12px; font-weight:400; color:var(--soft); }
 .add{
-  width:100%; min-height:48px; margin-top:10px; border:1px dashed #b9cfd6; border-radius:14px;
-  background:#f4fafb; color:var(--sea); font:inherit; font-size:16px; font-weight:700;
+  width:100%; min-height:48px; margin-top:10px; border:1px dashed #bccdd1; border-radius:14px;
+  background:#f4f6f6; color:var(--sea); font:inherit; font-size:16px; font-weight:700;
 }
 .bar{ display:flex; flex-wrap:wrap; gap:8px; margin-top:8px; }
 .bar .plain{ min-height:40px; font-size:14px; padding:0 12px; }
-.field{ background:#fffdf9; border:1px solid var(--line); border-radius:20px; padding:16px; }
+.field{ background:#faf8f4; border:1px solid var(--line); border-radius:20px; padding:16px; }
 .field h3{ margin:0 0 6px; font-size:17px; }
 .field p{ margin:0 0 10px; font-size:14px; line-height:1.8; color:var(--soft); }
 .field input{
   width:100%; padding:11px 14px; border:1px solid var(--line); border-radius:14px;
   background:#fff; color:var(--text); font:inherit; font-size:17px; outline:none;
 }
-.field input:focus{ border-color:#9cc3cf; }
+.field input:focus{ border-color:#a9bfc4; }
 .go{
   width:100%; min-height:50px; border:none; border-radius:16px; background:var(--sea); color:#fff;
   font:inherit; font-size:17px; font-weight:700;
@@ -198,7 +201,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
 .hrow .mname{ font-size:16px; }
 .hrow .mname small{ display:block; font-size:12px; color:var(--soft); }
 .tog{ flex-shrink:0; min-height:44px; min-width:96px; border:1px solid var(--line); border-radius:14px; font:inherit; font-size:15px; }
-.tog.on{ background:#e3f1f4; color:var(--text); }
+.tog.on{ background:#e4ebec; color:var(--text); }
 .tog.off{ background:#ffffff; color:var(--soft); }
 /* 画面の上にふわっと出る小さな窓（モデルを選ぶ） */
 .sheet{
@@ -209,7 +212,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
 .sheet[hidden]{ display:none; }
 .card2{
   width:100%; max-width:440px; max-height:100%; display:flex; flex-direction:column; overflow:hidden;
-  background:#fffdf9; border-radius:22px; box-shadow:0 10px 40px rgba(0,0,0,.2);
+  background:#faf8f4; border-radius:22px; box-shadow:0 10px 40px rgba(0,0,0,.2);
 }
 .ch{ flex-shrink:0; display:flex; align-items:center; justify-content:space-between; gap:10px; padding:14px 18px 4px 22px; }
 .ch h2{ margin:0; font-size:18px; }
@@ -222,20 +225,20 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   width:100%; min-height:52px; border:1px solid var(--line); border-radius:16px;
   background:#faf5ec; color:var(--text); font:inherit; font-size:16px; font-weight:700;
 }
-.model.now{ box-shadow:0 0 0 2px #7fb0bf; }
+.model.now{ box-shadow:0 0 0 2px #88a9b2; }
 .model small{ display:block; font-size:13px; line-height:1.6; color:var(--soft); }
 #imp .card2{ max-width:520px; }
 #impQ{ width:100%; margin:0 0 10px; padding:11px 14px; border:1px solid var(--line); border-radius:14px; background:#fff; color:var(--text); font:inherit; font-size:17px; outline:none; }
-#impQ:focus{ border-color:#9cc3cf; }
+#impQ:focus{ border-color:#a9bfc4; }
 #impQ[hidden], #impCount[hidden]{ display:none; }
 .group{ margin:4px 4px -6px; font-size:14px; font-weight:700; color:var(--soft); }
 .model{
   width:100%; min-height:56px; text-align:left; padding:10px 14px; border:1px solid var(--line); border-radius:16px;
-  background:#fffdf9; color:var(--text); font:inherit; font-size:17px; line-height:1.5;
+  background:#faf8f4; color:var(--text); font:inherit; font-size:17px; line-height:1.5;
 }
 .model{ display:flex; align-items:center; gap:12px; }
 .mname{ flex:1; min-width:0; }
-.mprice{ flex-shrink:0; text-align:right; padding:6px 10px; border-radius:12px; background:#e3f1f4; font-size:16px; font-weight:400; }
+.mprice{ flex-shrink:0; text-align:right; padding:6px 10px; border-radius:12px; background:#e4ebec; font-size:16px; font-weight:400; }
 .model.now{ background:var(--me-bg); border-color:var(--me-line); font-weight:700; }
 .model small{ display:block; font-size:13px; font-weight:400; color:var(--soft); }
 .note .detail{ display:block; margin-top:6px; font-size:12px; word-break:break-word; }
@@ -249,11 +252,11 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   width:100%; height:300px; max-height:45vh; margin:0 0 14px; padding:11px 14px; border:1px solid var(--line); border-radius:14px;
   background:#fff; color:var(--text); font:inherit; font-size:17px; line-height:1.7; outline:none; resize:none;
 }
-#dlgArea:focus{ border-color:#9cc3cf; }
+#dlgArea:focus{ border-color:#a9bfc4; }
 #toast{
   position:absolute; left:50%; top:calc(env(safe-area-inset-top,0px) + 14px); z-index:12;
   transform:translate(-50%,-12px); max-width:86%; padding:12px 20px; border-radius:18px;
-  background:#37474f; color:#fff; font-size:16px; line-height:1.6; text-align:center;
+  background:#3e484e; color:#fff; font-size:16px; line-height:1.6; text-align:center;
   opacity:0; pointer-events:none; transition:opacity .25s, transform .25s;
 }
 #toast.on{ opacity:1; transform:translate(-50%,0); }
@@ -263,7 +266,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   display:flex; align-items:flex-start; justify-content:center; padding:calc(env(safe-area-inset-top,0px) + 50px) 18px 18px; overflow-y:auto;
 }
 #dlg .card{
-  width:100%; max-width:560px; background:#fffdf9; border:1px solid var(--line); border-radius:22px; padding:20px;
+  width:100%; max-width:560px; background:#faf8f4; border:1px solid var(--line); border-radius:22px; padding:20px;
   box-shadow:0 12px 40px rgba(55,71,79,.18);
 }
 #dlgText{ margin:0 0 14px; font-size:17px; line-height:1.8; white-space:pre-line; }
@@ -271,7 +274,7 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
   width:100%; margin:0 0 14px; padding:11px 14px; border:1px solid var(--line); border-radius:14px;
   background:#fff; color:var(--text); font:inherit; font-size:17px; outline:none;
 }
-#dlgInput:focus{ border-color:#9cc3cf; }
+#dlgInput:focus{ border-color:#a9bfc4; }
 #dlg .btns{ display:flex; gap:10px; justify-content:flex-end; }
 #dlg .btns button{ min-height:48px; min-width:96px; padding:0 16px; border-radius:14px; font:inherit; font-size:16px; font-weight:700; }
 /* 長い文章を書く小窓：画面いっぱいに広げる（プロンプト・記憶・日記など） */
@@ -285,15 +288,17 @@ button:focus-visible{ outline:3px solid #9cc3cf; outline-offset:2px; }
 #dlgNo{ border:1px solid var(--line); background:#fff; color:var(--text); }
 #dlgYes{ border:none; background:var(--sea); color:#fff; }
 .label{ position:absolute; width:1px; height:1px; overflow:hidden; clip:rect(0 0 0 0); }
-.think{ margin:0 0 8px; padding:4px 12px; font-size:14px; color:var(--soft); border-left:3px solid var(--line); background:#fffdf9; border-radius:0 12px 12px 0; }
-.think summary{ min-height:36px; display:flex; align-items:center; }
-.think div{ white-space:pre-wrap; line-height:1.7; padding:2px 0 8px; word-break:break-word; }
+.think{ margin:0 0 8px; font-size:14px; color:#5c6369; }
+.think summary{ list-style:none; display:inline-flex; align-items:center; gap:6px; min-height:44px; padding:0 18px; border:1px solid #e0dcd0; border-radius:22px; background:#f1eee5; color:#5c6369; font-size:15px; font-weight:700; cursor:pointer; }
+.think summary::-webkit-details-marker{ display:none; }
+.think[open] summary{ margin-bottom:8px; }
+.think div{ white-space:pre-wrap; line-height:1.7; padding:12px 15px; border:1px solid #e0dcd0; border-radius:18px; background:#f8f6f1; word-break:break-word; }
 .src{ margin:3px 6px 0; font-size:12px; line-height:1.7; color:var(--soft); word-break:break-all; }
 .src a{ color:var(--sea); }
-.hit{ width:100%; text-align:left; padding:10px 14px; border:1px solid var(--line); border-radius:16px; background:#fffdf9; color:var(--text); font:inherit; font-size:16px; line-height:1.6; word-break:break-word; }
+.hit{ width:100%; text-align:left; padding:10px 14px; border:1px solid var(--line); border-radius:16px; background:#faf8f4; color:var(--text); font:inherit; font-size:16px; line-height:1.6; word-break:break-word; }
 .hit small{ display:block; font-size:12px; color:var(--soft); }
 .sw{ width:100%; min-height:50px; text-align:left; padding:8px 14px; border-radius:14px; border:2px solid; font:inherit; font-size:16px; }
-.sw.now{ box-shadow:0 0 0 3px #7fb0bf; font-weight:700; }
+.sw.now{ box-shadow:0 0 0 3px #88a9b2; font-weight:700; }
 #splash{ position:absolute; inset:0; z-index:20; overflow:hidden; cursor:pointer; transition:opacity .9s;
   background:linear-gradient(to bottom,#d6edf3 0%,#f2ecdd 40%,#6ea6b6 40%,#8fc2ce 55%,#b9dde4 66%,#e8f4f5 73%,#f8f1e2 73.5%,#faf6ee 100%); }
 body.t-morning #splash{ background:linear-gradient(to bottom,#fdf0da 0%,#fbe6cb 24%,#f4e6d3 40%,#7fb0bd 40%,#a4ccd4 55%,#cfe6e8 66%,#eef7f4 73%,#f8f1e2 73.5%,#faf6ee 100%); }
@@ -337,10 +342,52 @@ body.t-night .sp-stars{ display:block; position:absolute; top:0; left:0; right:0
 .hl[hidden]{ display:none; }
 #outSheet .cb{ display:flex; flex-direction:column; gap:10px; padding-bottom:20px; }
 header .plain, header .pick{ border:none; background:rgba(255,255,255,.6); }
-header .plain.on, header .plain.due{ background:#d9ecf1; box-shadow:inset 0 0 0 1.5px #9cc3cf; }
+header .plain.on, header .plain.due{ background:#dce7ea; box-shadow:inset 0 0 0 1.5px #a9bfc4; }
 header .tools{ border-top-color:rgba(228,220,204,.7); }
+/* ⋯ メニュー（プロンプト・記憶・日記・カラー・保存）。ふだんは閉じておく */
+header{ position:relative; z-index:3; }
+#menuPanel{ position:absolute; left:14px; right:14px; top:calc(100% + 6px); z-index:4; margin:0; padding:12px;
+  display:flex; flex-wrap:wrap; gap:8px; border:1px solid var(--line); border-radius:18px; background:#faf8f4; box-shadow:0 10px 30px rgba(55,65,70,.18); }
+#menuPanel[hidden]{ display:none; }
+header #menuPanel .plain{ background:#f1eee5; border:1px solid var(--line); }
+header #menuPanel .plain.on, header #menuPanel .plain.due{ background:#dce7ea; box-shadow:inset 0 0 0 1.5px #a9bfc4; }
+/* 入力しているあいだ（キーボードが出ているあいだ）は、上を細い1行に。モデルの段は残して、1行にそろえる */
+#mini{ display:block; width:100%; min-height:36px; padding:0 4px; border:none; background:none; color:var(--text); font:inherit; font-size:15px; font-weight:700; text-align:left; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+#mini[hidden]{ display:none; }
+#app.typing header{ padding-top:calc(env(safe-area-inset-top,0px) + 6px); padding-bottom:4px; }
+#app.typing header > *:not(#mini){ display:none; }
+#app.typing #modelRow{ padding-top:6px; }
+/* ペルソナ・Room の2つのボタン（中身の幅で、左に寄せる）と、いまの会話 */
+.hl.two{ gap:8px; justify-content:flex-start; }
+.hl.two .pick{ flex:0 0 auto; width:auto; max-width:48%; }
+.hl.two .pick .pt{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.hl.two .pick.cur{ background:#fff; box-shadow:inset 0 0 0 1.5px #a9bfc4; }
+.dot{ margin-left:4px; color:#b5714f; font-size:12px; }
+.dot[hidden]{ display:none; }
+#roomRow[hidden]{ display:none; }
+.ic.sm{ min-width:40px; min-height:40px; font-size:18px; border-radius:12px; }
+.conv{ display:flex; align-items:center; gap:6px; min-height:36px; max-width:100%; padding:0 6px; border:none; background:none; color:var(--text); font:inherit; font-size:15px; text-align:left; }
+.conv[hidden]{ display:none; }
+.conv .pt{ min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+/* ペルソナの画面：会話一覧 ／ ペルソナ管理 */
+.tabs{ display:flex; gap:8px; margin:2px 0 14px; }
+.tabs button{ flex:1; min-height:46px; border:1px solid var(--line); border-radius:14px; background:#f1eee5; color:var(--soft); font:inherit; font-size:16px; }
+.tabs button.on{ background:#fff; color:var(--text); font-weight:700; box-shadow:0 1px 4px rgba(55,65,70,.12); }
+.lhead{ display:flex; align-items:baseline; justify-content:space-between; margin:0 2px 8px; }
+.lhead b{ font-size:17px; }
+.lhead small{ font-size:13px; color:var(--soft); }
+.back{ align-self:flex-start; min-height:36px; margin:0 0 8px; padding:0 4px; border:none; background:none; color:var(--sea); font:inherit; font-size:14px; }
+.crow{ display:flex; gap:6px; align-items:stretch; }
+.crow .model{ flex:1; min-width:0; }
+.more{ flex-shrink:0; width:48px; border:1px solid var(--line); border-radius:16px; background:#faf8f4; color:var(--soft); font:inherit; font-size:20px; }
+.cacts{ display:flex; flex-wrap:wrap; gap:8px; margin:-2px 0 4px; padding:10px; border:1px solid var(--line); border-radius:14px; background:#f4f1ea; }
+.cacts[hidden]{ display:none; }
+.mrow{ width:100%; min-height:60px; display:flex; align-items:center; gap:12px; text-align:left; padding:10px 16px; border:1px solid var(--line); border-radius:16px; background:#fff; color:var(--text); font:inherit; font-size:17px; }
+.mrow .mname small{ display:block; font-size:13px; color:var(--soft); }
+.mrow .go2{ color:var(--soft); font-size:18px; }
+.mrow.due{ box-shadow:inset 0 0 0 1.5px #d8b49c; }
 /* 設定：会社ごとに開く、キーは閉じておく */
-.co{ width:100%; min-height:48px; display:flex; align-items:center; gap:8px; text-align:left; padding:0 14px; border:1px solid var(--line); border-radius:14px; background:#f6f0e4; color:var(--text); font:inherit; font-size:16px; font-weight:700; }
+.co{ width:100%; min-height:48px; display:flex; align-items:center; gap:8px; text-align:left; padding:0 14px; border:1px solid var(--line); border-radius:14px; background:#f1eee5; color:var(--text); font:inherit; font-size:16px; font-weight:700; }
 .co small{ margin-left:auto; font-size:13px; font-weight:400; color:var(--soft); }
 #hideList .co{ margin-top:8px; }
 .keys summary{ min-height:44px; display:flex; align-items:center; font-size:17px; font-weight:700; cursor:pointer; }
@@ -355,47 +402,48 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
 <div id="app">
   <header>
     <div class="hl">
-      <div class="ttl">🌊 Cove <small id="tide"></small><small id="ver">版 2.9</small></div>
+      <div class="ttl">🌊 Cove <small id="tide"></small><small id="ver">版 3.2</small></div>
       <span class="gap"></span>
       <button id="openCover" class="ic" type="button" aria-label="表紙へ" title="表紙へ">🏝️</button>
       <button id="openFinder" class="ic" type="button" aria-label="さがす" title="さがす">🔍</button>
       <button id="openSettings" class="ic" type="button" aria-label="設定" title="設定">⚙️</button>
     </div>
     <div id="cost"></div>
-    <div class="hl">
-      <button id="openPersonas" class="pick" type="button"><span id="pName" class="pt">じゅんび中…</span><span class="pa">▾</span></button>
+    <div class="hl two">
+      <button id="openPersonas" class="pick" type="button"><span id="pName" class="pt">じゅんび中…</span><span id="dueDot" class="dot" hidden>●</span><span class="pa">▾</span></button>
+      <button id="openGroups" class="pick" type="button"><span id="gName" class="pt">👥 Room</span><span class="pa">▾</span></button>
+      <button id="openMenu" type="button" hidden></button>
     </div>
     <div class="hl" id="roomRow">
-      <button id="openRoomList" class="pick big" type="button"><span id="rName" class="pt">部屋：</span><span class="pa">▾</span></button>
+      <button id="openRoomList" class="conv" type="button"><span id="rName" class="pt">会話：</span><span class="pa">▾</span></button>
       <span class="gap"></span>
-      <button id="newRoom" class="mk" type="button">＋ 新しい部屋</button>
+      <button id="btnColor" class="ic sm" type="button" aria-label="カラー" title="カラー">🎨</button>
+      <button id="btnOut" class="ic sm" type="button" aria-label="保存・コピー" title="保存・コピー">📋</button>
     </div>
-    <div class="bar tools">
+    <div id="menuPanel" hidden>
       <button id="openCall" class="plain" type="button" hidden>呼ぶ</button>
       <button id="openPersona" class="plain" type="button">プロンプト</button>
       <button id="openMemory" class="plain" type="button">記憶</button>
       <button id="openDiary" class="plain" type="button">日記</button>
-      <button id="btnColor" class="plain" type="button">カラー</button>
-      <span class="gap"></span>
-      <button id="btnOut" class="plain" type="button">保存・コピー</button>
     </div>
+    <button id="mini" type="button" hidden aria-label="上の部分をひらく"></button>
   </header>
   <main id="list" aria-live="polite"></main>
   <div id="whoRow" hidden></div>
   <div id="modelRow">
-    <button id="openModels" class="pill" type="button">モデル ▾</button>
-    <button id="toggleSearch" class="pill" type="button">ウェブ検索：オフ</button>
-    <button id="toggleThink" class="pill" type="button">思考：オフ</button>
-    <button id="insertNow" class="pill" type="button">今の日時</button>
+    <button id="toggleThink" class="tgl" type="button" title="思考の表示（タップでオン・オフ）" aria-label="思考の表示">💭</button>
+    <button id="toggleSearch" class="tgl" type="button" title="ウェブ検索（タップでオン・オフ）" aria-label="ウェブ検索">🌐</button>
+    <button id="insertNow" class="tgl" type="button" title="今の日時を、送る文の終わりに付ける（タップでオン・オフ）" aria-label="今の日時">🕒</button>
+    <button id="openModels" class="mchip" type="button">モデル ▾</button>
   </div>
   <div id="attRow" hidden></div>
   <footer>
     <label class="label" for="msg">メッセージ</label>
-    <button id="attach" type="button">＋ 添付</button>
+    <button id="attach" type="button" aria-label="添付" title="添付">➕</button>
     <input id="attFile" type="file" multiple accept="image/*,application/pdf,text/*,.txt,.md,.csv,.json,.log" hidden>
     <input id="libFile" type="file" accept="text/*,.txt,.md,.markdown,.csv,.json,.log" hidden>
     <textarea id="msg" rows="1" placeholder="メッセージを書く"></textarea>
-    <button id="send" type="button">送る</button>
+    <button id="send" type="button" aria-label="送る" title="送る">➤</button>
     <div id="mirror" aria-hidden="true"></div>
   </footer>
   <section id="pick" class="sheet top" hidden>
@@ -432,14 +480,14 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
     </div>
     <div id="diaryBody" class="pbody"></div>
   </section>
-  <section id="models" class="sheet" hidden aria-label="この部屋のモデル">
+  <section id="models" class="sheet" hidden aria-label="この会話のモデル">
     <div class="card2">
       <div class="ch">
-        <h2>この部屋のモデル</h2>
+        <h2>この会話のモデル</h2>
         <button id="closeModelsX" class="x" type="button" aria-label="閉じる">✕</button>
       </div>
       <div class="cb">
-        <p class="hint">ここで選ぶと、この部屋の次の返事から切り替わります。過去の返事の下には、その返事で実際に使ったモデルが残ります。</p>
+        <p class="hint">ここで選ぶと、この会話の次の返事から切り替わります。過去の返事の下には、その返事で実際に使ったモデルが残ります。</p>
         <div id="modelList" class="mlist"></div>
       </div>
       <div class="cf"><button id="closeModels" class="close2" type="button">閉じる</button></div>
@@ -485,7 +533,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
         <h3>ログを取り込む</h3>
         <button id="importBtn" class="small" type="button">ログを取り込む</button>
         <input id="importFile" type="file" multiple accept=".json,application/json,.html,.htm,text/html,.zip,application/zip,.txt,.md,text/plain" hidden>
-        <p style="margin-top:10px">ほかのアプリの会話を、部屋として足します。いまある会話は、消えません。料金はかかりません。<br>いま読めるのは、Claude公式の「データを書き出す」のファイル（zipのまま、または中の conversations.json）、Claudeの会話を書き出したHTMLファイル、旧Coveで保存した文章のファイル、GPTの形のJSONファイルです。</p>
+        <p style="margin-top:10px">ほかのアプリの会話を、こちらに足します。いまある会話は、消えません。料金はかかりません。<br>いま読めるのは、Claude公式の「データを書き出す」のファイル（zipのまま、または中の conversations.json）、Claudeの会話を書き出したHTMLファイル、旧Coveで保存した文章のファイル、GPTの形のJSONファイルです。</p>
       </div>
       <details id="keysBox" class="field keys">
         <summary>APIキー（押すと開きます）</summary>
@@ -569,7 +617,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
         <button id="closeImpX" class="x" type="button" aria-label="閉じる">✕</button>
       </div>
       <div class="cb">
-        <p class="hint">入れたい会話を押して、チェックを付けてください。会話1つが、部屋1つになります。</p>
+        <p class="hint">入れたい会話を押して、チェックを付けてください。ほかのアプリの会話1つが、こちらの会話1つになります。</p>
         <input id="impQ" type="text" autocomplete="off" placeholder="会話の名前でさがす" hidden>
         <p id="impCount" class="hint" hidden></p>
         <div id="impList" class="mlist"></div>
@@ -610,7 +658,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
 <script>
 (function(){
   "use strict";
-  const VERSION = "2.9";
+  const VERSION = "3.2";
   const app = document.getElementById("app");
   const list = document.getElementById("list");
   const box = document.getElementById("msg");
@@ -619,6 +667,11 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
   const pName = document.getElementById("pName");
   const rName = document.getElementById("rName");
   const state = document.getElementById("state");
+  const gName = document.getElementById("gName");
+  const dueDot = document.getElementById("dueDot");
+  const menuBtn = document.getElementById("openMenu");
+  const menuPanel = document.getElementById("menuPanel");
+  const miniBar = document.getElementById("mini");
 
   /* ───────── たずねる小窓（名前を入れる、確かめる、知らせる） ───────── */
   const dlg = document.getElementById("dlg");
@@ -1394,8 +1447,8 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
     }).then(v => { sweepSoon(); return v; });
   }
   let keys = { claude:"", gemini:"", openai:"", xai:"" };
-  let prefs = { lastModel:DEFAULT_MODEL, hidden:[], fs:17, think:false, capYen:1600 };
-  const savePrefs = () => putOne("meta", { key:"prefs", lastModel:prefs.lastModel, hidden:prefs.hidden, fs:prefs.fs, think:prefs.think, capYen:prefs.capYen });
+  let prefs = { lastModel:DEFAULT_MODEL, hidden:[], fs:17, think:false, now:false, capYen:1600 };
+  const savePrefs = () => putOne("meta", { key:"prefs", lastModel:prefs.lastModel, hidden:prefs.hidden, fs:prefs.fs, think:prefs.think, now:prefs.now, capYen:prefs.capYen });
   let usage = { month:"", usd:0, by:{} };     // by は、会社ごとの内訳（claude、gemini、openai、xai、other）
   let backup = { last:0, level:0 };
   const monthKey = () => { const d = new Date(); return d.getFullYear() + "-" + two(d.getMonth() + 1); };
@@ -1443,6 +1496,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
       if(Array.isArray(p.hidden)) prefs.hidden = p.hidden;
       if(typeof p.fs === "number") prefs.fs = p.fs;
       if(typeof p.think === "boolean") prefs.think = p.think;
+      if(typeof p.now === "boolean") prefs.now = p.now;
       if(typeof p.capYen === "number") prefs.capYen = p.capYen;
     }
     const us = await getOne("meta", "usage");
@@ -1546,7 +1600,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
     }
     if(m.role === "ai" && m.thinking){
       const det = el("details", "think");
-      det.appendChild(el("summary", "", "考えたこと"));
+      det.appendChild(el("summary", "", "💭 思考"));
       det.appendChild(el("div", "", m.thinking));
       row.appendChild(det);
     }
@@ -1616,7 +1670,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
       if(m.promptName) info += " ・ プロンプト: " + m.promptName;
       if(m.searches) info += " ・ 検索" + m.searches + "回";
       if(m.opened && m.opened.length) info += " ・ 開いた記憶: " + m.opened.join("、");
-      if(m.logsRead && m.logsRead.length) info += " ・ 読んだ部屋: " + m.logsRead.map(x => x.name + "（" + x.n + "件）").join("、");
+      if(m.logsRead && m.logsRead.length) info += " ・ 読んだ会話: " + m.logsRead.map(x => x.name + "（" + x.n + "件）").join("、");
       if(m.sawFiles) info += " ・ 添付 " + m.sawFiles + "件を見た";
       if(m.memFail) info += " ・ このモデルは、記憶を自分で開けませんでした";
       if(m.cut) info += " ・ 長くて途中で切れました";
@@ -1650,8 +1704,11 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
     modelBtn.textContent = (mo ? mo.name : "モデルを選びなおしてね") + " ▾";
   }
   function showWhere(){
-    pName.textContent = (grp ? "" : "⛵️ ") + current.roomName;
-    rName.textContent = "部屋：" + current.threadName;
+    pName.textContent = grp ? "⛵️ ペルソナ" : "⛵️ " + current.roomName;
+    gName.textContent = grp ? "👥 " + current.roomName : "👥 Room";
+    document.getElementById("openPersonas").classList.toggle("cur", !grp);
+    document.getElementById("openGroups").classList.toggle("cur", !!grp);
+    rName.textContent = "会話：" + current.threadName;
   }
   // 「いつもの」以外のプロンプトを使っている部屋では、上の「プロンプト」ボタンに色を付ける
   const promptTop = document.getElementById("openPersona");
@@ -1668,7 +1725,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
     showWhere();
     clearProblem();
     await showWho();
-    await showModel(); await showPromptBtn(); await showSearchBtn(); showThinkBtn(); await applyColors(); showDiaryBtn(false);
+    await showModel(); await showPromptBtn(); await showSearchBtn(); showThinkBtn(); showNowBtn(); await applyColors(); showDiaryBtn(false);
     list.textContent = ""; hint = null; drawn.clear();
     const msgs = await loadMessages();
     count = msgs.length;
@@ -1787,8 +1844,8 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
   async function showSearchBtn(){
     const th = await getOne("threads", current.threadId);
     const on = !!(th && th.search);
-    searchBtn.textContent = "ウェブ検索：" + (on ? "オン" : "オフ");
-    searchBtn.className = "pill" + (on ? " on" : "");
+    searchBtn.className = "tgl" + (on ? " on" : "");
+    searchBtn.setAttribute("aria-pressed", on ? "true" : "false");
   }
   searchBtn.addEventListener("click", async () => {
     if(!db) return;
@@ -1806,8 +1863,8 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
   /* ───────── 思考の表示のオン・オフ（入力欄の上） ───────── */
   const thinkTop = document.getElementById("toggleThink");
   function showThinkBtn(){
-    thinkTop.textContent = "思考：" + (prefs.think ? "オン" : "オフ");
-    thinkTop.className = "pill" + (prefs.think ? " on" : "");
+    thinkTop.className = "tgl" + (prefs.think ? " on" : "");
+    thinkTop.setAttribute("aria-pressed", prefs.think ? "true" : "false");
   }
   thinkTop.addEventListener("click", async () => {
     if(!db) return;
@@ -1822,37 +1879,37 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
 
   /* ───────── 文字欄の色（ペルソナごと） ───────── */
   const PALETTE = [
-    { name:"白",     bg:"#ffffff", line:"#e4dccc", text:"#37474f" },
-    { name:"水色",   bg:"#eaf5f8", line:"#cfe4ea", text:"#37474f" },
-    { name:"ピンク", bg:"#fcecef", line:"#f0cdd5", text:"#4a2f35" },
-    { name:"オレンジ", bg:"#fdf0e2", line:"#f1d3b4", text:"#4a3220" },
-    { name:"黄色",   bg:"#fcf5d8", line:"#ecdc9c", text:"#40361a" },
-    { name:"砂色",   bg:"#f6f0e4", line:"#e4dccc", text:"#37474f" },
-    { name:"緑",     bg:"#ecf5e6", line:"#cfe3c4", text:"#33452c" }
+    { name:"白",     bg:"#ffffff", line:"#e0dcd0", text:"#3e484e" },
+    { name:"水色",   bg:"#e3ebed", line:"#cad8dc", text:"#3e484e" },
+    { name:"ピンク", bg:"#f3e6e8", line:"#e2cdd1", text:"#4a3a3d" },
+    { name:"オレンジ", bg:"#f5eadb", line:"#e4d2b9", text:"#4a3d2e" },
+    { name:"黄色",   bg:"#f4eed2", line:"#ddd3a6", text:"#433e22" },
+    { name:"砂色",   bg:"#f1ece0", line:"#ddd5c2", text:"#3e484e" },
+    { name:"緑",     bg:"#e6eede", line:"#cbd9bf", text:"#38463a" }
   ];
   const palOf = n => PALETTE.find(p => p.name === n) || PALETTE[0];
   // 背景の色（文字欄より、うすい色。文字欄が見分けられるように）
   const BACKS = [
-    { name:"もとの色", bg:"#faf6ee" },
+    { name:"もとの色", bg:"#f3f0eb" },
     { name:"白",       bg:"#ffffff" },
-    { name:"水色",     bg:"#f2f9fb" },
-    { name:"ピンク",   bg:"#fdf4f6" },
-    { name:"オレンジ", bg:"#fef7ee" },
-    { name:"黄色",     bg:"#fdfae8" },
-    { name:"緑",       bg:"#f4f9f0" },
-    { name:"うす紫",   bg:"#f6f4fb" }
+    { name:"水色",     bg:"#eef3f4" },
+    { name:"ピンク",   bg:"#f7f1f1" },
+    { name:"オレンジ", bg:"#f7f1e9" },
+    { name:"黄色",     bg:"#f6f3e4" },
+    { name:"緑",       bg:"#f0f4eb" },
+    { name:"うす紫",   bg:"#f3f1f6" }
   ];
   const backOf = n => BACKS.find(p => p.name === n) || BACKS[0];
   // 背景と文字欄が同じ色どうしだと、ぼやける。そのときだけ、文字欄を少し濃くする
   const SAME = { "もとの色":"砂色", "白":"白", "水色":"水色", "ピンク":"ピンク", "オレンジ":"オレンジ", "黄色":"黄色", "緑":"緑" };
   const DEEP = {
-    "白":     { bg:"#ffffff", line:"#cdc4b2" },
-    "水色":   { bg:"#d8ebf1", line:"#a9ccd7" },
-    "ピンク": { bg:"#f8dbe1", line:"#e5b2be" },
-    "オレンジ": { bg:"#fbe2c6", line:"#e7bc90" },
-    "黄色":   { bg:"#f8ebb4", line:"#dcc776" },
-    "砂色":   { bg:"#eee4d0", line:"#d5c9ae" },
-    "緑":     { bg:"#dbebd0", line:"#b4d0a5" }
+    "白":     { bg:"#ffffff", line:"#cdc7b8" },
+    "水色":   { bg:"#d6e3e7", line:"#aec5cc" },
+    "ピンク": { bg:"#ecd8dc", line:"#d6b4bb" },
+    "オレンジ": { bg:"#f0dfc7", line:"#d9bf9a" },
+    "黄色":   { bg:"#ece3b9", line:"#cfc283" },
+    "砂色":   { bg:"#e9e1d0", line:"#d0c6ae" },
+    "緑":     { bg:"#d8e5cd", line:"#b3caa4" }
   };
   const bubbleOf = (name, bgName) => { const p = palOf(name); return SAME[backOf(bgName).name] === p.name ? Object.assign({}, p, DEEP[p.name]) : p; };
   async function applyColors(){
@@ -1949,7 +2006,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
       if(typeof ClipboardItem !== "undefined" && navigator.clipboard && navigator.clipboard.write){
         // 押した瞬間に使える形でコピーする（iPadは、押してから時間がたつとコピーを許可しないため）
         await navigator.clipboard.write([new ClipboardItem({ "text/plain": make().then(t => new Blob([t], { type:"text/plain" })) })]);
-        toast("この部屋の会話を、全部コピーしました");
+        toast("この会話を、全部コピーしました");
         return;
       }
     }catch(e){}
@@ -2205,7 +2262,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
       try{ if(fdb){ const used = new Set(); messages.forEach(m => (m.files || []).forEach(f => used.add(f.id))); files = (await allFiles()).filter(f => used.has(f.id)); } }catch(e){}
       const pack = { app:"newapp", format:1, version:VERSION, savedAt:Date.now(), rooms:rooms, threads:threads, messages:messages, files:files,
         current:{ roomId:current.roomId, threadId:current.threadId },
-        prefs:{ lastModel:prefs.lastModel, hidden:prefs.hidden, fs:prefs.fs, think:prefs.think, capYen:prefs.capYen }, usage:usageNow() };
+        prefs:{ lastModel:prefs.lastModel, hidden:prefs.hidden, fs:prefs.fs, think:prefs.think, now:prefs.now, capYen:prefs.capYen }, usage:usageNow() };
       const done = await saveFile("newapp-backup-" + stamp() + ".json", "application/json", JSON.stringify(pack));
       if(done){
         backup = { last:Date.now(), level:0 };
@@ -2225,7 +2282,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
     if(!pack || pack.app !== "newapp" || !Array.isArray(pack.rooms) || !Array.isArray(pack.threads) || !Array.isArray(pack.messages) || !pack.rooms.length || !pack.threads.length){
       tell("このファイルは、このアプリの「まるごと保存」ではないようです。"); return;
     }
-    const ok = await dialog({ text:"保存した日： " + when(pack.savedAt) + "\nペルソナ " + pack.rooms.length + "・部屋 " + pack.threads.length + "・発言 " + pack.messages.length + "件" + (Array.isArray(pack.files) && pack.files.length ? "・添付 " + pack.files.length + "件" : "") + "\n\nいまある会話は、すべてこのファイルの内容に置き換わります。元に戻せません。", yes:"置き換える" });
+    const ok = await dialog({ text:"保存した日： " + when(pack.savedAt) + "\nペルソナ " + pack.rooms.length + "・会話 " + pack.threads.length + "・発言 " + pack.messages.length + "件" + (Array.isArray(pack.files) && pack.files.length ? "・添付 " + pack.files.length + "件" : "") + "\n\nいまある会話は、すべてこのファイルの内容に置き換わります。元に戻せません。", yes:"置き換える" });
     if(!ok) return;
     try{
       const cur = pack.threads.find(t => pack.current && t.id === pack.current.threadId) || pack.threads[0];
@@ -2547,8 +2604,8 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
     const total = pick.reduce((n, c) => n + c.msgs.length, 0);
     const again = to ? pick.filter(impDup).length : 0;
     const ok = await dialog({ text:pick.length + "件の会話（発言 " + total.toLocaleString() + "件）を、\n" + (to ? "ペルソナ「" + to.name + "」" : "新しいペルソナ「" + imp.newName + "」")
-      + "に取り込みます。\n会話1つが、部屋1つになります。いまある会話は、変わりません。"
-      + (again ? "\n\n（" + again + "件は、前にも取り込んだものです。同じ部屋が、もう1つできます）" : ""), yes:"取り込む" });
+      + "に取り込みます。\nほかのアプリの会話1つが、こちらの会話1つになります。いまある会話は、変わりません。"
+      + (again ? "\n\n（" + again + "件は、前にも取り込んだものです。同じ会話が、もう1つできます）" : ""), yes:"取り込む" });
     if(!ok || !imp) return;
     importing = true;
     let made = 0;
@@ -2571,7 +2628,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
         made++;
       }
       closeImp();
-      await tell(made + "件の会話を、「" + room.name + "」に取り込みました。\nそのペルソナの、部屋の一覧から開けます。");
+      await tell(made + "件の会話を、「" + room.name + "」に取り込みました。\nそのペルソナの「会話一覧」から開けます。");
     }catch(e){
       await tell((made ? made + "件までは取り込めましたが、" : "") + "とちゅうで止まりました。もう一度ためしてください。");
       closeImp();
@@ -2657,15 +2714,15 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
   // ⛵️ ペルソナを選ぶ（manage が true のときは、名前を変える・削除する画面）
   async function openPersonaList(manage){
     const rooms = (await sortedRooms()).filter(r => !isGroup(r)), threads = await getAll("threads");
-    const box2 = openPick(manage ? "名前を変える・削除する" : "ペルソナ・Roomを選ぶ", manage ? "削除すると、中の部屋と会話も消えます。" : "");
+    const box2 = openPick(manage ? "ペルソナの名前を変える・削除する" : "ペルソナを選ぶ", manage ? "削除すると、中の会話もすべて消えます。" : "");
     rooms.forEach(room => {
-      const now = room.id === current.roomId;
+      const now = !grp && room.id === current.roomId;
       const mine = threads.filter(t => t.roomId === room.id);
       if(!manage){
-        const b = choice("⛵️ " + room.name, (now ? "いま開いている ・ " : "") + "部屋 " + mine.length + "個", now, () => now ? closePick() : goPersona(room));
+        const b = choice("⛵️ " + room.name, (now ? "いま開いている ・ " : "") + "会話 " + mine.length + "件", now, () => openPersonaSheet(room, "conv"));
         const p = palOf((room.colors || {}).ai || "白");
         b.style.background = p.bg; b.style.borderColor = p.line; b.style.color = p.text;
-        if(now) b.style.boxShadow = "0 0 0 3px #7fb0bf";
+        if(now) b.style.boxShadow = "0 0 0 3px #88a9b2";
         box2.appendChild(b);
         return;
       }
@@ -2687,7 +2744,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
       }));
       row.appendChild(btn("small danger", "削除", async () => {
         if(rooms.length < 2){ await tell("ペルソナが1つだけのときは、削除できません。\n先に、別のペルソナを作ってください。"); return; }
-        const ok = await dialog({ text:"⛵️ 「" + room.name + "」を削除しますか？\n中の部屋 " + mine.length + "個と、その会話がすべて消えます。元に戻せません。", yes:"削除する" });
+        const ok = await dialog({ text:"⛵️ 「" + room.name + "」を削除しますか？\n中の会話 " + mine.length + "件が、すべて消えます。元に戻せません。", yes:"削除する" });
         if(!ok) return;
         await removeThreads(mine.map(t => t.id), room.id);
         if(now) await goPersona(rooms.find(r => r.id !== room.id));
@@ -2704,19 +2761,125 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
       ensurePrompts(room);
       await putOne("rooms", room);
       await goPersona(room);
-      toast("「" + v + "」を作りました。プロンプトは、上の「プロンプト」から書けます");
+      await openPersonaSheet(room, "manage");
+      toast("「" + v + "」を作りました。「プロンプト」から、中身を書けます");
     }));
-    // Room（みんなで話す場所）。一覧に、別々に並ぶ
-    const groups = (await sortedRooms()).filter(isGroup);
-    box2.appendChild(el("p", "group", "みんなで話す"));
+    box2.appendChild(btn("small", manage ? "もどる" : "ペルソナの名前を変える・削除する", () => openPersonaList(!manage)));
+  }
+  document.getElementById("openPersonas").addEventListener("click", () => {
+    if(!db) return;
+    box.blur();
+    openPersonaList(false).catch(() => tell("一覧を開けませんでした。もう一度ためしてください。"));
+  });
+
+  // 管理の行（プロンプト・記憶・日記・カラーなど）。押すと、いまの画面を閉じて、その画面を開く
+  function manageRow(box2, label, sub, id, due){
+    const b = btn("mrow" + (due ? " due" : ""), null, () => { closePick(); document.getElementById(id).click(); });
+    const left = el("span", "mname", label);
+    if(sub) left.appendChild(el("small", "", sub));
+    b.appendChild(left);
+    b.appendChild(el("span", "go2", "›"));
+    box2.appendChild(b);
+  }
+
+  // ⛵️ ペルソナの画面：「会話一覧」と「ペルソナ管理」
+  async function openPersonaSheet(room0, tab){
+    if(grp || room0.id !== current.roomId) await goPersona(room0);      // ほかのペルソナを押したら、そのペルソナへ移る
+    const room = await getRoom(room0.id);
+    if(!room) return;
+    const mine = await threadsOf(room.id);
+    const box2 = openPick("⛵️ " + room.name, "");
+    box2.appendChild(btn("back", "‹ ペルソナ一覧", () => openPersonaList(false)));
+    const tabs = el("div", "tabs");
+    tabs.appendChild(btn(tab === "conv" ? "on" : "", "会話一覧", () => openPersonaSheet(room, "conv")));
+    tabs.appendChild(btn(tab === "manage" ? "on" : "", "ペルソナ管理", () => openPersonaSheet(room, "manage")));
+    box2.appendChild(tabs);
+
+    if(tab === "manage"){
+      const pr = mainOf(room);
+      manageRow(box2, "プロンプト", "いつもの：" + ((pr && pr.name) || "（なし）") + " ・ " + (room.prompts || []).length + "個", "openPersona");
+      manageRow(box2, "記憶", ((room.memories || []).length) + "項目", "openMemory");
+      const due = !dueDot.hidden;
+      manageRow(box2, "日記" + (due ? " ●" : ""), diariesOn(room).length + "回分" + (due ? " ・ 会話がたまってきました。そろそろ書く頃です" : ""), "openDiary", due);
+      return;
+    }
+
+    const head = el("div", "lhead");
+    head.appendChild(el("b", "", "会話一覧"));
+    head.appendChild(el("small", "", mine.length + "件"));
+    box2.appendChild(head);
+    const add = btn("add", "＋ 新しい会話", async () => {
+      try{
+        const v = await dialog({ text:"⛵️ " + room.name + " と、新しい会話をはじめます。\n会話の名前", input:true, value:dayName(Date.now()), yes:"はじめる" });
+        if(!v) return;
+        const th = await makeThread(room, v);
+        await goThread(th, room);
+      }catch(e){ tell("会話を作れませんでした。もう一度ためしてください。"); }
+    });
+    add.style.marginTop = "0";
+    box2.appendChild(add);
+    mine.forEach(th => {
+      const now = th.id === current.threadId;
+      const line = el("div", "crow");
+      line.appendChild(choice(th.name, (now ? "いま開いている ・ " : "") + "さいごに話した日 " + when(th.updatedAt), now, () => now ? closePick() : goThread(th, room)));
+      const acts = el("div", "cacts"); acts.hidden = true;
+      const more = btn("more", "⋯", () => { acts.hidden = !acts.hidden; });
+      more.setAttribute("aria-label", "「" + th.name + "」の名前を変える・保存・削除");
+      line.appendChild(more);
+      acts.appendChild(btn("small", "名前を変える", async () => {
+        const v = await dialog({ text:"会話の名前", input:true, value:th.name, yes:"変える" });
+        if(!v) return;
+        th.name = v; await putOne("threads", th);
+        if(now){ current.threadName = v; showWhere(); }
+        await openPersonaSheet(room, "conv");
+      }));
+      acts.appendChild(btn("small", "テキストで保存", async () => {
+        await saveFile(fileSafe(room.name + "_" + th.name) + "_" + stamp() + ".txt", "text/plain", await threadText(th, room));
+      }));
+      acts.appendChild(btn("small danger", "削除", async () => {
+        if(mine.length < 2){ await tell("会話が1つだけのときは、削除できません。\n先に、「＋ 新しい会話」で別の会話を作ってください。"); return; }
+        const ok = await dialog({ text:"会話「" + th.name + "」を削除しますか？\n中のやりとりがすべて消えます。元に戻せません。", yes:"削除する" });
+        if(!ok) return;
+        await removeThreads([th.id], null);
+        if(now){
+          const other = mine.find(t => t.id !== th.id);
+          current = { roomId:room.id, threadId:other.id, roomName:room.name, threadName:other.name };
+          await setCurrent(room.id, other.id);
+          await openCurrent();
+        }
+        await openPersonaSheet(room, "conv");
+      }));
+      box2.appendChild(line);
+      box2.appendChild(acts);
+    });
+  }
+  // 上の「会話：◯◯」を押すと、いまのペルソナの会話一覧
+  document.getElementById("openRoomList").addEventListener("click", async () => {
+    if(!db || grp) return;
+    box.blur();
+    try{ const room = await getRoom(current.roomId); if(room) await openPersonaSheet(room, "conv"); }
+    catch(e){ tell("一覧を開けませんでした。もう一度ためしてください。"); }
+  });
+
+  // 👥 Room を選ぶ（manage が true のときは、名前を変える・削除する画面）
+  async function openGroupList(manage){
+    const all = await sortedRooms(), rooms = all.filter(r => !isGroup(r)), groups = all.filter(isGroup), threads = await getAll("threads");
+    const box2 = openPick(manage ? "Roomの名前を変える・削除する" : "👥 Room（みんなで話す場所）", manage ? "削除すると、中の会話と書庫も消えます。" : "");
+    if(!manage && grp){
+      box2.appendChild(el("p", "group", "いまの「" + grp.name + "」"));
+      manageRow(box2, "呼ぶ", "ペルソナを呼ぶ・外す", "openCall");
+      manageRow(box2, "書庫", (grp.memories || []).length + "項目", "openMemory");
+      manageRow(box2, "日記", "呼んだ人に、日記を書いてもらう", "openDiary");
+      box2.appendChild(el("p", "group", "Roomを選ぶ"));
+    }
     groups.forEach(g => {
-      const now = g.id === current.roomId;
+      const now = !!grp && g.id === current.roomId;
       const mine = threads.filter(t => t.roomId === g.id);
       if(!manage){
         const who = ((mine[0] && mine[0].members) || []).map(x => (rooms.find(r => r.id === x.roomId) || {}).name).filter(Boolean);
         const b = choice(g.name, (now ? "いま開いている ・ " : "") + (who.length ? "呼んでいる人：" + who.join("、") : "まだ、だれも呼んでいません"), now, () => now ? closePick() : goGroup(g));
-        b.style.background = backOf((g.colors || {}).bg).bg; b.style.borderColor = "#e4dccc";
-        if(now) b.style.boxShadow = "0 0 0 3px #7fb0bf";
+        b.style.background = backOf((g.colors || {}).bg).bg; b.style.borderColor = "#e0dcd0";
+        if(now) b.style.boxShadow = "0 0 0 3px #88a9b2";
         box2.appendChild(b);
         return;
       }
@@ -2727,17 +2890,18 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
         if(!v) return;
         await renameGroup(g.id, v);
         if(now){ current.roomName = v; current.threadName = v; showWhere(); }
-        await openPersonaList(true);
+        await openGroupList(true);
       }));
       row.appendChild(btn("small danger", "削除", async () => {
         const ok = await dialog({ text:"「" + g.name + "」を削除しますか？\n中の会話と、書庫がすべて消えます。元に戻せません。\n（ペルソナの日記に保存したものは、残ります）", yes:"削除する" });
         if(!ok) return;
         await removeThreads(mine.map(t => t.id), g.id);
         if(now) await goPersona(rooms[0]);
-        await openPersonaList(true);
+        await openGroupList(true);
       }));
       box2.appendChild(row);
     });
+    if(!manage && !groups.length) box2.appendChild(el("p", "hint", "まだRoomはありません。Roomでは、何人かのペルソナを呼んで、みんなで話せます。"));
     if(!manage) box2.appendChild(btn("add", "＋ 新しいRoom", async () => {
       const used = groups.map(g => g.name);
       let n = groups.length + 1;
@@ -2749,69 +2913,12 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
       await putOne("rooms", g);
       await goGroup(g);
     }));
-    box2.appendChild(btn("small", manage ? "もどる" : "名前を変える・削除する（ペルソナ・Room）", () => openPersonaList(!manage)));
+    if(groups.length) box2.appendChild(btn("small", manage ? "もどる" : "Roomの名前を変える・削除する", () => openGroupList(!manage)));
   }
-  document.getElementById("openPersonas").addEventListener("click", () => {
+  document.getElementById("openGroups").addEventListener("click", () => {
     if(!db) return;
     box.blur();
-    openPersonaList(false).catch(() => tell("一覧を開けませんでした。もう一度ためしてください。"));
-  });
-
-  // 部屋を選ぶ（manage が true のときは、名前を変える・削除する画面）
-  async function openRoomList(manage){
-    const room = await getRoom(current.roomId);
-    if(!room) return;
-    const mine = await threadsOf(room.id);
-    const box2 = openPick(manage ? "部屋の名前を変える・削除する" : tag(room) + " の部屋", manage ? "削除すると、中の会話も消えます。" : "");
-    mine.forEach(th => {
-      const now = th.id === current.threadId;
-      if(!manage){
-        box2.appendChild(choice(th.name, (now ? "いま開いている ・ " : "") + "さいごに話した日 " + when(th.updatedAt), now, () => now ? closePick() : goThread(th, room)));
-        return;
-      }
-      const row = el("div", "thread");
-      row.appendChild(el("span", "tname", th.name + (now ? "（いま開いている）" : "")));
-      row.appendChild(btn("small", "名前を変える", async () => {
-        const v = await dialog({ text:"部屋の名前", input:true, value:th.name, yes:"変える" });
-        if(!v) return;
-        th.name = v; await putOne("threads", th);
-        if(now){ current.threadName = v; showWhere(); }
-        await openRoomList(true);
-      }));
-      row.appendChild(btn("small danger", "削除", async () => {
-        if(mine.length < 2){ await tell("部屋が1つだけのときは、削除できません。\n先に、別の部屋を作ってください。"); return; }
-        const ok = await dialog({ text:"部屋「" + th.name + "」を削除しますか？\n中の会話がすべて消えます。元に戻せません。", yes:"削除する" });
-        if(!ok) return;
-        await removeThreads([th.id], null);
-        if(now){
-          const other = mine.find(t => t.id !== th.id);
-          current = { roomId:room.id, threadId:other.id, roomName:room.name, threadName:other.name };
-          await setCurrent(room.id, other.id);
-          await openCurrent();
-        }
-        await openRoomList(true);
-      }));
-      box2.appendChild(row);
-    });
-    box2.appendChild(btn("small", manage ? "もどる" : "部屋の名前を変える・削除する", () => openRoomList(!manage)));
-  }
-  document.getElementById("openRoomList").addEventListener("click", () => {
-    if(!db) return;
-    box.blur();
-    openRoomList(false).catch(() => tell("一覧を開けませんでした。もう一度ためしてください。"));
-  });
-  document.getElementById("newRoom").addEventListener("click", async () => {
-    if(!db) return;
-    box.blur();
-    try{
-      const room = await getRoom(current.roomId);
-      if(!room) return;
-      const v = await dialog({ text:tag(room) + " に、新しい部屋を作ります。\n部屋の名前", input:true, value:dayName(Date.now()), yes:"作る" });
-      if(!v) return;
-      const th = await makeThread(room, v);
-      await goThread(th, room);
-      if(isGroup(room) && !th.members.length) await openCall();
-    }catch(e){ tell("部屋を作れませんでした。もう一度ためしてください。"); }
+    openGroupList(false).catch(() => tell("一覧を開けませんでした。もう一度ためしてください。"));
   });
 
   // プロンプト（いま開いているペルソナの分）
@@ -2827,7 +2934,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
     document.getElementById("personaTitle").textContent = "⛵️ " + room.name + " のプロンプト";
     personaBody.textContent = "";
     const f2 = el("div", "field");
-    f2.appendChild(el("p", "", "ここに書いたことを、毎回AIに伝えます。「いつもの」は、どの部屋もふつうに使うプロンプトです。試したいときは、新しいプロンプトを作って、その部屋でだけ切り替えます。"));
+    f2.appendChild(el("p", "", "ここに書いたことを、毎回AIに伝えます。「いつもの」は、どの会話もふつうに使うプロンプトです。試したいときは、新しいプロンプトを作って、その会話でだけ切り替えます。"));
     personaBody.appendChild(f2);
     room.prompts.forEach(p => {
       const main = p.id === room.mainPrompt, using = p.id === usingId;
@@ -2835,11 +2942,11 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
       const c = el("div", "pcard" + (main ? " main" : ""));
       const h = el("h4", "", p.name);
       if(main) h.appendChild(el("span", "", "いつもの"));
-      if(using) h.appendChild(el("span", "", "この部屋で使用中"));
+      if(using) h.appendChild(el("span", "", "この会話で使用中"));
       c.appendChild(h);
       const body = (p.text || "").replace(/\s+/g, " ").trim();
       c.appendChild(el("p", "", body ? "中身：" + body.slice(0, 60) + (body.length > 60 ? "…" : "") : "中身：（まだ何も書いていません）"));
-      c.appendChild(el("p", "", main ? "どの部屋も、ふつうはこれを使います。" : "使っている部屋：" + (users.length ? users.map(t => t.name).join("、") : "なし")));
+      c.appendChild(el("p", "", main ? "どの会話も、ふつうはこれを使います。" : "使っている会話：" + (users.length ? users.map(t => t.name).join("、") : "なし")));
       const bar = el("div", "bar");
       bar.appendChild(btn("small", "編集", async () => {
         const r = await dialog({ text:"プロンプト「" + p.name + "」の中身\nここに書いたことを、毎回AIに伝えます。", area:true, value:p.text || "", yes:"保存する" });
@@ -2853,16 +2960,16 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
         p.name = v; await save();
         await showPromptBtn(); await drawPersona();
       }));
-      if(!using && cur) bar.appendChild(btn("small", "この部屋で使う", async () => {
+      if(!using && cur) bar.appendChild(btn("small", "この会話で使う", async () => {
         const t = await getOne("threads", current.threadId);
         if(main) delete t.promptId; else t.promptId = p.id;
         await putOne("threads", t);
         await showPromptBtn(); await drawPersona();
-        toast("部屋「" + t.name + "」は、次の返事から「" + p.name + "」を使います");
+        toast("会話「" + t.name + "」は、次の返事から「" + p.name + "」を使います");
       }));
       if(!main){
         bar.appendChild(btn("small", "これをいつものにする", async () => {
-          const ok = await dialog({ text:"「" + p.name + "」を、いつものプロンプトにしますか？\n「いつもの」を使っている部屋は、すべてこれに変わります。\n（いままでの「" + mainOf(room).name + "」は、消えずに残ります）", yes:"いつものにする" });
+          const ok = await dialog({ text:"「" + p.name + "」を、いつものプロンプトにしますか？\n「いつもの」を使っている会話は、すべてこれに変わります。\n（いままでの「" + mainOf(room).name + "」は、消えずに残ります）", yes:"いつものにする" });
           if(!ok) return;
           room.mainPrompt = p.id; await save();
           for(const t of users){ delete t.promptId; await putOne("threads", t); }
@@ -2870,7 +2977,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
           toast("「" + p.name + "」を、いつものにしました");
         }));
         bar.appendChild(btn("small danger", "削除", async () => {
-          const ok = await dialog({ text:"プロンプト「" + p.name + "」を削除しますか？\n元に戻せません。" + (users.length ? "\nこれを使っている部屋 " + users.length + "個は、「いつもの」にもどります。" : "") + "\n（会話は消えません）", yes:"削除する" });
+          const ok = await dialog({ text:"プロンプト「" + p.name + "」を削除しますか？\n元に戻せません。" + (users.length ? "\nこれを使っている会話 " + users.length + "個は、「いつもの」にもどります。" : "") + "\n（会話は消えません）", yes:"削除する" });
           if(!ok) return;
           room.prompts = room.prompts.filter(x => x.id !== p.id); await save();
           for(const t of users){ delete t.promptId; await putOne("threads", t); }
@@ -2963,7 +3070,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
       await drawMemory(); toast(memWord() + "を保存しました");
     }));
     if(sideJob && sideJob.kind === "sum" && sideJob.roomId === room.id) f.appendChild(sideJob.el);
-    else f.appendChild(btn("add", grp ? "ここまでの話を、まとめてもらう" : "いまの部屋のあらすじを、AIに下書きしてもらう", grp ? pickSummarizer : writeSum));
+    else f.appendChild(btn("add", grp ? "ここまでの話を、まとめてもらう" : "いまの会話のあらすじを、AIに下書きしてもらう", grp ? pickSummarizer : writeSum));
     if(grp) f.appendChild(btn("add", "文章のファイルを、項目として取り込む", () => libFile.click()));
     const s0 = room.sumDraft;
     if(s0){
@@ -2971,14 +3078,14 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
       const h = el("h4", "", grp ? "まとめの下書き" + (s0.by ? "（⛵️ " + s0.by + "）" : "") : "あらすじの下書き");
       h.appendChild(el("span", "off", "まだ" + memWord() + "に入っていません"));
       c.appendChild(h);
-      c.appendChild(el("p", "", dayTime(s0.createdAt) + (s0.threadName ? " ・ 部屋：" + s0.threadName : "")));
+      c.appendChild(el("p", "", dayTime(s0.createdAt) + (s0.threadName ? " ・ 会話：" + s0.threadName : "")));
       c.appendChild(el("p", "dtext", s0.text));
       const bar = el("div", "bar");
       const put = async (id, title) => {
         const now = Date.now();
         let it = id ? room.memories.find(x => x.id === id) : null;
         if(!it){ it = { id:newId(), title:title, text:"", show:!!grp, mode:grp ? "always" : "need", createdAt:now, updatedAt:now }; room.memories.push(it); }
-        const head = "（" + dayName(s0.createdAt) + (s0.threadName ? " 部屋：" + s0.threadName : "") + (grp ? " のまとめ" + (s0.by ? "・" + s0.by : "") : " のあらすじ") + "）\n";
+        const head = "（" + dayName(s0.createdAt) + (s0.threadName ? " 会話：" + s0.threadName : "") + (grp ? " のまとめ" + (s0.by ? "・" + s0.by : "") : " のあらすじ") + "）\n";
         it.text = ((it.text || "").trim() ? it.text.replace(/\s+$/, "") + "\n\n" : "") + head + s0.text;
         it.updatedAt = now;
         delete room.sumDraft; await save();
@@ -3056,7 +3163,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
   const nudged = new Set();
   // 会話がたまったら、上の「日記」ボタンにしるしを付ける。返事のあとなら、1回だけ小さく知らせる
   async function showDiaryBtn(nudge){
-    if(grp){ diaryBtn.textContent = "日記"; diaryBtn.className = "plain"; return; }
+    if(grp){ diaryBtn.textContent = "日記"; diaryBtn.className = "plain"; dueDot.hidden = true; return; }
     try{
       const threadId = current.threadId;
       const room = await getRoom(current.roomId);
@@ -3067,8 +3174,9 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
       const due = n >= DIARY_NUDGE;
       diaryBtn.textContent = due ? "日記 ●" : "日記";
       diaryBtn.className = "plain" + (due ? " due" : "");
+      dueDot.hidden = !due;
       const k = threadId + ":" + mark;
-      if(due && nudge && !nudged.has(k)){ nudged.add(k); toast("会話がたまってきました。そろそろ日記を書く？（上の「日記」から）"); }
+      if(due && nudge && !nudged.has(k)){ nudged.add(k); toast("会話がたまってきました。そろそろ日記を書く？（⛵️ ペルソナ → ペルソナ管理 → 日記）"); }
     }catch(e){}
   }
   /* 会話の外で、AIに下書きを書いてもらう（日記と、あらすじで、同じ作りを使う）
@@ -3142,9 +3250,9 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
     plan:async (room, th, msgs, model) => {
       const mark = diaryMark(room, th.id);
       const fresh = msgs.filter(m => m.createdAt > mark);
-      if(!fresh.length){ await tell(mark ? "前の日記のあと、この部屋ではまだ話していません。" : "この部屋には、まだ会話がありません。"); return null; }
-      let q = "部屋「" + th.name + "」の会話から、日記を書いてもらいますか？\n\n・使うモデル：" + model.name + "\n・返事1回分くらいの料金がかかります。\n・書いたものは、下書きとして出ます。「保存」を押すまでは残りません。";
-      if(fresh.length < 10) q += "\n\n（" + (mark ? "前の日記のあとの会話" : "この部屋の会話") + "は、まだ " + fresh.length + " 件です。少ないと、書くことがあまりないかもしれません）";
+      if(!fresh.length){ await tell(mark ? "前の日記のあと、この会話ではまだ話していません。" : "この会話には、まだ発言がありません。"); return null; }
+      let q = "会話「" + th.name + "」から、日記を書いてもらいますか？\n\n・使うモデル：" + model.name + "\n・返事1回分くらいの料金がかかります。\n・書いたものは、下書きとして出ます。「保存」を押すまでは残りません。";
+      if(fresh.length < 10) q += "\n\n（" + (mark ? "前の日記のあとの会話" : "この会話") + "は、まだ " + fresh.length + " 件です。少ないと、書くことがあまりないかもしれません）";
       if(fresh.length > SEND_COUNT) q += "\n\n（会話が " + fresh.length + " 件たまっています。AIに渡せるのは新しい " + SEND_COUNT + " 件までなので、それより前のことは日記に入りません）";
       if(room.diaryDraft) q += "\n\n（いまの下書きは、新しいものに置きかわります）";
       return { q:q, req:diaryReq(room.name, mark) };
@@ -3152,8 +3260,8 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
   const writeSum = () => sideWrite({ kind:"sum", field:"sumDraft", label:"あらすじを書いています",
     redraw:async () => { if(!memoryPanel.hidden) await drawMemory(); },
     plan:async (room, th, msgs, model) => {
-      if(!msgs.length){ await tell("この部屋には、まだ会話がありません。"); return null; }
-      let q = "部屋「" + th.name + "」の会話から、あらすじの下書きを作ってもらいますか？\n\n・使うモデル：" + model.name + "\n・返事1回分くらいの料金がかかります。\n・下書きとして出ます。入れる項目を選んで保存するまでは、記憶に入りません。";
+      if(!msgs.length){ await tell("この会話には、まだ発言がありません。"); return null; }
+      let q = "会話「" + th.name + "」から、あらすじの下書きを作ってもらいますか？\n\n・使うモデル：" + model.name + "\n・返事1回分くらいの料金がかかります。\n・下書きとして出ます。入れる項目を選んで保存するまでは、記憶に入りません。";
       if(msgs.length > SEND_COUNT) q += "\n\n（会話が " + msgs.length + " 件あります。AIに渡せるのは新しい " + SEND_COUNT + " 件までなので、それより前のことは、あらすじに入りません）";
       if(room.sumDraft) q += "\n\n（いまの下書きは、新しいものに置きかわります）";
       const req = "【ここからは、会話の外からのお願いです】\nここまでの会話のあらすじを、短くまとめてください。あとであなた（" + room.name + "）自身が読み返して、思い出すためのメモです。\n"
@@ -3176,7 +3284,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
     f.appendChild(el("p", "", "・新しい " + DIARY_SHOW + " 回分は、毎回AIに伝えます。\n・それより古い日記は、AIが必要だと思ったときに自分で開きます。\n・「見せない」にした日記は、AIに渡しません。")).style.whiteSpace = "pre-line";
     const mark = diaryMark(room, current.threadId);
     const n = (await loadMessages()).filter(m => m.createdAt > mark).length;
-    f.appendChild(el("p", "", (mark ? "前の日記のあと、" : "") + "いまの部屋（" + current.threadName + "）の会話：" + n + " 件"));
+    f.appendChild(el("p", "", (mark ? "前の日記のあと、" : "") + "いまの会話（" + current.threadName + "）の発言：" + n + " 件"));
     if(sideJob && sideJob.kind === "diary" && sideJob.roomId === room.id) f.appendChild(sideJob.el);
     else f.appendChild(btn("go", "日記を書く", writeDiary));
     diaryBody.appendChild(f);
@@ -3186,7 +3294,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
       const h = el("h4", "", "下書き");
       h.appendChild(el("span", "off", "まだ保存していません"));
       c.appendChild(h);
-      c.appendChild(el("p", "", dayTime(d0.createdAt) + (d0.threadName ? " ・ 部屋：" + d0.threadName : "")));
+      c.appendChild(el("p", "", dayTime(d0.createdAt) + (d0.threadName ? " ・ 会話：" + d0.threadName : "")));
       c.appendChild(el("p", "dtext", d0.text));
       const bar = el("div", "bar");
       bar.appendChild(btn("small", "保存", async () => {
@@ -3217,7 +3325,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
       const h = el("h4", "", dayTime(d.createdAt));
       h.appendChild(el("span", shown.has(d.id) ? "" : "off", d.hide ? "見せない" : shown.has(d.id) ? "毎回AIに伝える" : "必要なときにAIが開く"));
       c.appendChild(h);
-      if(d.threadName) c.appendChild(el("p", "", "部屋：" + d.threadName));
+      if(d.threadName) c.appendChild(el("p", "", "会話：" + d.threadName));
       c.appendChild(el("p", "dtext", d.text));
       const bar = el("div", "bar");
       bar.appendChild(btn("small", "編集", async () => {
@@ -3282,7 +3390,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
     const g = !!grp;
     promptTop.hidden = g; modelBtn.hidden = g;
     callBtn.hidden = !g; whoRow.hidden = !g;
-    document.getElementById("roomRow").hidden = g;     // Room では、部屋を分けない
+    document.getElementById("openRoomList").hidden = g;     // Room では、会話を分けない（カラーと保存・コピーは、そのまま出す）
     memBtn.textContent = g ? "書庫" : "記憶";
   }
   // 入力欄の上の「次に返事する人」
@@ -3291,7 +3399,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
     if(!grp) return;
     const th = await getOne("threads", current.threadId);
     const ms = await membersOf(th);
-    if(!ms.length){ whoRow.appendChild(el("span", "wl", "まだ、だれも呼んでいません。上の「呼ぶ」から、ペルソナを呼んでね。")); return; }
+    if(!ms.length){ whoRow.appendChild(el("span", "wl", "まだ、だれも呼んでいません。上の「👥 Room」→「呼ぶ」から、ペルソナを呼んでね。")); return; }
     let next = th.next;
     if(next !== ALL && !ms.some(x => x.room.id === next)) next = ms[0].room.id;
     if(next === ALL && ms.length < 2) next = ms[0].room.id;
@@ -3471,7 +3579,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
     const g = await freshGroup();
     const P = await getRoom(pid);
     const seat = (th.members || []).find(x => x.roomId === pid);
-    if(!g || !P || !seat){ problem("このペルソナは、もうこの部屋にいません。\n上の「呼ぶ」から、呼びなおしてね。", false); return false; }
+    if(!g || !P || !seat){ problem("このペルソナは、もうこのRoomにいません。\n上の「👥 Room」→「呼ぶ」から、呼びなおしてね。", false); return false; }
     const model = modelOf(seat.model);
     if(!model){ problem("⛵️ " + P.name + " のモデルが使えなくなりました。\n上の「呼ぶ」から、別のモデルを選んでね。", false); return false; }
     const key = keys[model.by];
@@ -3592,7 +3700,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
     if(run || waiting || !db) return;
     const th = await getOne("threads", current.threadId);
     const ms = await membersOf(th);
-    if(!ms.length){ clearProblem(); problem("まだ、だれも呼んでいません。\n上の「呼ぶ」から、ペルソナを呼んでね。", false); return; }
+    if(!ms.length){ clearProblem(); problem("まだ、だれも呼んでいません。\n上の「👥 Room」→「呼ぶ」から、ペルソナを呼んでね。", false); return; }
     const here = id => ms.some(x => x.room.id === id);
     let auto = false;
     if(!ids && pendingGroup && pendingGroup.threadId === current.threadId){ ids = pendingGroup.ids; auto = pendingGroup.auto; }
@@ -3695,7 +3803,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
     const msgs = await loadThread(th.id);
     const can = ms.filter(x => msgs.some(m => m.createdAt > diaryMark(x.room, th.id)));
     if(!ms.length){ await tell("書いてもらう人を、選んでください。"); return; }
-    if(!can.length){ await tell(msgs.length ? "前の日記のあと、この部屋ではまだ話していません。" : "この部屋には、まだ会話がありません。"); return; }
+    if(!can.length){ await tell(msgs.length ? "前の日記のあと、この会話ではまだ話していません。" : "この会話には、まだ発言がありません。"); return; }
     const cost = can.reduce((a, x) => a + estUsd(x, msgs), 0);
     let q = can.map(x => x.room.name).join("、") + " に、日記を書いてもらいますか？\n\n・1人につき、返事1回分くらいの料金がかかります（合わせて " + yen(cost) + " くらいが目安）。\n・書いたものは、下書きとして出ます。「保存」を押すまでは、だれの日記にも残りません。";
     if(can.length < ms.length) q += "\n\n（" + ms.filter(x => !can.includes(x)).map(x => x.room.name).join("、") + " は、前の日記のあと、まだ話していないので、書きません）";
@@ -3755,7 +3863,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
       const h = el("h4", "", "⛵️ " + d.name + " の下書き");
       h.appendChild(el("span", "off", "まだ保存していません"));
       c.appendChild(h);
-      c.appendChild(el("p", "", dayTime(d.createdAt) + " ・ 部屋：" + th.name));
+      c.appendChild(el("p", "", dayTime(d.createdAt) + " ・ 会話：" + th.name));
       c.appendChild(el("p", "dtext", d.text));
       const bar = el("div", "bar");
       bar.appendChild(btn("small", "保存", async () => {
@@ -3790,8 +3898,8 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
     const th = await getOne("threads", current.threadId);
     const ms = await membersOf(th);
     const msgs = await loadThread(th.id);
-    if(!ms.length){ await tell("まだ、だれも呼んでいません。\n上の「呼ぶ」から、ペルソナを呼んでね。"); return; }
-    if(!msgs.length){ await tell("この部屋には、まだ会話がありません。"); return; }
+    if(!ms.length){ await tell("まだ、だれも呼んでいません。\n上の「👥 Room」→「呼ぶ」から、ペルソナを呼んでね。"); return; }
+    if(!msgs.length){ await tell("この会話には、まだ発言がありません。"); return; }
     const box2 = openPick("だれに、まとめてもらいますか？", "「" + th.name + "」の、ここまでの話を、まとめてもらいます。下書きとして出ます。");
     ms.forEach(x => {
       const mo = modelOf(x.model);
@@ -3844,6 +3952,29 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
       toast("書庫に「" + title + "」を入れました（見せ方：" + MODE_NAME[mode] + "）");
     }catch(e){ await tell("このファイルは読めませんでした。\n（" + (f.name || "名前なし") + "）"); }
   });
+
+
+  /* ⋯ メニューと、入力中の畳みかた */
+  const setMenu = on => { menuPanel.hidden = !on; menuBtn.setAttribute("aria-expanded", on ? "true" : "false"); };
+  menuBtn.addEventListener("click", e => { e.stopPropagation(); setMenu(menuPanel.hidden); });
+  menuPanel.addEventListener("click", () => setTimeout(() => setMenu(false), 0));
+  document.addEventListener("click", e => { if(!menuPanel.hidden && !menuPanel.contains(e.target)) setMenu(false); });
+  const coarse = window.matchMedia && matchMedia("(pointer: coarse)");
+  let typingOff = 0;
+  function setTyping(on){
+    if(app.classList.contains("typing") === on) return;
+    const gap = list.scrollHeight - list.scrollTop - list.clientHeight;
+    if(on){
+      setMenu(false);
+      miniBar.textContent = grp ? gName.textContent : pName.textContent + "　・　" + current.threadName;
+      miniBar.hidden = false;
+    }else miniBar.hidden = true;
+    app.classList.toggle("typing", on);
+    list.scrollTop = list.scrollHeight - list.clientHeight - gap;
+  }
+  box.addEventListener("focus", () => { clearTimeout(typingOff); if(coarse && coarse.matches) setTyping(true); });
+  box.addEventListener("blur", () => { clearTimeout(typingOff); typingOff = setTimeout(() => setTyping(false), 200); });
+  miniBar.addEventListener("click", () => box.blur());
 
   /* ───────── 画面の土台（揺れの試し（3）と同じ作り） ───────── */
   let lastH = -1, lastT = "";
@@ -4000,6 +4131,7 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
     let text = box.value.replace(/\s+$/, "");
     if(!text.trim()) text = "";
     if((!text && !staged.length) || busy || !db) return;
+    if(prefs.now && text && !/（いま：[^）]*）\s*$/.test(text)) text += nowStamp();
     if(run){
       if(!run.auto) return;
       busy = true;
@@ -4032,13 +4164,15 @@ header .tools{ border-top-color:rgba(228,220,204,.7); }
     busy = false;
   }
   send.addEventListener("click", () => { submit(); box.focus(); });
-  document.getElementById("insertNow").addEventListener("click", () => {
-    const d = new Date();
-    const t = "（いま：" + (d.getMonth() + 1) + "月" + d.getDate() + "日（" + "日月火水木金土".charAt(d.getDay()) + "）" + d.getHours() + ":" + two(d.getMinutes()) + "）";
-    box.value = box.value + t;
-    grow();
-    box.focus();
-    try{ box.setSelectionRange(box.value.length, box.value.length); }catch(e){}
+  /* 🕒 今の日時：オンのあいだ、送る文の終わりに「（いま：◯月◯日（◯）◯:◯◯）」を付ける */
+  const nowBtn = document.getElementById("insertNow");
+  const nowStamp = () => { const d = new Date(); return "（いま：" + (d.getMonth() + 1) + "月" + d.getDate() + "日（" + "日月火水木金土".charAt(d.getDay()) + "）" + d.getHours() + ":" + two(d.getMinutes()) + "）"; };
+  function showNowBtn(){ nowBtn.className = "tgl" + (prefs.now ? " on" : ""); nowBtn.setAttribute("aria-pressed", prefs.now ? "true" : "false"); }
+  nowBtn.addEventListener("click", async () => {
+    if(!db) return;
+    prefs.now = !prefs.now; showNowBtn();
+    try{ await savePrefs(); toast(prefs.now ? "今の日時を、送る文の終わりに付けます" : "今の日時を付けるのをやめました"); }
+    catch(e){ tell("切り替えられませんでした。もう一度ためしてください。"); }
   });
 
   /* ───────── はじまり ───────── */
